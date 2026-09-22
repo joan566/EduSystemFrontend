@@ -56,70 +56,55 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () => context.read<DashboardProvider>().loadAll(),
-        child: ListView(
-          padding: EdgeInsets.symmetric(
-            horizontal: context.isMobile ? 16 : 24,
-            vertical: 20,
-          ),
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: context.isMobile ? double.infinity : 1200,
+            ),
+            child: ListView(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.isMobile ? 16 : 24,
+                vertical: 20,
+              ),
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _greeting(user?.firstName),
-                        style: Theme.of(context).textTheme.displayLarge,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        isBrandNew
-                            ? 'Bienvenido a EduSistem. Configuremos tu espacio de trabajo.'
-                            : 'Este es el resumen de tu actividad académica.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
+                _HeroHeader(
+                  greeting: _greeting(user?.firstName),
+                  subtitle: isBrandNew
+                      ? 'Bienvenido a EduSistem. Configuremos tu espacio de trabajo.'
+                      : 'Este es el resumen de tu actividad académica.',
+                  onRefresh: () => context.read<DashboardProvider>().loadAll(),
                 ),
-                if (!context.isMobile)
-                  IconButton(
-                    tooltip: 'Actualizar',
-                    onPressed: () => context.read<DashboardProvider>().loadAll(),
-                    icon: const Icon(Icons.refresh),
+                const SizedBox(height: 28),
+                if (isBrandNew)
+                  const _GettingStartedCard()
+                else ...[
+                  _StatsRow(
+                    students: studentsState,
+                    courses: coursesState,
+                    assignments: assignmentsState,
                   ),
+                  const SizedBox(height: 28),
+                  ResponsiveBuilder(
+                    mobile: (_) => const Column(
+                      children: [
+                        _TeachingPeriodsCard(),
+                        SizedBox(height: 16),
+                        _RecentActivityCard(),
+                      ],
+                    ),
+                    desktop: (_) => const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _TeachingPeriodsCard()),
+                        SizedBox(width: 16),
+                        Expanded(child: _RecentActivityCard()),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: 28),
-            if (isBrandNew)
-              const _GettingStartedCard()
-            else ...[
-              _StatsRow(
-                students: studentsState,
-                courses: coursesState,
-                assignments: assignmentsState,
-              ),
-              const SizedBox(height: 28),
-              ResponsiveBuilder(
-                mobile: (_) => const Column(
-                  children: [
-                    _TeachingPeriodsCard(),
-                    SizedBox(height: 16),
-                    _RecentActivityCard(),
-                  ],
-                ),
-                desktop: (_) => const Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _TeachingPeriodsCard()),
-                    SizedBox(width: 16),
-                    Expanded(child: _RecentActivityCard()),
-                  ],
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -133,6 +118,81 @@ class _DashboardPageState extends State<DashboardPage> {
         ? 'Buenas tardes'
         : 'Buenas noches';
     return name == null ? base : '$base, $name';
+  }
+}
+
+/// Gradient banner reusing the exact same [AppColors.brandGradient] as the
+/// sidebar and the login branding panel — the dashboard is the one screen
+/// every session starts on, so it gets the same "premium navy" treatment
+/// instead of being the only major surface that's just black text on white.
+class _HeroHeader extends StatelessWidget {
+  const _HeroHeader({
+    required this.greeting,
+    required this.subtitle,
+    required this.onRefresh,
+  });
+
+  final String greeting;
+  final String subtitle;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = context.isMobile;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isMobile ? 20 : 28),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: AppColors.brandGradient,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadowMedium,
+            blurRadius: 24,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  greeting,
+                  style: (isMobile ? textTheme.headlineLarge : textTheme.displayLarge)
+                      ?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.82),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!isMobile)
+            IconButton(
+              tooltip: 'Actualizar',
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: 0.12),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -305,18 +365,21 @@ class _StatsRow extends StatelessWidget {
         value: students.totalElements,
         hasError: students.status == ViewStatus.error,
         icon: Icons.people_alt_outlined,
+        accentColor: AppColors.primary,
       ),
       _StatCard(
         label: 'Cursos',
         value: courses.totalElements,
         hasError: courses.status == ViewStatus.error,
         icon: Icons.class_outlined,
+        accentColor: AppColors.info,
       ),
       _StatCard(
         label: 'Clases activas',
         value: assignments.totalElements,
         hasError: assignments.status == ViewStatus.error,
         icon: Icons.groups_outlined,
+        accentColor: AppColors.success,
       ),
     ];
 
@@ -347,12 +410,14 @@ class _StatCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.icon,
+    required this.accentColor,
     this.hasError = false,
   });
 
   final String label;
   final int value;
   final IconData icon;
+  final Color accentColor;
   final bool hasError;
 
   @override
@@ -369,13 +434,13 @@ class _StatCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppColors.primary.withValues(alpha: 0.12),
-                  AppColors.primary.withValues(alpha: 0.06),
+                  accentColor.withValues(alpha: 0.14),
+                  accentColor.withValues(alpha: 0.06),
                 ],
               ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 22),
+            child: Icon(icon, color: accentColor, size: 22),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -423,6 +488,8 @@ class _TeachingPeriodsCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              Icon(Icons.groups_outlined, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Tus clases',
@@ -475,6 +542,8 @@ class _RecentActivityCard extends StatelessWidget {
         children: [
           Row(
             children: [
+              Icon(Icons.history_outlined, size: 18, color: AppColors.info),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Actividad reciente',
