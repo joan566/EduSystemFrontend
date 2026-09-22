@@ -38,12 +38,7 @@ class MorePage extends StatelessWidget {
             leading: const Icon(Icons.logout),
             title: const Text('Cerrar sesión'),
             onTap: () async {
-              final confirmed = await showAppConfirmDialog(
-                context,
-                title: 'Cerrar sesión',
-                message: '¿Seguro que quieres cerrar tu sesión?',
-                confirmLabel: 'Cerrar sesión',
-              );
+              final confirmed = await confirmLogout(context);
               if (confirmed && context.mounted) {
                 await context.read<AuthProvider>().logout();
               }

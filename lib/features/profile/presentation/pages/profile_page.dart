@@ -100,12 +100,7 @@ class ProfilePage extends StatelessWidget {
               variant: AppButtonVariant.danger,
               icon: Icons.logout,
               onPressed: () async {
-                final confirmed = await showAppConfirmDialog(
-                  context,
-                  title: 'Cerrar sesión',
-                  message: '¿Seguro que quieres cerrar tu sesión?',
-                  confirmLabel: 'Cerrar sesión',
-                );
+                final confirmed = await confirmLogout(context);
                 if (confirmed && context.mounted) {
                   await context.read<AuthProvider>().logout();
                 }

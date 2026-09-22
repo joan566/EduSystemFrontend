@@ -52,3 +52,14 @@ Future<bool> showAppConfirmDialog(
   );
   return result ?? false;
 }
+
+/// Shared copy for the "cerrar sesión" confirmation, so the title, message
+/// and button label can't drift between the sidebar, the mobile "Más" page
+/// and the profile page — each just calls this and, if it resolves true,
+/// invokes its own `AuthProvider.logout()`.
+Future<bool> confirmLogout(BuildContext context) => showAppConfirmDialog(
+  context,
+  title: 'Cerrar sesión',
+  message: '¿Seguro que quieres cerrar tu sesión?',
+  confirmLabel: 'Cerrar sesión',
+);
