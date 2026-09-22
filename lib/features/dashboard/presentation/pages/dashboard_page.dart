@@ -81,16 +81,6 @@ class _DashboardPageState extends State<DashboardPage> {
                 if (isBrandNew)
                   const _GettingStartedCard()
                 else ...[
-                  if (!context.isMobile)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: () =>
-                            context.read<DashboardProvider>().loadAll(),
-                        icon: const Icon(Icons.refresh, size: 16),
-                        label: const Text('Actualizar'),
-                      ),
-                    ),
                   _StatsRow(
                     students: studentsState,
                     courses: coursesState,

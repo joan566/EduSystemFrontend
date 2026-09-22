@@ -14,6 +14,23 @@ bool _isActive(String currentPath, String itemPath) {
   return currentPath.startsWith(itemPath);
 }
 
+/// Real page context for the header (§ "¿sé dónde estoy?") — derived from
+/// the actual route, not decorative. Dashboard gets no label since its own
+/// hero banner already says "Bienvenido".
+String? _currentPageLabel(String currentPath) {
+  if (currentPath == RoutePaths.dashboard) return null;
+  for (final item in [
+    ...primaryNavItems,
+    ...secondaryNavItems,
+    ...catalogNavItems,
+    ...systemNavItems,
+    profileNavItem,
+  ]) {
+    if (_isActive(currentPath, item.path)) return item.label;
+  }
+  return null;
+}
+
 Future<void> _handleLogout(BuildContext context) async {
   final confirmed = await confirmLogout(context);
   if (confirmed && context.mounted) {
@@ -371,6 +388,8 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
     final colors = Theme.of(context).colorScheme;
+    final currentPath = GoRouterState.of(context).uri.path;
+    final currentLabel = _currentPageLabel(currentPath);
 
     return Container(
       height: 64,
@@ -389,8 +408,10 @@ class _Header extends StatelessWidget {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          if (currentLabel != null)
+            Text(currentLabel, style: Theme.of(context).textTheme.titleMedium),
+          const Spacer(),
           PopupMenuButton<String>(
             offset: const Offset(0, 44),
             shape: RoundedRectangleBorder(

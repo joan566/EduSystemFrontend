@@ -65,21 +65,24 @@ class AppHeroBanner extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Positioned(
-            right: -8,
-            top: 0,
-            bottom: 0,
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: isMobile ? 0.10 : 0.14,
-                child: Icon(
-                  icon,
-                  size: isMobile ? 110 : 170,
-                  color: Colors.white,
+          // Skipped entirely when a CTA button is present — at any size or
+          // position, a decorative icon sharing the same corner as an
+          // interactive button reads as visual clutter, not depth.
+          if (!showCta)
+            Positioned(
+              top: -30,
+              right: -20,
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: isMobile ? 0.08 : 0.10,
+                  child: Icon(
+                    icon,
+                    size: isMobile ? 90 : 130,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
-          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
