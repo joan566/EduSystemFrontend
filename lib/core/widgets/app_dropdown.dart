@@ -9,6 +9,7 @@ class AppDropdown<T> extends StatelessWidget {
     this.value,
     this.label,
     this.hint,
+    this.helperText,
     this.required = false,
     this.onChanged,
     this.validator,
@@ -20,6 +21,10 @@ class AppDropdown<T> extends StatelessWidget {
   final T? value;
   final String? label;
   final String? hint;
+
+  /// Shown below the field regardless of focus — use it to explain a
+  /// constraint (e.g. why the field is disabled), not to restate the label.
+  final String? helperText;
   final bool required;
   final void Function(T?)? onChanged;
   final String? Function(T?)? validator;
@@ -31,7 +36,12 @@ class AppDropdown<T> extends StatelessWidget {
     return DropdownButtonFormField<T>(
       initialValue: value,
       isExpanded: true,
-      decoration: InputDecoration(labelText: labelText, hintText: hint),
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: hint,
+        helperText: helperText,
+        helperMaxLines: 2,
+      ),
       items: items
           .map((e) => DropdownMenuItem<T>(value: e, child: Text(itemLabel(e))))
           .toList(),

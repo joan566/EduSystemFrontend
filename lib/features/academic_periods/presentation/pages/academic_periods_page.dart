@@ -195,6 +195,9 @@ class _AcademicPeriodsPageState extends State<AcademicPeriodsPage> {
             ),
             AppDataColumn(
               label: 'Acciones',
+              // Mirrors the mobile card: an active period can't be deleted
+              // from here either, only edited — desktop previously always
+              // showed both actions regardless of status.
               cellBuilder: (item) => Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -202,10 +205,11 @@ class _AcademicPeriodsPageState extends State<AcademicPeriodsPage> {
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     onPressed: () => _openForm(initial: item),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    onPressed: () => _delete(item),
-                  ),
+                  if (!item.isActive)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      onPressed: () => _delete(item),
+                    ),
                 ],
               ),
             ),
@@ -266,17 +270,11 @@ class _PeriodFormState extends State<_PeriodForm> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     if (_startDate == null || _endDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecciona la fecha de inicio y fin.')),
-      );
+      context.showWarning('Selecciona la fecha de inicio y fin.');
       return;
     }
     if (!_endDate!.isAfter(_startDate!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La fecha de fin debe ser posterior a la de inicio.'),
-        ),
-      );
+      context.showWarning('La fecha de fin debe ser posterior a la de inicio.');
       return;
     }
     Navigator.of(context).pop((

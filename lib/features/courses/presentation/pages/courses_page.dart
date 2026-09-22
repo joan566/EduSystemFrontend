@@ -281,6 +281,9 @@ class _CourseFormState extends State<_CourseForm> {
               required: true,
               value: _gradeId,
               enabled: !isEditing,
+              helperText: isEditing
+                  ? 'El grado no se puede cambiar después de crear el curso.'
+                  : null,
               items: [for (final level in widget.levels) level.id],
               itemLabel: (id) =>
                   widget.levels.firstWhere((l) => l.id == id).name,

@@ -174,22 +174,29 @@ class _StatusToggle extends StatelessWidget {
     Color color,
   ) {
     final selected = value == status;
-    return InkWell(
-      onTap: () => onChanged(status),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? color : color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : color,
-            fontWeight: FontWeight.w700,
+    return Tooltip(
+      message: switch (status) {
+        AttendanceStatus.present => 'Presente',
+        AttendanceStatus.absent => 'Ausente',
+        AttendanceStatus.excused => 'Excusado',
+      },
+      child: InkWell(
+        onTap: () => onChanged(status),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? color : color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : color,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ),
