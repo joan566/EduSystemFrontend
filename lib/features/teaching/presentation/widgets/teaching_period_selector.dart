@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/router/route_paths.dart';
 import '../../../../core/widgets/app_dropdown.dart';
 import '../../domain/entities/teaching_period_entity.dart';
 import '../providers/teaching_provider.dart';
@@ -44,9 +46,34 @@ class _TeachingPeriodSelectorState extends State<TeachingPeriodSelector> {
     final periods = context.watch<TeachingProvider>().allPeriods;
 
     if (periods.isEmpty) {
-      return InputDecorator(
-        decoration: InputDecoration(labelText: widget.label),
-        child: const Text('No tienes clases asignadas todavía'),
+      final colors = Theme.of(context).colorScheme;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerHighest.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colors.outline),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.groups_outlined,
+              size: 20,
+              color: colors.onSurface.withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Todavía no tienes clases asignadas.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.push(RoutePaths.teaching),
+              child: const Text('Crear una clase'),
+            ),
+          ],
+        ),
       );
     }
 
