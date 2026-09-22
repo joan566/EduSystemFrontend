@@ -65,7 +65,7 @@ class AppTheme {
 
     OutlineInputBorder border(Color color, {double width = 1}) =>
         OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: color, width: width),
         );
 
@@ -89,17 +89,18 @@ class AppTheme {
         centerTitle: false,
       ),
 
+      // Stripe/Vercel-style separation: a crisp, fully-opaque 1px border
+      // does most of the work; the shadow is a barely-there accent rather
+      // than the primary depth cue (was elevation 3 / 70%-alpha border).
       cardTheme: CardThemeData(
         color: colorScheme.surface,
-        elevation: isDark ? 0 : 3,
+        elevation: isDark ? 0 : 1,
         shadowColor: shadowColor,
         surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(
-            color: borderColor.withValues(alpha: isDark ? 1 : 0.7),
-          ),
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: borderColor),
         ),
       ),
 
@@ -117,38 +118,36 @@ class AppTheme {
             }
             return colorScheme.onPrimary;
           }),
+          // Flatter elevation curve — Stripe/Vercel buttons barely lift.
           elevation: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) return 0;
-            if (states.contains(WidgetState.pressed)) return 1.0;
-            if (states.contains(WidgetState.hovered)) return 6.0;
-            return 2.0;
+            if (states.contains(WidgetState.pressed)) return 0;
+            if (states.contains(WidgetState.hovered)) return 2.0;
+            return 0.5;
           }),
           shadowColor: WidgetStatePropertyAll(
-            isDark ? Colors.black : colorScheme.primary.withValues(alpha: 0.32),
+            isDark ? Colors.black : colorScheme.primary.withValues(alpha: 0.24),
           ),
           padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+            EdgeInsets.symmetric(horizontal: 18, vertical: 13),
           ),
           shape: const WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
+              borderRadius: BorderRadius.all(Radius.circular(8)),
             ),
           ),
           textStyle: WidgetStatePropertyAll(textTheme.labelLarge),
-          animationDuration: const Duration(milliseconds: 150),
+          animationDuration: const Duration(milliseconds: 120),
         ),
       ),
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
-          side: BorderSide(
-            color: colorScheme.primary.withValues(alpha: 0.4),
-            width: 1.4,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+          side: BorderSide(color: borderColor, width: 1),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
           ),
           textStyle: textTheme.labelLarge,
         ),
@@ -159,7 +158,7 @@ class AppTheme {
           foregroundColor: colorScheme.primary,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
           ),
           textStyle: textTheme.labelLarge,
         ),
@@ -173,8 +172,8 @@ class AppTheme {
         filled: true,
         fillColor: isDark ? AppColors.surfaceMutedDark : AppColors.surfaceMuted,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
+          horizontal: 14,
+          vertical: 14,
         ),
         border: border(Colors.transparent),
         enabledBorder: border(borderColor.withValues(alpha: isDark ? 1 : 0.8)),
@@ -196,7 +195,7 @@ class AppTheme {
             ? AppColors.surfaceMutedDark
             : AppColors.surfaceMuted,
         labelStyle: textTheme.labelMedium,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         side: BorderSide.none,
         shape: const StadiumBorder(),
       ),
@@ -204,9 +203,12 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        elevation: 8,
+        elevation: 4,
         shadowColor: shadowColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: borderColor),
+        ),
         titleTextStyle: textTheme.titleLarge,
         contentTextStyle: textTheme.bodyMedium,
       ),
@@ -214,10 +216,10 @@ class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        elevation: 8,
+        elevation: 4,
         shadowColor: shadowColor,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
         showDragHandle: true,
       ),
@@ -226,7 +228,7 @@ class AppTheme {
         backgroundColor: colorScheme.surface,
         indicatorColor: colorScheme.primary.withValues(alpha: 0.12),
         indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
         selectedIconTheme: IconThemeData(color: colorScheme.primary),
         selectedLabelTextStyle: textTheme.labelMedium?.copyWith(
@@ -242,10 +244,10 @@ class AppTheme {
         backgroundColor: colorScheme.surface,
         indicatorColor: colorScheme.primary.withValues(alpha: 0.12),
         indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(10),
         ),
         surfaceTintColor: Colors.transparent,
-        elevation: 12,
+        elevation: 4,
         shadowColor: shadowColor,
         height: 68,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -257,13 +259,18 @@ class AppTheme {
         }),
       ),
 
+      // Denser rows (Stripe/Vercel-style data-forward tables) than Material's
+      // ~56px default — more rows visible without scrolling.
       dataTableTheme: DataTableThemeData(
         headingRowColor: WidgetStatePropertyAll(
           isDark ? AppColors.surfaceMutedDark : AppColors.surfaceMuted,
         ),
+        headingRowHeight: 44,
         headingTextStyle: textTheme.labelMedium?.copyWith(
           color: colorScheme.onSurface,
         ),
+        dataRowMinHeight: 44,
+        dataRowMaxHeight: 48,
         dataTextStyle: textTheme.bodyMedium,
         dividerThickness: 1,
       ),

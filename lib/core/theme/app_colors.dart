@@ -47,9 +47,11 @@ class AppColors {
   static const List<Color> brandGradientDark = [Color(0xFF060B14), primaryDark];
 
   // Elevation shadows, tinted with the brand navy instead of pure black so
-  // depth reads as "premium" rather than muddy. Alpha is intentionally low —
-  // these are meant to be barely-there separation cues.
-  static const Color shadowSoft = Color(0x14122036); // ~8% navy
-  static const Color shadowMedium = Color(0x22122036); // ~13% navy
-  static const Color shadowStrong = Color(0x38122036); // ~22% navy
+  // depth reads as "premium" rather than muddy. Alpha is intentionally low
+  // and biased flat/crisp (Stripe/Vercel-style: separation comes mostly
+  // from a defined 1px border, shadow is a barely-there accent, not the
+  // primary depth cue) rather than soft/diffuse.
+  static const Color shadowSoft = Color(0x0D122036); // ~5% navy
+  static const Color shadowMedium = Color(0x18122036); // ~9% navy
+  static const Color shadowStrong = Color(0x30122036); // ~19% navy
 }

@@ -49,11 +49,15 @@ class AppDataTable<T> extends StatelessWidget {
       );
     }
 
+    final hoverColor = Theme.of(
+      context,
+    ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Card(
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(10),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: ConstrainedBox(
@@ -71,6 +75,15 @@ class AppDataTable<T> extends StatelessWidget {
                 rows: [
                   for (final item in items)
                     DataRow(
+                      // Hover highlight (Stripe/Vercel-style) — only wired
+                      // when the row is actually clickable.
+                      color: onRowTap == null
+                          ? null
+                          : WidgetStateProperty.resolveWith(
+                              (states) => states.contains(WidgetState.hovered)
+                                  ? hoverColor
+                                  : null,
+                            ),
                       onSelectChanged: onRowTap == null
                           ? null
                           : (_) => onRowTap!(item),

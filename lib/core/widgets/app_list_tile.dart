@@ -7,7 +7,7 @@ import '../theme/app_colors.dart';
 /// trailing widget (chip, icon button, chevron). Replaces the old bare
 /// `Card(child: ListTile(...))` pattern so every feature's mobile list
 /// shares the same visual weight as the rest of the redesigned app.
-class AppListTile extends StatelessWidget {
+class AppListTile extends StatefulWidget {
   const AppListTile({
     super.key,
     required this.icon,
@@ -33,14 +33,33 @@ class AppListTile extends StatelessWidget {
   final Color? background;
 
   @override
-  Widget build(BuildContext context) {
-    final color = iconColor ?? AppColors.primary;
+  State<AppListTile> createState() => _AppListTileState();
+}
 
-    return Card(
-      color: background,
+class _AppListTileState extends State<AppListTile> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.iconColor ?? AppColors.primary;
+    final colors = Theme.of(context).colorScheme;
+
+    final card = Card(
+      color: widget.background,
+      shape: widget.onTap == null
+          ? null
+          : RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(
+                color: _hovering
+                    ? colors.primary.withValues(alpha: 0.55)
+                    : colors.outline,
+                width: _hovering ? 1.4 : 1,
+              ),
+            ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        onTap: widget.onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
@@ -50,9 +69,9 @@ class AppListTile extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(widget.icon, color: color, size: 20),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -61,16 +80,16 @@ class AppListTile extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      title,
+                      widget.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    if (subtitle != null) ...[
+                    if (widget.subtitle != null) ...[
                       const SizedBox(height: 3),
                       Text(
-                        subtitle!,
-                        maxLines: subtitleMaxLines,
+                        widget.subtitle!,
+                        maxLines: widget.subtitleMaxLines,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
@@ -78,11 +97,22 @@ class AppListTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null) ...[const SizedBox(width: 10), trailing!],
+              if (widget.trailing != null) ...[
+                const SizedBox(width: 10),
+                widget.trailing!,
+              ],
             ],
           ),
         ),
       ),
+    );
+
+    if (widget.onTap == null) return card;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: card,
     );
   }
 }
