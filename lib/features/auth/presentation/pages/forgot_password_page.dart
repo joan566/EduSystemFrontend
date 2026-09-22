@@ -170,6 +170,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             required: true,
             keyboardType: TextInputType.number,
             hint: '123456',
+            maxLength: 6,
             validator: (v) {
               if (v == null || v.trim().length != 6) {
                 return 'El código debe tener 6 dígitos.';
@@ -184,6 +185,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             controller: _passwordController,
             label: 'Nueva contraseña',
             required: true,
+            helperText: 'Entre 8 y 72 caracteres.',
             obscureText: _obscureNewPassword,
             validator: Validators.password,
             suffixIcon: IconButton(

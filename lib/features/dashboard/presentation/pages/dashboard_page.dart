@@ -62,16 +62,34 @@ class _DashboardPageState extends State<DashboardPage> {
             vertical: 20,
           ),
           children: [
-            Text(
-              _greeting(user?.firstName),
-              style: Theme.of(context).textTheme.displayLarge,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              isBrandNew
-                  ? 'Bienvenido a EduSistem. Configuremos tu espacio de trabajo.'
-                  : 'Este es el resumen de tu actividad académica.',
-              style: Theme.of(context).textTheme.bodyMedium,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _greeting(user?.firstName),
+                        style: Theme.of(context).textTheme.displayLarge,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        isBrandNew
+                            ? 'Bienvenido a EduSistem. Configuremos tu espacio de trabajo.'
+                            : 'Este es el resumen de tu actividad académica.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                if (!context.isMobile)
+                  IconButton(
+                    tooltip: 'Actualizar',
+                    onPressed: () => context.read<DashboardProvider>().loadAll(),
+                    icon: const Icon(Icons.refresh),
+                  ),
+              ],
             ),
             const SizedBox(height: 28),
             if (isBrandNew)

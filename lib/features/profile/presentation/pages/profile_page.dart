@@ -54,6 +54,10 @@ class ProfilePage extends StatelessWidget {
                           children: [
                             Text(user.fullName, style: Theme.of(context).textTheme.titleLarge),
                             Text(user.email, style: Theme.of(context).textTheme.bodyMedium),
+                            Text(
+                              'El correo no se puede cambiar desde aquí.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                           ],
                         ),
                       ),

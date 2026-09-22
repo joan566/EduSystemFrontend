@@ -145,6 +145,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       controller: _passwordController,
                       label: 'Contraseña',
                       required: true,
+                      helperText: 'Entre 8 y 72 caracteres.',
                       obscureText: _obscurePassword,
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) => _submit(auth),

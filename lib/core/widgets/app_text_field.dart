@@ -15,6 +15,7 @@ class AppTextField extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.maxLines = 1,
+    this.maxLength,
     this.enabled = true,
     this.prefixIcon,
     this.suffixIcon,
@@ -34,6 +35,11 @@ class AppTextField extends StatelessWidget {
   final void Function(String)? onChanged;
   final void Function(String)? onSubmitted;
   final int maxLines;
+
+  /// Hard input cap (e.g. a fixed-length verification code) — leave null
+  /// for fields that only need [Validators.maxLength]'s softer, message-
+  /// bearing validation.
+  final int? maxLength;
   final bool enabled;
   final IconData? prefixIcon;
   final Widget? suffixIcon;
@@ -53,6 +59,10 @@ class AppTextField extends StatelessWidget {
       onChanged: onChanged,
       onFieldSubmitted: onSubmitted,
       maxLines: maxLines,
+      maxLength: maxLength,
+      buildCounter: maxLength == null
+          ? null
+          : (_, {required currentLength, required isFocused, maxLength}) => null,
       enabled: enabled,
       autofocus: autofocus,
       textInputAction: textInputAction,
