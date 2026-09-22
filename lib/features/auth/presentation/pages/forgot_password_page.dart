@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/utils/validators.dart';
 import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../providers/auth_provider.dart';
 
@@ -24,6 +25,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
   _Step _step = _Step.email;
+  bool _obscureNewPassword = true;
 
   @override
   void dispose() {
@@ -61,13 +63,32 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     if (!ok && auth.error != null) context.showApiError(auth.error!);
   }
 
+  void _handleBack() {
+    switch (_step) {
+      case _Step.code:
+        setState(() => _step = _Step.email);
+      case _Step.newPassword:
+        setState(() => _step = _Step.code);
+      case _Step.email:
+      case _Step.done:
+        context.pop();
+    }
+  }
+
+  int get _stepIndex => switch (_step) {
+    _Step.email => 0,
+    _Step.code => 1,
+    _Step.newPassword => 2,
+    _Step.done => 2,
+  };
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final isLoading = auth.status == AuthStatus.authenticating;
 
     return Scaffold(
-      appBar: AppBar(leading: BackButton(onPressed: () => context.pop())),
+      appBar: AppBar(leading: BackButton(onPressed: _handleBack)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Center(
@@ -80,6 +101,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        Text(
+                          'Paso ${_stepIndex + 1} de 3',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        AppProgressBar(value: (_stepIndex + 1) / 3),
+                        const SizedBox(height: 20),
                         Text(_title, style: Theme.of(context).textTheme.headlineLarge),
                         const SizedBox(height: 6),
                         Text(_subtitle, style: Theme.of(context).textTheme.bodyMedium),
@@ -156,8 +184,19 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             controller: _passwordController,
             label: 'Nueva contraseña',
             required: true,
-            obscureText: true,
+            obscureText: _obscureNewPassword,
             validator: Validators.password,
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureNewPassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                size: 20,
+              ),
+              onPressed: () => setState(
+                () => _obscureNewPassword = !_obscureNewPassword,
+              ),
+            ),
           ),
         ];
       case _Step.done:
