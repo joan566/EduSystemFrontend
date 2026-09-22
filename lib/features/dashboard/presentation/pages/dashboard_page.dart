@@ -9,8 +9,10 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_hero_banner.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/app_loading.dart';
+import '../../../../core/widgets/app_stat_card.dart';
 import '../../../audit/presentation/providers/audit_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../courses/presentation/providers/courses_provider.dart';
@@ -67,29 +69,42 @@ class _DashboardPageState extends State<DashboardPage> {
                 vertical: 20,
               ),
               children: [
-                _HeroHeader(
-                  greeting: _greeting(user?.firstName),
+                AppHeroBanner(
+                  eyebrow: isBrandNew ? 'Bienvenido' : 'Bienvenido de nuevo',
+                  title: _greeting(user?.firstName),
                   subtitle: isBrandNew
-                      ? 'Bienvenido a EduSistem. Configuremos tu espacio de trabajo.'
+                      ? 'Configuremos tu espacio de trabajo.'
                       : 'Este es el resumen de tu actividad académica.',
-                  onRefresh: () => context.read<DashboardProvider>().loadAll(),
+                  icon: Icons.school_outlined,
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 if (isBrandNew)
                   const _GettingStartedCard()
                 else ...[
+                  if (!context.isMobile)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () =>
+                            context.read<DashboardProvider>().loadAll(),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: const Text('Actualizar'),
+                      ),
+                    ),
                   _StatsRow(
                     students: studentsState,
                     courses: coursesState,
                     assignments: assignmentsState,
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
                   ResponsiveBuilder(
                     mobile: (_) => const Column(
                       children: [
                         _TeachingPeriodsCard(),
                         SizedBox(height: 16),
                         _RecentActivityCard(),
+                        SizedBox(height: 16),
+                        _CreateExamCta(),
                       ],
                     ),
                     desktop: (_) => const Row(
@@ -97,7 +112,15 @@ class _DashboardPageState extends State<DashboardPage> {
                       children: [
                         Expanded(child: _TeachingPeriodsCard()),
                         SizedBox(width: 16),
-                        Expanded(child: _RecentActivityCard()),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              _RecentActivityCard(),
+                              SizedBox(height: 16),
+                              _CreateExamCta(),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -118,81 +141,6 @@ class _DashboardPageState extends State<DashboardPage> {
         ? 'Buenas tardes'
         : 'Buenas noches';
     return name == null ? base : '$base, $name';
-  }
-}
-
-/// Gradient banner reusing the exact same [AppColors.brandGradient] as the
-/// sidebar and the login branding panel — the dashboard is the one screen
-/// every session starts on, so it gets the same "premium navy" treatment
-/// instead of being the only major surface that's just black text on white.
-class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({
-    required this.greeting,
-    required this.subtitle,
-    required this.onRefresh,
-  });
-
-  final String greeting;
-  final String subtitle;
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final isMobile = context.isMobile;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(isMobile ? 20 : 28),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: AppColors.brandGradient,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.shadowMedium,
-            blurRadius: 24,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  greeting,
-                  style: (isMobile ? textTheme.headlineLarge : textTheme.displayLarge)
-                      ?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.82),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (!isMobile)
-            IconButton(
-              tooltip: 'Actualizar',
-              onPressed: onRefresh,
-              icon: const Icon(Icons.refresh, color: Colors.white),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.12),
-              ),
-            ),
-        ],
-      ),
-    );
   }
 }
 
@@ -360,26 +308,29 @@ class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cards = [
-      _StatCard(
+      AppStatCard(
         label: 'Estudiantes',
-        value: students.totalElements,
+        value: '${students.totalElements}',
         hasError: students.status == ViewStatus.error,
         icon: Icons.people_alt_outlined,
         accentColor: AppColors.primary,
+        onTap: () => context.push(RoutePaths.students),
       ),
-      _StatCard(
+      AppStatCard(
         label: 'Cursos',
-        value: courses.totalElements,
+        value: '${courses.totalElements}',
         hasError: courses.status == ViewStatus.error,
         icon: Icons.class_outlined,
         accentColor: AppColors.info,
+        onTap: () => context.push(RoutePaths.courses),
       ),
-      _StatCard(
+      AppStatCard(
         label: 'Clases activas',
-        value: assignments.totalElements,
+        value: '${assignments.totalElements}',
         hasError: assignments.status == ViewStatus.error,
         icon: Icons.groups_outlined,
         accentColor: AppColors.success,
+        onTap: () => context.push(RoutePaths.teaching),
       ),
     ];
 
@@ -405,71 +356,63 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.accentColor,
-    this.hasError = false,
-  });
-
-  final String label;
-  final int value;
-  final IconData icon;
-  final Color accentColor;
-  final bool hasError;
+/// Real, honest CTA — links to Exams (which then asks the teacher to pick
+/// a class) rather than pretending exam creation can start without one.
+/// Deliberately not an [AppCard]: it's a solid accent block, not a neutral
+/// content card, the same distinction the reference layout makes.
+class _CreateExamCta extends StatelessWidget {
+  const _CreateExamCta();
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  accentColor.withValues(alpha: 0.14),
-                  accentColor.withValues(alpha: 0.06),
-                ],
+    return Material(
+      color: AppColors.primaryDarkest,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => context.push(RoutePaths.exams),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.fact_check_outlined,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: accentColor, size: 22),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (hasError)
-                  Tooltip(
-                    message: 'No se pudo cargar este dato.',
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('—', style: Theme.of(context).textTheme.displayLarge),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.error_outline,
-                          size: 18,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ],
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Crear nuevo examen',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleMedium?.copyWith(color: Colors.white),
                     ),
-                  )
-                else
-                  Text('$value', style: Theme.of(context).textTheme.displayLarge),
-                Text(label, style: Theme.of(context).textTheme.bodyMedium),
-              ],
-            ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Diseña y programa tus evaluaciones.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

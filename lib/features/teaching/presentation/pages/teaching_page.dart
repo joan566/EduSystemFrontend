@@ -3,18 +3,21 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/state/list_state.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
+import '../../../../core/widgets/app_data_table.dart';
 import '../../../../core/widgets/app_dialog.dart';
 import '../../../../core/widgets/app_dropdown.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_hero_banner.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/app_loading.dart';
-import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/app_pagination.dart';
+import '../../../../core/widgets/app_stat_card.dart';
 import '../../../../core/widgets/app_status_chip.dart';
 import '../../../academic_periods/domain/entities/academic_period_entity.dart';
 import '../../../academic_periods/presentation/providers/academic_periods_provider.dart';
@@ -26,10 +29,21 @@ import '../../domain/entities/teaching_assignment_entity.dart';
 import '../../domain/entities/teaching_period_entity.dart';
 import '../providers/teaching_provider.dart';
 
-/// Same catalog skeleton as Subjects/Courses/Periods/Levels (§18): the
-/// primary action lives in the header (desktop) / FAB (mobile), not loose
-/// inside the tab body — it just tracks which of the two tabs is active to
-/// know which action to offer.
+/// Deterministic per-subject accent, cycling through the existing semantic
+/// palette (no new colors) so classes read apart from each other in lists
+/// the way the reference design's colored subject badges do.
+const _subjectPalette = [
+  AppColors.primary,
+  AppColors.info,
+  AppColors.success,
+  AppColors.warning,
+  AppColors.error,
+  AppColors.primaryMedium,
+];
+
+Color _subjectColor(int subjectId) =>
+    _subjectPalette[subjectId % _subjectPalette.length];
+
 class TeachingPage extends StatefulWidget {
   const TeachingPage({super.key});
 
@@ -49,6 +63,11 @@ class _TeachingPageState extends State<TeachingPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TeachingProvider>().loadAssignments();
       context.read<TeachingProvider>().loadPeriods();
+      // Needed for the "Materia" filter and the create-assignment form —
+      // load once up front instead of assuming the user already visited
+      // the Subjects page this session.
+      final subjects = context.read<SubjectsProvider>();
+      if (subjects.state.status == ViewStatus.initial) subjects.load();
     });
   }
 
@@ -121,6 +140,8 @@ class _TeachingPageState extends State<TeachingPage>
     final onCreate = onAssignmentsTab
         ? _createAssignment
         : _createPeriodFromCurrentAssignments;
+    final assignmentsState = context.watch<TeachingProvider>().assignmentsState;
+    final periodsState = context.watch<TeachingProvider>().periodsState;
 
     return Scaffold(
       floatingActionButton: context.isMobile
@@ -131,18 +152,55 @@ class _TeachingPageState extends State<TeachingPage>
           : null,
       body: Column(
         children: [
-          AppPageHeader(
-            title: 'Mis clases',
-            subtitle: 'Asignaturas que impartes y sus periodos de enseñanza.',
-            actions: context.isMobile
-                ? []
-                : [
-                    AppButton(
-                      label: onAssignmentsTab ? 'Nueva asignación' : 'Nueva clase',
-                      icon: Icons.add,
-                      onPressed: onCreate,
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.isMobile ? 16 : 24,
+              20,
+              context.isMobile ? 16 : 24,
+              0,
+            ),
+            child: Column(
+              children: [
+                AppHeroBanner(
+                  eyebrow: 'Clases',
+                  title: 'Gestiona tus clases ',
+                  titleHighlight: 'académicas',
+                  subtitle:
+                      'Aquí puedes ver, crear y administrar las clases que '
+                      'impartes.',
+                  icon: Icons.groups_outlined,
+                  ctaLabel: onAssignmentsTab
+                      ? 'Nueva asignación'
+                      : 'Nueva clase',
+                  ctaIcon: Icons.add,
+                  onCtaPressed: onCreate,
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppStatCard(
+                        label: 'Asignaciones',
+                        value: '${assignmentsState.totalElements}',
+                        hasError: assignmentsState.status == ViewStatus.error,
+                        icon: Icons.groups_outlined,
+                        accentColor: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: AppStatCard(
+                        label: 'Clases por periodo',
+                        value: '${periodsState.totalElements}',
+                        hasError: periodsState.status == ViewStatus.error,
+                        icon: Icons.calendar_month_outlined,
+                        accentColor: AppColors.info,
+                      ),
                     ),
                   ],
+                ),
+              ],
+            ),
           ),
           TabBar(
             controller: _tabController,
@@ -166,24 +224,89 @@ class _TeachingPageState extends State<TeachingPage>
   }
 }
 
-class _AssignmentsTab extends StatelessWidget {
+class _AssignmentsTab extends StatefulWidget {
   const _AssignmentsTab({required this.onCreate});
 
   final VoidCallback onCreate;
 
   @override
+  State<_AssignmentsTab> createState() => _AssignmentsTabState();
+}
+
+class _AssignmentsTabState extends State<_AssignmentsTab> {
+  int? _subjectFilter;
+  bool? _activeFilter;
+
+  void _applyFilters() {
+    context.read<TeachingProvider>().loadAssignments(
+      page: 0,
+      subjectId: _subjectFilter,
+      active: _activeFilter,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final state = context.watch<TeachingProvider>().assignmentsState;
+    final subjects = context.watch<SubjectsProvider>().state.items;
+
     return Column(
       children: [
+        if (subjects.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              context.isMobile ? 16 : 24,
+              12,
+              context.isMobile ? 16 : 24,
+              12,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: AppDropdown<SubjectEntity?>(
+                    label: 'Materia',
+                    value: subjects
+                        .where((s) => s.id == _subjectFilter)
+                        .firstOrNull,
+                    items: [null, ...subjects],
+                    itemLabel: (s) => s?.name ?? 'Todas las materias',
+                    onChanged: (s) {
+                      setState(() => _subjectFilter = s?.id);
+                      _applyFilters();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: AppDropdown<bool?>(
+                    label: 'Estado',
+                    value: _activeFilter,
+                    items: const [null, true, false],
+                    itemLabel: (v) => switch (v) {
+                      null => 'Todas',
+                      true => 'Activas',
+                      false => 'Inactivas',
+                    },
+                    onChanged: (v) {
+                      setState(() => _activeFilter = v);
+                      _applyFilters();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
         Expanded(child: _buildList(context, state)),
         if (state.status == ViewStatus.success)
           AppPagination(
             page: state.page,
             totalPages: state.totalPages,
             totalElements: state.totalElements,
-            onPageChanged: (page) =>
-                context.read<TeachingProvider>().loadAssignments(page: page),
+            onPageChanged: (page) => context.read<TeachingProvider>().loadAssignments(
+              page: page,
+              subjectId: _subjectFilter,
+              active: _activeFilter,
+            ),
           ),
       ],
     );
@@ -209,61 +332,113 @@ class _AssignmentsTab extends StatelessWidget {
               'Asigna una materia a un curso para empezar a dictar clases.',
           icon: Icons.groups_outlined,
           actionLabel: 'Nueva asignación',
-          onAction: onCreate,
+          onAction: widget.onCreate,
         );
       case ViewStatus.success:
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          itemCount: state.items.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
-          itemBuilder: (context, index) {
-            final item = state.items[index];
-            return AppListTile(
-              icon: Icons.groups_outlined,
-              title: item.displayName,
-              subtitle: 'Año académico ${item.academicYear}',
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppStatusChip(
-                    label: item.active ? 'Activa' : 'Inactiva',
-                    kind: item.active
-                        ? AppStatusKind.success
-                        : AppStatusKind.neutral,
-                  ),
-                  Switch(
-                    value: item.active,
-                    onChanged: (value) async {
-                      final error = await context
-                          .read<TeachingProvider>()
-                          .setAssignmentActive(item.id, value);
-                      if (context.mounted && error != null)
-                        context.showApiError(error);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    onPressed: () async {
-                      final confirmed = await showAppConfirmDialog(
-                        context,
-                        title: 'Eliminar asignación',
-                        message: 'Esta acción no se puede deshacer.',
-                        confirmLabel: 'Eliminar',
-                      );
-                      if (!confirmed || !context.mounted) return;
-                      final error = await context
-                          .read<TeachingProvider>()
-                          .deleteAssignment(item.id);
-                      if (context.mounted && error != null)
-                        context.showApiError(error);
-                    },
-                  ),
-                ],
+        return AppDataTable<TeachingAssignmentEntity>(
+          isMobile: context.isMobile,
+          items: state.items,
+          mobileCardBuilder: (context, item) => AppListTile(
+            icon: Icons.groups_outlined,
+            iconColor: _subjectColor(item.subjectId),
+            title: item.displayName,
+            subtitle: 'Año académico ${item.academicYear}',
+            trailing: _AssignmentActions(item: item),
+          ),
+          columns: [
+            AppDataColumn(
+              label: 'Clase',
+              cellBuilder: (item) => Text(item.displayName),
+            ),
+            AppDataColumn(
+              label: 'Materia',
+              cellBuilder: (item) => _SubjectBadge(
+                name: item.subjectName,
+                color: _subjectColor(item.subjectId),
               ),
-            );
-          },
+            ),
+            AppDataColumn(
+              label: 'Año académico',
+              cellBuilder: (item) => Text('${item.academicYear}'),
+            ),
+            AppDataColumn(
+              label: 'Estado',
+              cellBuilder: (item) => AppStatusChip(
+                label: item.active ? 'Activa' : 'Inactiva',
+                kind: item.active ? AppStatusKind.success : AppStatusKind.neutral,
+              ),
+            ),
+            AppDataColumn(
+              label: 'Acciones',
+              cellBuilder: (item) => _AssignmentActions(item: item),
+            ),
+          ],
         );
     }
+  }
+}
+
+class _SubjectBadge extends StatelessWidget {
+  const _SubjectBadge({required this.name, required this.color});
+
+  final String name;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        name,
+        style: Theme.of(
+          context,
+        ).textTheme.labelMedium?.copyWith(color: color),
+      ),
+    );
+  }
+}
+
+class _AssignmentActions extends StatelessWidget {
+  const _AssignmentActions({required this.item});
+
+  final TeachingAssignmentEntity item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Switch(
+          value: item.active,
+          onChanged: (value) async {
+            final error = await context
+                .read<TeachingProvider>()
+                .setAssignmentActive(item.id, value);
+            if (context.mounted && error != null) context.showApiError(error);
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete_outline, size: 18),
+          onPressed: () async {
+            final confirmed = await showAppConfirmDialog(
+              context,
+              title: 'Eliminar asignación',
+              message: 'Esta acción no se puede deshacer.',
+              confirmLabel: 'Eliminar',
+            );
+            if (!confirmed || !context.mounted) return;
+            final error = await context
+                .read<TeachingProvider>()
+                .deleteAssignment(item.id);
+            if (context.mounted && error != null) context.showApiError(error);
+          },
+        ),
+      ],
+    );
   }
 }
 
@@ -314,13 +489,17 @@ class _PeriodsTab extends StatelessWidget {
         );
       case ViewStatus.success:
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: context.isMobile ? 16 : 24,
+            vertical: 8,
+          ),
           itemCount: state.items.length,
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
             final item = state.items[index];
             return AppListTile(
               icon: Icons.calendar_month_outlined,
+              iconColor: _subjectColor(item.subjectId),
               title: item.displayName,
               subtitle:
                   '${Formatters.date(item.startDate)} — ${Formatters.date(item.endDate)}',
