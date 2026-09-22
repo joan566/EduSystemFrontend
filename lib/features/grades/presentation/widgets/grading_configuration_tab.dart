@@ -140,7 +140,14 @@ class _GradingConfigurationTabState extends State<GradingConfigurationTab> {
                   TextButton(onPressed: _createScale, child: const Text('Nueva escala')),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
+              Text(
+                'El rango numérico en el que calificarás (ej. de 0 a 5). Las '
+                'escalas son compartidas por todo el colegio, no solo por '
+                'esta clase.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
               AppDropdown<int>(
                 value: _scaleId,
                 items: [for (final s in provider.scales) s.id],
@@ -199,11 +206,22 @@ class _GradingConfigurationTabState extends State<GradingConfigurationTab> {
                     ),
                   ),
                   if (!isComplete)
-                    Text(
-                      '⚠ Las ponderaciones deben sumar 100%.',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 14,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Deben sumar 100%.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),
@@ -243,9 +261,7 @@ class _ScaleFormState extends State<_ScaleForm> {
     final min = double.parse(_minController.text.trim());
     final max = double.parse(_maxController.text.trim());
     if (min >= max) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('El mínimo debe ser menor que el máximo.')));
+      context.showWarning('El mínimo debe ser menor que el máximo.');
       return;
     }
     Navigator.of(
