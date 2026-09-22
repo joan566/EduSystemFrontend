@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_dialog.dart';
@@ -13,6 +14,7 @@ import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_pagination.dart';
 import '../../../../core/widgets/app_status_chip.dart';
 import '../../../academic_periods/domain/entities/academic_period_entity.dart';
 import '../../../academic_periods/presentation/providers/academic_periods_provider.dart';
@@ -24,6 +26,10 @@ import '../../domain/entities/teaching_assignment_entity.dart';
 import '../../domain/entities/teaching_period_entity.dart';
 import '../providers/teaching_provider.dart';
 
+/// Same catalog skeleton as Subjects/Courses/Periods/Levels (§18): the
+/// primary action lives in the header (desktop) / FAB (mobile), not loose
+/// inside the tab body — it just tracks which of the two tabs is active to
+/// know which action to offer.
 class TeachingPage extends StatefulWidget {
   const TeachingPage({super.key});
 
@@ -31,14 +37,25 @@ class TeachingPage extends StatefulWidget {
   State<TeachingPage> createState() => _TeachingPageState();
 }
 
-class _TeachingPageState extends State<TeachingPage> {
+class _TeachingPageState extends State<TeachingPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this)
+      ..addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TeachingProvider>().loadAssignments();
       context.read<TeachingProvider>().loadPeriods();
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _createAssignment() async {
@@ -93,41 +110,57 @@ class _TeachingPageState extends State<TeachingPage> {
     }
   }
 
+  void _createPeriodFromCurrentAssignments() {
+    final assignments = context.read<TeachingProvider>().assignmentsState.items;
+    _createPeriod(assignments);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        body: Column(
-          children: [
-            AppPageHeader(
-              title: 'Mis clases',
-              subtitle: 'Asignaturas que impartes y sus periodos de enseñanza.',
-            ),
-            const TabBar(
-              tabs: [
-                Tab(text: 'Asignaciones'),
-                Tab(text: 'Clases por periodo'),
+    final onAssignmentsTab = _tabController.index == 0;
+    final onCreate = onAssignmentsTab
+        ? _createAssignment
+        : _createPeriodFromCurrentAssignments;
+
+    return Scaffold(
+      floatingActionButton: context.isMobile
+          ? FloatingActionButton(
+              onPressed: onCreate,
+              child: const Icon(Icons.add),
+            )
+          : null,
+      body: Column(
+        children: [
+          AppPageHeader(
+            title: 'Mis clases',
+            subtitle: 'Asignaturas que impartes y sus periodos de enseñanza.',
+            actions: context.isMobile
+                ? []
+                : [
+                    AppButton(
+                      label: onAssignmentsTab ? 'Nueva asignación' : 'Nueva clase',
+                      icon: Icons.add,
+                      onPressed: onCreate,
+                    ),
+                  ],
+          ),
+          TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Asignaciones'),
+              Tab(text: 'Clases por periodo'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _AssignmentsTab(onCreate: _createAssignment),
+                _PeriodsTab(onCreate: _createPeriodFromCurrentAssignments),
               ],
             ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _AssignmentsTab(onCreate: _createAssignment),
-                  _PeriodsTab(
-                    onCreate: () {
-                      final assignments = context
-                          .read<TeachingProvider>()
-                          .assignmentsState
-                          .items;
-                      _createPeriod(assignments);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -143,18 +176,15 @@ class _AssignmentsTab extends StatelessWidget {
     final state = context.watch<TeachingProvider>().assignmentsState;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: AppButton(
-              label: 'Nueva asignación',
-              icon: Icons.add,
-              onPressed: onCreate,
-            ),
-          ),
-        ),
         Expanded(child: _buildList(context, state)),
+        if (state.status == ViewStatus.success)
+          AppPagination(
+            page: state.page,
+            totalPages: state.totalPages,
+            totalElements: state.totalElements,
+            onPageChanged: (page) =>
+                context.read<TeachingProvider>().loadAssignments(page: page),
+          ),
       ],
     );
   }
@@ -247,18 +277,15 @@ class _PeriodsTab extends StatelessWidget {
     final state = context.watch<TeachingProvider>().periodsState;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: AppButton(
-              label: 'Nueva clase',
-              icon: Icons.add,
-              onPressed: onCreate,
-            ),
-          ),
-        ),
         Expanded(child: _buildList(context, state)),
+        if (state.status == ViewStatus.success)
+          AppPagination(
+            page: state.page,
+            totalPages: state.totalPages,
+            totalElements: state.totalElements,
+            onPageChanged: (page) =>
+                context.read<TeachingProvider>().loadPeriods(page: page),
+          ),
       ],
     );
   }
@@ -332,6 +359,7 @@ class _AssignmentForm extends StatefulWidget {
 }
 
 class _AssignmentFormState extends State<_AssignmentForm> {
+  final _formKey = GlobalKey<FormState>();
   int? _subjectId;
   int? _groupId;
 
@@ -342,44 +370,44 @@ class _AssignmentFormState extends State<_AssignmentForm> {
     _groupId = widget.courses.first.id;
   }
 
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop((groupId: _groupId!, subjectId: _subjectId!));
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppDialogFrame(
       title: 'Nueva asignación',
-      actions: [
-        AppButton(
-          label: 'Guardar',
-          onPressed: () {
-            if (_subjectId == null || _groupId == null) return;
-            Navigator.of(
-              context,
-            ).pop((groupId: _groupId!, subjectId: _subjectId!));
-          },
+      actions: [AppButton(label: 'Guardar', onPressed: _submit)],
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppDropdown<int>(
+              label: 'Materia',
+              required: true,
+              value: _subjectId,
+              items: [for (final s in widget.subjects) s.id],
+              itemLabel: (id) =>
+                  widget.subjects.firstWhere((s) => s.id == id).name,
+              validator: (v) => v == null ? 'Selecciona una materia.' : null,
+              onChanged: (value) => setState(() => _subjectId = value),
+            ),
+            const SizedBox(height: 16),
+            AppDropdown<int>(
+              label: 'Curso',
+              required: true,
+              value: _groupId,
+              items: [for (final c in widget.courses) c.id],
+              itemLabel: (id) =>
+                  widget.courses.firstWhere((c) => c.id == id).displayName,
+              validator: (v) => v == null ? 'Selecciona un curso.' : null,
+              onChanged: (value) => setState(() => _groupId = value),
+            ),
+          ],
         ),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppDropdown<int>(
-            label: 'Materia',
-            required: true,
-            value: _subjectId,
-            items: [for (final s in widget.subjects) s.id],
-            itemLabel: (id) =>
-                widget.subjects.firstWhere((s) => s.id == id).name,
-            onChanged: (value) => setState(() => _subjectId = value),
-          ),
-          const SizedBox(height: 16),
-          AppDropdown<int>(
-            label: 'Curso',
-            required: true,
-            value: _groupId,
-            items: [for (final c in widget.courses) c.id],
-            itemLabel: (id) =>
-                widget.courses.firstWhere((c) => c.id == id).displayName,
-            onChanged: (value) => setState(() => _groupId = value),
-          ),
-        ],
       ),
     );
   }
@@ -396,6 +424,7 @@ class _PeriodForm extends StatefulWidget {
 }
 
 class _PeriodFormState extends State<_PeriodForm> {
+  final _formKey = GlobalKey<FormState>();
   int? _assignmentId;
   int? _periodId;
 
@@ -406,45 +435,47 @@ class _PeriodFormState extends State<_PeriodForm> {
     _periodId = widget.periods.first.id;
   }
 
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop((
+      teachingAssignmentId: _assignmentId!,
+      academicPeriodId: _periodId!,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppDialogFrame(
       title: 'Nueva clase',
-      actions: [
-        AppButton(
-          label: 'Guardar',
-          onPressed: () {
-            if (_assignmentId == null || _periodId == null) return;
-            Navigator.of(context).pop((
-              teachingAssignmentId: _assignmentId!,
-              academicPeriodId: _periodId!,
-            ));
-          },
+      actions: [AppButton(label: 'Guardar', onPressed: _submit)],
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppDropdown<int>(
+              label: 'Asignación',
+              required: true,
+              value: _assignmentId,
+              items: [for (final a in widget.assignments) a.id],
+              itemLabel: (id) =>
+                  widget.assignments.firstWhere((a) => a.id == id).displayName,
+              validator: (v) => v == null ? 'Selecciona una asignación.' : null,
+              onChanged: (value) => setState(() => _assignmentId = value),
+            ),
+            const SizedBox(height: 16),
+            AppDropdown<int>(
+              label: 'Periodo académico',
+              required: true,
+              value: _periodId,
+              items: [for (final p in widget.periods) p.id],
+              itemLabel: (id) =>
+                  widget.periods.firstWhere((p) => p.id == id).name,
+              validator: (v) => v == null ? 'Selecciona un periodo.' : null,
+              onChanged: (value) => setState(() => _periodId = value),
+            ),
+          ],
         ),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppDropdown<int>(
-            label: 'Asignación',
-            required: true,
-            value: _assignmentId,
-            items: [for (final a in widget.assignments) a.id],
-            itemLabel: (id) =>
-                widget.assignments.firstWhere((a) => a.id == id).displayName,
-            onChanged: (value) => setState(() => _assignmentId = value),
-          ),
-          const SizedBox(height: 16),
-          AppDropdown<int>(
-            label: 'Periodo académico',
-            required: true,
-            value: _periodId,
-            items: [for (final p in widget.periods) p.id],
-            itemLabel: (id) =>
-                widget.periods.firstWhere((p) => p.id == id).name,
-            onChanged: (value) => setState(() => _periodId = value),
-          ),
-        ],
       ),
     );
   }
