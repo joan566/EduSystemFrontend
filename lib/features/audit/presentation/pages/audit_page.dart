@@ -2,14 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/state/list_state.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/app_dropdown.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../../core/widgets/app_pagination.dart';
 import '../../domain/entities/audit_log_entity.dart';
 import '../providers/audit_provider.dart';
+
+const _actionApiValues = <AuditAction, String>{
+  AuditAction.login: 'LOGIN',
+  AuditAction.logout: 'LOGOUT',
+  AuditAction.create: 'CREATE',
+  AuditAction.update: 'UPDATE',
+  AuditAction.delete: 'DELETE',
+  AuditAction.import: 'IMPORT',
+  AuditAction.export: 'EXPORT',
+  AuditAction.examProcessed: 'EXAM_PROCESSED',
+  AuditAction.gradeUpdated: 'GRADE_UPDATED',
+  AuditAction.answerUpdated: 'ANSWER_UPDATED',
+};
 
 class AuditPage extends StatefulWidget {
   const AuditPage({super.key});
@@ -19,10 +35,17 @@ class AuditPage extends StatefulWidget {
 }
 
 class _AuditPageState extends State<AuditPage> {
+  AuditAction? _actionFilter;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => context.read<AuditProvider>().load());
+  }
+
+  void _onActionFilterChanged(AuditAction? action) {
+    setState(() => _actionFilter = action);
+    context.read<AuditProvider>().load(action: _actionApiValues[action]);
   }
 
   @override
@@ -36,6 +59,21 @@ class _AuditPageState extends State<AuditPage> {
             title: 'Auditoría',
             subtitle: 'Historial de acciones realizadas en tu cuenta.',
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: 240,
+              child: AppDropdown<AuditAction?>(
+                label: 'Filtrar por acción',
+                value: _actionFilter,
+                items: [null, ...AuditAction.values],
+                itemLabel: (action) =>
+                    action == null ? 'Todas las acciones' : _actionLabel(action),
+                onChanged: _onActionFilterChanged,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           Expanded(child: _buildBody(state)),
           if (state.status == ViewStatus.success)
             AppPagination(
@@ -68,12 +106,25 @@ class _AuditPageState extends State<AuditPage> {
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           itemCount: state.items.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 4),
+          separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) => _AuditTile(log: state.items[index]),
         );
     }
   }
 }
+
+String _actionLabel(AuditAction action) => switch (action) {
+  AuditAction.login => 'Inicio de sesión',
+  AuditAction.logout => 'Cierre de sesión',
+  AuditAction.create => 'Creación',
+  AuditAction.update => 'Actualización',
+  AuditAction.delete => 'Eliminación',
+  AuditAction.import => 'Importación',
+  AuditAction.export => 'Exportación',
+  AuditAction.examProcessed => 'Examen procesado',
+  AuditAction.gradeUpdated => 'Calificación actualizada',
+  AuditAction.answerUpdated => 'Respuesta corregida',
+};
 
 class _AuditTile extends StatelessWidget {
   const _AuditTile({required this.log});
@@ -82,32 +133,15 @@ class _AuditTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(
-        log.isSuccess ? Icons.check_circle_outline : Icons.error_outline,
-        color: log.isSuccess
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.error,
-      ),
-      title: Text(_actionLabel(log.action)),
-      subtitle: Text('${log.entityType}${log.entityId != null ? ' #${log.entityId}' : ''}'),
+    return AppListTile(
+      icon: log.isSuccess ? Icons.check_circle_outline : Icons.error_outline,
+      iconColor: log.isSuccess ? AppColors.success : AppColors.error,
+      title: _actionLabel(log.action),
+      subtitle: '${log.entityType}${log.entityId != null ? ' #${log.entityId}' : ''}',
       trailing: Text(
         Formatters.dateTime(log.createdAt),
         style: Theme.of(context).textTheme.bodySmall,
       ),
     );
   }
-
-  String _actionLabel(AuditAction action) => switch (action) {
-    AuditAction.login => 'Inicio de sesión',
-    AuditAction.logout => 'Cierre de sesión',
-    AuditAction.create => 'Creación',
-    AuditAction.update => 'Actualización',
-    AuditAction.delete => 'Eliminación',
-    AuditAction.import => 'Importación',
-    AuditAction.export => 'Exportación',
-    AuditAction.examProcessed => 'Examen procesado',
-    AuditAction.gradeUpdated => 'Calificación actualizada',
-    AuditAction.answerUpdated => 'Respuesta corregida',
-  };
 }

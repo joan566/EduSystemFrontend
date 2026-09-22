@@ -6,9 +6,11 @@ import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/downloads.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_dialog.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/app_loading.dart';
@@ -262,39 +264,34 @@ class _DataManagementPageState extends State<DataManagementPage> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _TemplateOption(
-                          title: 'Solo estudiantes',
-                          description:
-                              'Una hoja para matricular estudiantes nuevos en '
-                              'varias clases a la vez. No incluye notas ni '
-                              'asistencia.',
-                          buttonLabel: 'Plantilla de estudiantes',
-                          onPressed: _downloadStudentsTemplate,
-                        ),
+                  _TemplatesRow(
+                    isMobile: context.isMobile,
+                    options: [
+                      _TemplateOption(
+                        title: 'Solo estudiantes',
+                        description:
+                            'Una hoja para matricular estudiantes nuevos en '
+                            'varias clases a la vez. No incluye notas ni '
+                            'asistencia.',
+                        buttonLabel: 'Plantilla de estudiantes',
+                        onPressed: _downloadStudentsTemplate,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _TemplateOption(
-                          title: 'De esta clase',
-                          badge: const _RecommendedChip(),
-                          description:
-                              'Un Excel con 3 hojas: Estudiantes, '
-                              'Calificaciones y Asistencia de la clase '
-                              'seleccionada arriba. Sirve aunque todavía no '
-                              'tenga estudiantes matriculados.',
-                          buttonLabel: 'Plantilla de la clase',
-                          isLoading: _exportLoadingAction == 'full',
-                          onPressed: _period == null
-                              ? null
-                              : _downloadPeriodFull,
-                          disabledHint: hasPeriods
-                              ? 'Selecciona una clase arriba primero.'
-                              : 'Aún no tienes clases asignadas.',
-                        ),
+                      _TemplateOption(
+                        title: 'De esta clase',
+                        badge: const _RecommendedChip(),
+                        description:
+                            'Un Excel con 3 hojas: Estudiantes, '
+                            'Calificaciones y Asistencia de la clase '
+                            'seleccionada arriba. Sirve aunque todavía no '
+                            'tenga estudiantes matriculados.',
+                        buttonLabel: 'Plantilla de la clase',
+                        isLoading: _exportLoadingAction == 'full',
+                        onPressed: _period == null
+                            ? null
+                            : _downloadPeriodFull,
+                        disabledHint: hasPeriods
+                            ? 'Selecciona una clase arriba primero.'
+                            : 'Aún no tienes clases asignadas.',
                       ),
                     ],
                   ),
@@ -535,6 +532,40 @@ class _DataManagementPageState extends State<DataManagementPage> {
   }
 }
 
+/// Lays the two template cards side by side on desktop/tablet, or stacked
+/// full-width on mobile — a `Row` of `Expanded` children has no mobile
+/// fallback on its own and compresses both cards on a narrow screen.
+class _TemplatesRow extends StatelessWidget {
+  const _TemplatesRow({required this.isMobile, required this.options});
+
+  final bool isMobile;
+  final List<Widget> options;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < options.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            options[i],
+          ],
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < options.length; i++) ...[
+          if (i > 0) const SizedBox(width: 12),
+          Expanded(child: options[i]),
+        ],
+      ],
+    );
+  }
+}
+
 class _TemplateOption extends StatelessWidget {
   final String title;
   final String description;
@@ -726,7 +757,13 @@ class _HistoryList extends StatelessWidget {
       case ViewStatus.empty:
         return const Padding(
           padding: EdgeInsets.all(24),
-          child: Text('Aún no has realizado importaciones.'),
+          child: AppEmptyState(
+            title: 'Aún no has realizado importaciones',
+            message:
+                'Cuando subas un archivo Excel, aparecerá aquí junto con su '
+                'resultado.',
+            icon: Icons.history_outlined,
+          ),
         );
       case ViewStatus.success:
         return Column(
