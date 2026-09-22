@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_page_header.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/widgets/teaching_period_selector.dart';
@@ -35,7 +36,17 @@ class _GradesPageState extends State<GradesPage> {
               ),
             ),
             const SizedBox(height: 8),
-            if (_period != null) ...[
+            if (_period == null)
+              const Expanded(
+                child: AppEmptyState(
+                  title: 'Selecciona una clase',
+                  message:
+                      'Elige una clase arriba para configurar su escala de '
+                      'calificación o consultar sus notas.',
+                  icon: Icons.grade_outlined,
+                ),
+              )
+            else ...[
               const TabBar(tabs: [Tab(text: 'Configuración'), Tab(text: 'Notas del periodo')]),
               Expanded(
                 child: TabBarView(

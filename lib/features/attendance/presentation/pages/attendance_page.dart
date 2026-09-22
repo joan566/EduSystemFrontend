@@ -94,7 +94,11 @@ class _AttendancePageState extends State<AttendancePage> {
           const SizedBox(height: 8),
           Expanded(
             child: _period == null
-                ? const SizedBox.shrink()
+                ? const AppEmptyState(
+                    title: 'Selecciona una clase',
+                    message: 'Elige una clase arriba para ver sus sesiones de asistencia.',
+                    icon: Icons.checklist_outlined,
+                  )
                 : _buildBody(state),
           ),
           if (_period != null && state.status == ViewStatus.success)

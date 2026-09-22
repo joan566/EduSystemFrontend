@@ -96,7 +96,11 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
           const SizedBox(height: 8),
           Expanded(
             child: _period == null
-                ? const SizedBox.shrink()
+                ? const AppEmptyState(
+                    title: 'Selecciona una clase',
+                    message: 'Elige una clase arriba para ver sus actividades.',
+                    icon: Icons.assignment_outlined,
+                  )
                 : _buildBody(state),
           ),
           if (_period != null && state.status == ViewStatus.success)
