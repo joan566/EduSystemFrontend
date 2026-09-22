@@ -14,6 +14,7 @@ import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_pagination.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/widgets/teaching_period_selector.dart';
 import '../../domain/entities/attendance_entity.dart';
@@ -96,6 +97,16 @@ class _AttendancePageState extends State<AttendancePage> {
                 ? const SizedBox.shrink()
                 : _buildBody(state),
           ),
+          if (_period != null && state.status == ViewStatus.success)
+            AppPagination(
+              page: state.page,
+              totalPages: state.totalPages,
+              totalElements: state.totalElements,
+              onPageChanged: (page) => context.read<AttendanceProvider>().load(
+                teachingPeriodId: _period!.id,
+                page: page,
+              ),
+            ),
         ],
       ),
     );

@@ -15,6 +15,7 @@ import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_list_tile.dart';
 import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/widgets/app_pagination.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/widgets/teaching_period_selector.dart';
 import '../../domain/entities/activity_entity.dart';
@@ -98,6 +99,16 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
                 ? const SizedBox.shrink()
                 : _buildBody(state),
           ),
+          if (_period != null && state.status == ViewStatus.success)
+            AppPagination(
+              page: state.page,
+              totalPages: state.totalPages,
+              totalElements: state.totalElements,
+              onPageChanged: (page) => context.read<ActivitiesProvider>().load(
+                teachingPeriodId: _period!.id,
+                page: page,
+              ),
+            ),
         ],
       ),
     );

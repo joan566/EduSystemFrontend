@@ -90,15 +90,16 @@ class ActivitiesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<AppException?> saveGrade(int activityId, int studentId, double grade, {String? comment}) async {
+  /// Saves every edited grade in a single request (§99: batch save,
+  /// mirroring the attendance roster pattern — not one round trip per
+  /// student).
+  Future<AppException?> saveGrades(
+    int activityId,
+    List<({int studentId, double grade, String? comment})> grades,
+  ) async {
     try {
-      final grades = await _repository.putStudentGrade(
-        activityId,
-        studentId,
-        grade: grade,
-        comment: comment,
-      );
-      _gradesState = ListViewState.list(grades);
+      final result = await _repository.putGrades(activityId, grades);
+      _gradesState = ListViewState.list(result);
       notifyListeners();
       return null;
     } on AppException catch (e) {

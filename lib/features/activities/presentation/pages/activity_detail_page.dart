@@ -14,6 +14,10 @@ import '../../../../core/widgets/app_page_header.dart';
 import '../../domain/entities/activity_entity.dart';
 import '../providers/activities_provider.dart';
 
+/// Grade capture (§99): edit every student's grade locally, then a single
+/// sticky "Guardar calificaciones" commits the whole roster in one batch
+/// request — same pattern as attendance's roster, instead of a per-row
+/// save that made every row's spinner light up at once.
 class ActivityDetailPage extends StatefulWidget {
   const ActivityDetailPage({super.key, required this.activityId});
 
@@ -51,28 +55,41 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
     );
   }
 
-  Future<void> _saveGrade(
-    StudentGradeEntity student,
-    double maximumScore,
-  ) async {
-    final text = _controllerFor(student).text.trim();
-    final value = double.tryParse(text);
-    if (value == null || value < 0 || value > maximumScore) {
-      context.showWarning('Ingresa una nota entre 0 y $maximumScore.');
+  Future<void> _save(List<StudentGradeEntity> students, double maximumScore) async {
+    final entries = <({int studentId, double grade, String? comment})>[];
+    final invalidNames = <String>[];
+    for (final student in students) {
+      final text = _controllerFor(student).text.trim();
+      if (text.isEmpty) continue;
+      final value = double.tryParse(text);
+      if (value == null || value < 0 || value > maximumScore) {
+        invalidNames.add(student.studentName);
+        continue;
+      }
+      entries.add((studentId: student.studentId, grade: value, comment: null));
+    }
+    if (invalidNames.isNotEmpty) {
+      context.showWarning(
+        'Revisa la nota de ${invalidNames.join(', ')}: debe estar entre 0 y '
+        '$maximumScore.',
+      );
+      return;
+    }
+    if (entries.isEmpty) {
+      context.showWarning('Ingresa al menos una calificación.');
       return;
     }
     setState(() => _saving = true);
-    final error = await context.read<ActivitiesProvider>().saveGrade(
+    final error = await context.read<ActivitiesProvider>().saveGrades(
       widget.activityId,
-      student.studentId,
-      value,
+      entries,
     );
     if (!mounted) return;
     setState(() => _saving = false);
     if (error != null) {
       context.showApiError(error);
     } else {
-      context.showSuccess('Calificación guardada.');
+      context.showSuccess('Calificaciones guardadas.');
     }
   }
 
@@ -99,24 +116,43 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<ActivitiesProvider>().detailState;
+    final gradesState = context.watch<ActivitiesProvider>().gradesState;
+    final activity = state.data;
+    final canSave = activity != null && gradesState.status == ViewStatus.success;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(state.data?.name ?? 'Actividad'),
-        actions: state.data == null
+        title: Text(activity?.name ?? 'Actividad'),
+        actions: activity == null
             ? null
             : [
                 IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _delete(state.data!),
+                  onPressed: () => _delete(activity),
                 ),
               ],
       ),
-      body: _buildBody(state),
+      body: _buildBody(state, gradesState),
+      bottomNavigationBar: !canSave
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: AppButton(
+                  label: 'Guardar calificaciones',
+                  isLoading: _saving,
+                  expand: true,
+                  onPressed: () => _save(gradesState.items, activity.maximumScore),
+                ),
+              ),
+            ),
     );
   }
 
-  Widget _buildBody(DetailViewState<ActivityEntity> state) {
+  Widget _buildBody(
+    DetailViewState<ActivityEntity> state,
+    ListViewState<StudentGradeEntity> gradesState,
+  ) {
     switch (state.status) {
       case DetailStatus.initial:
       case DetailStatus.loading:
@@ -129,7 +165,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
         );
       case DetailStatus.success:
         final activity = state.data!;
-        final gradesState = context.watch<ActivitiesProvider>().gradesState;
         return Column(
           children: [
             AppPageHeader(
@@ -137,16 +172,13 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
               subtitle:
                   'Puntaje máximo: ${activity.maximumScore.toStringAsFixed(2)}',
             ),
-            Expanded(child: _buildGrades(gradesState, activity)),
+            Expanded(child: _buildGrades(gradesState)),
           ],
         );
     }
   }
 
-  Widget _buildGrades(
-    ListViewState<StudentGradeEntity> state,
-    ActivityEntity activity,
-  ) {
+  Widget _buildGrades(ListViewState<StudentGradeEntity> state) {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
@@ -164,7 +196,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
         );
       case ViewStatus.success:
         return ListView.separated(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
           itemCount: state.items.length,
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {
@@ -174,29 +206,17 @@ class _ActivityDetailPageState extends State<ActivityDetailPage> {
               title: student.studentName,
               subtitle: 'Código: ${student.studentCode}',
               trailing: SizedBox(
-                width: 140,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controllerFor(student),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          hintText: 'Nota',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    AppButton(
-                      label: 'Guardar',
-                      isLoading: _saving,
-                      onPressed: () =>
-                          _saveGrade(student, activity.maximumScore),
-                    ),
-                  ],
+                width: 72,
+                child: TextField(
+                  controller: _controllerFor(student),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'Nota',
+                  ),
                 ),
               ),
             );
