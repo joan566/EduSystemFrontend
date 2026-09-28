@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../../core/router/route_paths.dart';
-import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/shared/tinted_icon.dart';
+import '../../shared/quick_actions.dart';
 import 'mobile_dashboard_section.dart';
 
 /// 2×2 grid of the teacher's most frequent tasks. Each one opens the
@@ -12,48 +12,27 @@ class QuickActionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const actions = [
-      _QuickAction(
-        label: 'Crear examen',
-        icon: Icons.description_outlined,
-        color: AppColors.accentBlue,
-        path: RoutePaths.exams,
-      ),
-      _QuickAction(
-        label: 'Importar estudiantes',
-        icon: Icons.person_add_alt_1_outlined,
-        color: AppColors.accentGreen,
-        path: RoutePaths.dataManagement,
-      ),
-      _QuickAction(
-        label: 'Nueva actividad',
-        icon: Icons.assignment_add,
-        color: AppColors.accentPurple,
-        path: RoutePaths.activities,
-      ),
-      _QuickAction(
-        label: 'Tomar asistencia',
-        icon: Icons.event_available_outlined,
-        color: AppColors.accentTeal,
-        path: RoutePaths.attendance,
-      ),
-    ];
-
     return MobileDashboardSection(
       icon: Icons.bolt_outlined,
       title: 'Acciones rápidas',
       padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
       child: Column(
         children: [
-          for (var row = 0; row < actions.length; row += 2) ...[
+          for (var row = 0; row < dashboardQuickActions.length; row += 2) ...[
             if (row > 0) const SizedBox(height: 10),
             IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: _QuickActionTile(action: actions[row])),
+                  Expanded(
+                    child: _QuickActionTile(action: dashboardQuickActions[row]),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: _QuickActionTile(action: actions[row + 1])),
+                  Expanded(
+                    child: _QuickActionTile(
+                      action: dashboardQuickActions[row + 1],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -64,24 +43,10 @@ class QuickActionsSection extends StatelessWidget {
   }
 }
 
-class _QuickAction {
-  const _QuickAction({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.path,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color color;
-  final String path;
-}
-
 class _QuickActionTile extends StatelessWidget {
   const _QuickActionTile({required this.action});
 
-  final _QuickAction action;
+  final DashboardQuickAction action;
 
   @override
   Widget build(BuildContext context) {

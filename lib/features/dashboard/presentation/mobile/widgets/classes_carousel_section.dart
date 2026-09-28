@@ -9,6 +9,8 @@ import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../shared/dashboard_error_notice.dart';
 import '../../../../../core/theme/subject_visuals.dart';
+import '../../../../../core/widgets/shared/tinted_icon.dart';
+import '../../shared/class_counts.dart';
 import 'mobile_dashboard_section.dart';
 
 /// "Tus clases": the teacher's classes as a horizontal, swipeable row of
@@ -128,7 +130,7 @@ class _ClassCard extends StatelessWidget {
                         style: textTheme.bodySmall,
                       ),
                       const SizedBox(height: 6),
-                      _Counts(
+                      ClassCounts(
                         weeklySessions: weeklySessions,
                         students: period.studentCount,
                       ),
@@ -145,44 +147,6 @@ class _ClassCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Counts extends StatelessWidget {
-  const _Counts({required this.weeklySessions, required this.students});
-
-  final int? weeklySessions;
-  final int students;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11);
-    final iconColor = style?.color;
-
-    Widget item(IconData icon, String text) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: iconColor),
-        const SizedBox(width: 3),
-        Text(text, style: style),
-      ],
-    );
-
-    final sessions = weeklySessions;
-    return Wrap(
-      spacing: 10,
-      children: [
-        if (sessions != null)
-          item(
-            Icons.event_outlined,
-            sessions == 1 ? '1 clase/sem' : '$sessions clases/sem',
-          ),
-        item(
-          Icons.people_alt_outlined,
-          students == 1 ? '1 alumno' : '$students alumnos',
-        ),
-      ],
     );
   }
 }

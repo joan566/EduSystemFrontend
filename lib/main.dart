@@ -243,7 +243,7 @@ class _AppRootState extends State<_AppRoot> {
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return MaterialApp(
-            title: 'EduSistem',
+            title: 'EduSystem',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,

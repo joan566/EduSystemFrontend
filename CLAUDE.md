@@ -42,7 +42,8 @@ features/<feature>/presentation/
 ### Core widgets
 
 - `core/widgets/shared/`: platform-neutral primitives (buttons, fields,
-  cards, chips, states, `AppFormFrame`, `showAppConfirmDialog`, `PickedFile`).
+  cards, chips, states, `TintedIcon`, `AppFormFrame`, `showAppConfirmDialog`,
+  `PickedFile`).
 - `core/widgets/mobile/`: `MobileShell`/`MobileBottomNav`, `MobilePageHeader`,
   `MobileCardList`, `showMobileForm`/`showMobileSheet`,
   `MobileFilePickerButton`, `MobileMorePage`.

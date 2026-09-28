@@ -10,7 +10,7 @@ class AppConfig {
   /// without the `/api/v1` prefix (that is added by [apiBaseUrl]).
   static const String _host = String.fromEnvironment(
     'API_HOST',
-    defaultValue: 'http://192.168.0.102:8080',
+    defaultValue: 'http://10.142.138.30:8080',
   );
 
   /// Full base URL for API calls, e.g. http://localhost:8080/api/v1

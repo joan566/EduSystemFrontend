@@ -10,6 +10,8 @@ import '../../../../audit/domain/entities/audit_log_entity.dart';
 import '../../../../audit/presentation/providers/audit_provider.dart';
 import '../../../../audit/presentation/shared/audit_labels.dart';
 import '../../shared/dashboard_error_notice.dart';
+import '../../../../../core/widgets/shared/tinted_icon.dart';
+import '../../shared/activity_visuals.dart';
 import 'mobile_dashboard_section.dart';
 
 /// Latest actions on the account (from the audit trail), newest first.
@@ -56,7 +58,9 @@ class _ActivityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final color = log.isSuccess ? _actionColor(log.action) : AppColors.error;
+    final color = log.isSuccess
+        ? auditActionAccent(log.action)
+        : AppColors.error;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -99,14 +103,4 @@ class _ActivityRow extends StatelessWidget {
       ),
     );
   }
-
-  static Color _actionColor(AuditAction action) => switch (action) {
-    AuditAction.create ||
-    AuditAction.examProcessed ||
-    AuditAction.gradeUpdated => AppColors.accentGreen,
-    AuditAction.import || AuditAction.export => AppColors.accentTeal,
-    AuditAction.update || AuditAction.answerUpdated => AppColors.accentPurple,
-    AuditAction.delete => AppColors.accentOrange,
-    AuditAction.login || AuditAction.logout => AppColors.accentBlue,
-  };
 }

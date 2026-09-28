@@ -11,6 +11,7 @@ import '../../../../schedule/domain/entities/schedule_entities.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../schedule/presentation/shared/schedule_widgets.dart';
 import '../../shared/dashboard_error_notice.dart';
+import '../../../../../core/widgets/shared/tinted_icon.dart';
 import 'mobile_dashboard_section.dart';
 
 /// "Hoy": the next (or current) class highlighted, then the day's classes
