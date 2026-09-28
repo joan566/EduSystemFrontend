@@ -17,18 +17,20 @@ class TeachingAssignmentModel {
 }
 
 class TeachingPeriodModel {
-  static TeachingPeriodEntity fromJson(Map<String, dynamic> json) => TeachingPeriodEntity(
-    id: json['id'] as int,
-    teachingAssignmentId: json['teachingAssignmentId'] as int,
-    groupId: json['groupId'] as int,
-    groupName: json['groupName'] as String,
-    gradeName: json['gradeName'] as String,
-    academicYear: json['academicYear'] as int,
-    subjectId: json['subjectId'] as int,
-    subjectName: json['subjectName'] as String,
-    academicPeriodId: json['academicPeriodId'] as int,
-    academicPeriodName: json['academicPeriodName'] as String,
-    startDate: Formatters.parseApiDate(json['startDate'] as String),
-    endDate: Formatters.parseApiDate(json['endDate'] as String),
-  );
+  static TeachingPeriodEntity fromJson(Map<String, dynamic> json) =>
+      TeachingPeriodEntity(
+        id: json['id'] as int,
+        teachingAssignmentId: json['teachingAssignmentId'] as int,
+        groupId: json['groupId'] as int,
+        groupName: json['groupName'] as String,
+        gradeName: json['gradeName'] as String,
+        academicYear: json['academicYear'] as int,
+        subjectId: json['subjectId'] as int,
+        subjectName: json['subjectName'] as String,
+        academicPeriodId: json['academicPeriodId'] as int,
+        academicPeriodName: json['academicPeriodName'] as String,
+        startDate: Formatters.parseApiDate(json['startDate'] as String),
+        endDate: Formatters.parseApiDate(json['endDate'] as String),
+        studentCount: (json['studentCount'] as num?)?.toInt() ?? 0,
+      );
 }

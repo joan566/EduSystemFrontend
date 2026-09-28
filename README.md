@@ -112,9 +112,12 @@ lib/
 │   │                         providers de listado/detalle)
 │   ├── storage/            # TokenStorage (flutter_secure_storage)
 │   ├── theme/               # Paleta, tipografía, ThemeData centralizado
-│   ├── utils/                # Responsive (breakpoints), formatters, validators
-│   └── widgets/               # Componentes reutilizables (AppButton,
-│                                AppDataTable, AppUploadZone, AppShell, ...)
+│   ├── layout/               # Breakpoints, ResponsiveBuilder y AppShell
+│   ├── utils/                # Formatters, validators, descargas
+│   └── widgets/
+│       ├── shared/            # Primitivos neutrales (AppButton, AppFormFrame...)
+│       ├── mobile/            # Solo mobile (MobileShell, MobileCardList...)
+│       └── desktop/           # Solo desktop (DesktopShell, DesktopDataTable...)
 │
 ├── features/                # Un directorio por dominio de negocio
 │   ├── auth/                 # Login, registro, recuperación de contraseña
@@ -124,6 +127,7 @@ lib/
 │   ├── courses/                # Cursos/Grupos (10-A, 10-B...)
 │   ├── academic_periods/        # Periodos académicos
 │   ├── teaching/                 # Asignaciones profesor-materia-curso-periodo
+│   ├── schedule/                 # Horario semanal por clase, agenda de hoy y calendario
 │   ├── students/                  # Estudiantes, matrícula, retiro
 │   ├── imports/                    # Importación de estudiantes por Excel
 │   ├── exams/                       # Exámenes, preguntas, hojas PDF, submissions
@@ -144,7 +148,12 @@ Cada feature sigue, cuando aporta valor real, la separación:
 feature/
 ├── data/           # datasources (HTTP), models (JSON <-> entity), repositories
 ├── domain/         # entities (y, en auth, la interfaz de repository)
-└── presentation/   # providers (ChangeNotifier), pages, widgets
+└── presentation/
+    ├── pages/      # Punto de entrada: carga datos y elige la vista
+    ├── mobile/     # Vista mobile
+    ├── desktop/    # Vista desktop
+    ├── shared/     # Formularios, acciones y controllers que usan ambas
+    └── providers/  # Estado (ChangeNotifier)
 ```
 
 **Sobre la capa de UseCase**: el flujo `Widget → Provider → Repository →
@@ -164,20 +173,32 @@ como `ListViewState<T>` / `DetailViewState<T>`
 (`core/state/list_state.dart`, `core/state/detail_state.dart`), que
 modela explícitamente `Initial / Loading / Success / Empty / Error`.
 
-## Responsive
+## Mobile y desktop
 
-Sistema centralizado en `core/utils/responsive.dart`:
+Mobile y desktop **no** son el mismo layout estirado: cada pantalla tiene
+una implementación propia en `mobile/` y otra en `desktop/`. Breakpoints
+en `core/layout/responsive.dart`:
 
-- **Mobile**: `< 600px` — Bottom Navigation, cards, cámara, formularios de
-  un solo paso.
-- **Tablet**: `600–1024px` — `NavigationRail`, layouts híbridos.
-- **Desktop/Web**: `> 1024px` — Sidebar colapsable, tablas, paneles
-  múltiples, drag & drop.
+- **Mobile**: `< 600px` — bottom navigation, cards, cámara, formularios a
+  pantalla completa.
+- **Tablet**: `600–1024px` — familia desktop con `NavigationRail`.
+- **Desktop/Web**: `≥ 1024px` — sidebar colapsable, tablas, diálogos,
+  drag & drop.
 
-`ResponsiveBuilder` construye un árbol de widgets distinto por
-plataforma; todos comparten el mismo `Provider` (dominio, datos, estado).
-Nunca se duplica lógica de negocio entre Desktop y Mobile — solo cambia
-la presentación.
+Reglas:
+
+- `ResponsiveBuilder` se usa **solo** en el punto de entrada de cada
+  página (`pages/`) y en `AppShell`. Debajo de ese punto ningún widget
+  pregunta "¿estoy en mobile?" (no existe `context.isMobile`).
+- Lo que no depende de la plataforma (formularios, acciones con su
+  feedback, controllers de estado, etiquetas) vive en `shared/` y lo usan
+  ambas vistas. La lógica de negocio sigue en providers/repositorios.
+- El estado que debe sobrevivir a un cambio de tamaño (clase elegida,
+  filtros, borradores, archivos seleccionados) vive en la página de
+  entrada o en un controller de `shared/`, nunca dentro de una vista.
+- Los formularios usan `AppFormFrame`; la vista decide cómo presentarlos:
+  `showDesktopDialog` en desktop, `showMobileForm`/`showMobileSheet` en
+  mobile.
 
 ## Seguridad
 

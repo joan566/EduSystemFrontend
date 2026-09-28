@@ -40,7 +40,9 @@ class TeachingRemoteDataSource {
       ApiEndpoints.teachingAssignments,
       data: {'groupId': groupId, 'subjectId': subjectId},
     );
-    return TeachingAssignmentModel.fromJson(response.data as Map<String, dynamic>);
+    return TeachingAssignmentModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
   }
 
   Future<void> setAssignmentActive(int id, bool active) => _client.patch(
@@ -65,7 +67,10 @@ class TeachingRemoteDataSource {
         'academicPeriodId': academicPeriodId,
       },
     );
-    return ApiPage.fromJson(response.data as Map<String, dynamic>, TeachingPeriodModel.fromJson);
+    return ApiPage.fromJson(
+      response.data as Map<String, dynamic>,
+      TeachingPeriodModel.fromJson,
+    );
   }
 
   Future<TeachingPeriodEntity> createPeriod({
@@ -74,10 +79,19 @@ class TeachingRemoteDataSource {
   }) async {
     final response = await _client.post(
       ApiEndpoints.teachingPeriods,
-      data: {'teachingAssignmentId': teachingAssignmentId, 'academicPeriodId': academicPeriodId},
+      data: {
+        'teachingAssignmentId': teachingAssignmentId,
+        'academicPeriodId': academicPeriodId,
+      },
     );
     return TeachingPeriodModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<void> deletePeriod(int id) => _client.delete(ApiEndpoints.teachingPeriodById(id));
+  Future<TeachingPeriodEntity> getPeriod(int id) async {
+    final response = await _client.get(ApiEndpoints.teachingPeriodById(id));
+    return TeachingPeriodModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deletePeriod(int id) =>
+      _client.delete(ApiEndpoints.teachingPeriodById(id));
 }

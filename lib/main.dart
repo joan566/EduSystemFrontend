@@ -41,6 +41,9 @@ import 'features/imports/data/repositories/import_repository.dart';
 import 'features/imports/presentation/providers/imports_provider.dart';
 import 'features/profile/data/user_profile_datasource.dart';
 import 'features/profile/presentation/providers/profile_provider.dart';
+import 'features/schedule/data/datasources/schedule_remote_datasource.dart';
+import 'features/schedule/data/repositories/schedule_repository.dart';
+import 'features/schedule/presentation/providers/schedule_provider.dart';
 import 'features/students/data/datasources/student_remote_datasource.dart';
 import 'features/students/data/repositories/student_repository.dart';
 import 'features/students/presentation/providers/students_provider.dart';
@@ -123,6 +126,13 @@ class EduSistemApp extends StatelessWidget {
             ),
           ),
         ),
+        ChangeNotifierProvider<ScheduleProvider>(
+          create: (context) => ScheduleProvider(
+            ScheduleRepository(
+              ScheduleRemoteDataSource(context.read<ApiClient>()),
+            ),
+          ),
+        ),
 
         // --- Students & imports -----------------------------------------
         ChangeNotifierProvider<StudentsProvider>(
@@ -201,6 +211,7 @@ class EduSistemApp extends StatelessWidget {
             courses: context.read<CoursesProvider>(),
             teaching: context.read<TeachingProvider>(),
             audit: context.read<AuditProvider>(),
+            schedule: context.read<ScheduleProvider>(),
           ),
         ),
       ],

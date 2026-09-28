@@ -15,6 +15,7 @@ class TeachingPeriodEntity {
     required this.academicPeriodName,
     required this.startDate,
     required this.endDate,
+    this.studentCount = 0,
   });
 
   final int id;
@@ -30,6 +31,10 @@ class TeachingPeriodEntity {
   final DateTime startDate;
   final DateTime endDate;
 
-  String get displayName => '$subjectName — $gradeName $groupName ($academicPeriodName)';
+  /// Active students in the group.
+  final int studentCount;
+
+  String get displayName =>
+      '$subjectName — $gradeName $groupName ($academicPeriodName)';
   String get courseLabel => '$gradeName $groupName';
 }

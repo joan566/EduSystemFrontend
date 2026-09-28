@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
 import '../../data/repositories/teaching_repository.dart';
 import '../../domain/entities/teaching_assignment_entity.dart';
@@ -24,6 +25,21 @@ class TeachingProvider extends ChangeNotifier {
   /// activities, attendance, grading) to let the teacher pick which class
   /// they're working with (`teachingPeriodId` is a required query param
   /// across the API).
+  /// The class open on the class detail screen.
+  DetailViewState<TeachingPeriodEntity> _periodDetail = const DetailViewState();
+  DetailViewState<TeachingPeriodEntity> get periodDetail => _periodDetail;
+
+  Future<void> loadPeriodDetail(int id) async {
+    _periodDetail = DetailViewState.loading();
+    notifyListeners();
+    try {
+      _periodDetail = DetailViewState.success(await _repository.getPeriod(id));
+    } on AppException catch (e) {
+      _periodDetail = DetailViewState.error(e);
+    }
+    notifyListeners();
+  }
+
   List<TeachingPeriodEntity> _allPeriods = [];
   List<TeachingPeriodEntity> get allPeriods => _allPeriods;
   bool _allPeriodsLoaded = false;

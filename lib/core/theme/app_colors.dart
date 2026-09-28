@@ -40,6 +40,23 @@ class AppColors {
   static const Color info = Color(0xFF2A6BA6);
   static const Color infoBg = Color(0xFFE6F0F8);
 
+  // Identity accents: tell items apart (a subject's icon, a quick action)
+  // where a status color would wrongly read as success/warning/error.
+  static const Color accentBlue = Color(0xFF2F6FEB);
+  static const Color accentGreen = Color(0xFF1F9D6B);
+  static const Color accentPurple = Color(0xFF7B5CF0);
+  static const Color accentOrange = Color(0xFFE07B24);
+  static const Color accentTeal = Color(0xFF1A9AA8);
+  static const Color accentPink = Color(0xFFD9467A);
+  static const List<Color> accents = [
+    accentBlue,
+    accentGreen,
+    accentPurple,
+    accentOrange,
+    accentTeal,
+    accentPink,
+  ];
+
   // Brand gradient — used sparingly for hero surfaces that should signal
   // trust/security (sidebar, login branding panel), never for body text
   // backgrounds or content cards.

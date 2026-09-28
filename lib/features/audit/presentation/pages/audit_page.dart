@@ -1,31 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/state/list_state.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/app_dropdown.dart';
-import '../../../../core/widgets/app_empty_state.dart';
-import '../../../../core/widgets/app_error_state.dart';
-import '../../../../core/widgets/app_list_tile.dart';
-import '../../../../core/widgets/app_loading.dart';
-import '../../../../core/widgets/app_page_header.dart';
-import '../../../../core/widgets/app_pagination.dart';
+import '../../../../core/layout/responsive.dart';
 import '../../domain/entities/audit_log_entity.dart';
+import '../desktop/audit_desktop_view.dart';
+import '../mobile/audit_mobile_view.dart';
 import '../providers/audit_provider.dart';
-
-const _actionApiValues = <AuditAction, String>{
-  AuditAction.login: 'LOGIN',
-  AuditAction.logout: 'LOGOUT',
-  AuditAction.create: 'CREATE',
-  AuditAction.update: 'UPDATE',
-  AuditAction.delete: 'DELETE',
-  AuditAction.import: 'IMPORT',
-  AuditAction.export: 'EXPORT',
-  AuditAction.examProcessed: 'EXAM_PROCESSED',
-  AuditAction.gradeUpdated: 'GRADE_UPDATED',
-  AuditAction.answerUpdated: 'ANSWER_UPDATED',
-};
+import '../shared/audit_labels.dart';
 
 class AuditPage extends StatefulWidget {
   const AuditPage({super.key});
@@ -40,107 +21,26 @@ class _AuditPageState extends State<AuditPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => context.read<AuditProvider>().load());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => context.read<AuditProvider>().load(),
+    );
   }
 
   void _onActionFilterChanged(AuditAction? action) {
     setState(() => _actionFilter = action);
-    context.read<AuditProvider>().load(action: _actionApiValues[action]);
+    context.read<AuditProvider>().load(action: auditActionApiValues[action]);
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AuditProvider>().state;
-
-    return Scaffold(
-      body: Column(
-        children: [
-          const AppPageHeader(
-            title: 'Auditoría',
-            subtitle: 'Historial de acciones realizadas en tu cuenta.',
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SizedBox(
-              width: 240,
-              child: AppDropdown<AuditAction?>(
-                label: 'Filtrar por acción',
-                value: _actionFilter,
-                items: [null, ...AuditAction.values],
-                itemLabel: (action) =>
-                    action == null ? 'Todas las acciones' : _actionLabel(action),
-                onChanged: _onActionFilterChanged,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(child: _buildBody(state)),
-          if (state.status == ViewStatus.success)
-            AppPagination(
-              page: state.page,
-              totalPages: state.totalPages,
-              totalElements: state.totalElements,
-              onPageChanged: (page) => context.read<AuditProvider>().load(page: page),
-            ),
-        ],
+    return ResponsiveBuilder(
+      mobile: (_) => AuditMobileView(
+        actionFilter: _actionFilter,
+        onActionFilterChanged: _onActionFilterChanged,
       ),
-    );
-  }
-
-  Widget _buildBody(ListViewState<AuditLogEntity> state) {
-    switch (state.status) {
-      case ViewStatus.initial:
-      case ViewStatus.loading:
-        return const AppLoading();
-      case ViewStatus.error:
-        return AppErrorState(
-          exception: state.error!,
-          onRetry: () => context.read<AuditProvider>().load(),
-        );
-      case ViewStatus.empty:
-        return const AppEmptyState(
-          title: 'No hay actividad registrada',
-          icon: Icons.history_outlined,
-        );
-      case ViewStatus.success:
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          itemCount: state.items.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
-          itemBuilder: (context, index) => _AuditTile(log: state.items[index]),
-        );
-    }
-  }
-}
-
-String _actionLabel(AuditAction action) => switch (action) {
-  AuditAction.login => 'Inicio de sesión',
-  AuditAction.logout => 'Cierre de sesión',
-  AuditAction.create => 'Creación',
-  AuditAction.update => 'Actualización',
-  AuditAction.delete => 'Eliminación',
-  AuditAction.import => 'Importación',
-  AuditAction.export => 'Exportación',
-  AuditAction.examProcessed => 'Examen procesado',
-  AuditAction.gradeUpdated => 'Calificación actualizada',
-  AuditAction.answerUpdated => 'Respuesta corregida',
-};
-
-class _AuditTile extends StatelessWidget {
-  const _AuditTile({required this.log});
-
-  final AuditLogEntity log;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppListTile(
-      icon: log.isSuccess ? Icons.check_circle_outline : Icons.error_outline,
-      iconColor: log.isSuccess ? AppColors.success : AppColors.error,
-      title: _actionLabel(log.action),
-      subtitle: '${log.entityType}${log.entityId != null ? ' #${log.entityId}' : ''}',
-      trailing: Text(
-        Formatters.dateTime(log.createdAt),
-        style: Theme.of(context).textTheme.bodySmall,
+      desktop: (_) => AuditDesktopView(
+        actionFilter: _actionFilter,
+        onActionFilterChanged: _onActionFilterChanged,
       ),
     );
   }

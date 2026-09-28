@@ -3,7 +3,7 @@ import 'package:edusistem_front/core/storage/token_storage.dart';
 import 'package:edusistem_front/features/auth/domain/entities/user_entity.dart';
 import 'package:edusistem_front/features/auth/domain/repositories/auth_repository.dart';
 import 'package:edusistem_front/features/auth/presentation/providers/auth_provider.dart';
-import 'package:edusistem_front/features/auth/presentation/widgets/login_form.dart';
+import 'package:edusistem_front/features/auth/presentation/shared/login_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';

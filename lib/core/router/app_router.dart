@@ -27,9 +27,11 @@ import '../../features/scanning/presentation/pages/scanning_page.dart';
 import '../../features/students/presentation/pages/student_detail_page.dart';
 import '../../features/students/presentation/pages/students_page.dart';
 import '../../features/subjects/presentation/pages/subjects_page.dart';
+import '../../features/schedule/presentation/pages/schedule_page.dart';
 import '../../features/teaching/presentation/pages/teaching_page.dart';
-import '../widgets/app_shell.dart';
-import '../widgets/more_page.dart';
+import '../../features/teaching/presentation/pages/teaching_period_detail_page.dart';
+import '../layout/app_shell.dart';
+import '../widgets/mobile/mobile_more_page.dart';
 import 'route_paths.dart';
 
 /// Centralized routing (§17). Auth state drives redirects here rather
@@ -67,6 +69,18 @@ class AppRouter {
           GoRoute(
             path: RoutePaths.teaching,
             builder: (context, state) => const TeachingPage(),
+            routes: [
+              GoRoute(
+                path: 'periods/:id',
+                builder: (context, state) => TeachingPeriodDetailPage(
+                  teachingPeriodId: int.parse(state.pathParameters['id']!),
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RoutePaths.schedule,
+            builder: (context, state) => const SchedulePage(),
           ),
           GoRoute(
             path: RoutePaths.students,
@@ -195,7 +209,7 @@ class AppRouter {
           ),
           GoRoute(
             path: RoutePaths.more,
-            builder: (context, state) => const MorePage(),
+            builder: (context, state) => const MobileMorePage(),
           ),
         ],
       ),

@@ -43,6 +43,17 @@ class ApiEndpoints {
   static String periodGrades(int teachingPeriodId) =>
       '/teaching-periods/$teachingPeriodId/period-grades';
 
+  static String teachingPeriodSchedules(int teachingPeriodId) =>
+      '/teaching-periods/$teachingPeriodId/schedules';
+  static String teachingPeriodScheduleById(
+    int teachingPeriodId,
+    int scheduleId,
+  ) => '/teaching-periods/$teachingPeriodId/schedules/$scheduleId';
+
+  // Schedule (teacher's agenda across all classes)
+  static const scheduleToday = '/schedule/today';
+  static const schedule = '/schedule';
+
   // Students
   static const students = '/students';
   static String studentById(int id) => '/students/$id';

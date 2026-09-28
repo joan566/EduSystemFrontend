@@ -1,4 +1,4 @@
-import 'package:edusistem_front/core/widgets/app_button.dart';
+import 'package:edusistem_front/core/widgets/shared/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -13,7 +13,12 @@ class TeachingRepository {
     int? groupId,
     int? subjectId,
     bool? active,
-  }) => _remote.getAssignments(page: page, groupId: groupId, subjectId: subjectId, active: active);
+  }) => _remote.getAssignments(
+    page: page,
+    groupId: groupId,
+    subjectId: subjectId,
+    active: active,
+  );
 
   Future<TeachingAssignmentEntity> createAssignment({
     required int groupId,
@@ -38,7 +43,12 @@ class TeachingRepository {
   Future<TeachingPeriodEntity> createPeriod({
     required int teachingAssignmentId,
     required int academicPeriodId,
-  }) => _remote.createPeriod(teachingAssignmentId: teachingAssignmentId, academicPeriodId: academicPeriodId);
+  }) => _remote.createPeriod(
+    teachingAssignmentId: teachingAssignmentId,
+    academicPeriodId: academicPeriodId,
+  );
+
+  Future<TeachingPeriodEntity> getPeriod(int id) => _remote.getPeriod(id);
 
   Future<void> deletePeriod(int id) => _remote.deletePeriod(id);
 }

@@ -11,6 +11,9 @@ class RoutePaths {
   static const dashboard = '/app/dashboard';
 
   static const teaching = '/app/teaching';
+  static String teachingPeriodDetail(int id) => '/app/teaching/periods/$id';
+
+  static const schedule = '/app/schedule';
 
   static const students = '/app/students';
   static String studentDetail(int id) => '/app/students/$id';

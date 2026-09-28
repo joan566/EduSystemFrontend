@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../../../core/widgets/app_empty_state.dart';
-import '../../../../core/widgets/app_page_header.dart';
+import '../../../../core/layout/responsive.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/widgets/teaching_period_selector.dart';
-import '../widgets/grading_configuration_tab.dart';
-import '../widgets/period_grades_tab.dart';
+import '../desktop/grades_desktop_view.dart';
+import '../mobile/grades_mobile_view.dart';
+import '../providers/grading_provider.dart';
+import '../shared/grading_configuration_controller.dart';
 
 class GradesPage extends StatefulWidget {
   const GradesPage({super.key});
@@ -15,50 +16,41 @@ class GradesPage extends StatefulWidget {
 }
 
 class _GradesPageState extends State<GradesPage> {
+  // Selected class and its editable configuration live here so both
+  // survive a mobile <-> desktop switch.
   TeachingPeriodEntity? _period;
+  GradingConfigurationController? _config;
+
+  void _onPeriodChanged(TeachingPeriodEntity? period) {
+    _config?.dispose();
+    final config = period == null
+        ? null
+        : GradingConfigurationController(period.id);
+    setState(() {
+      _period = period;
+      _config = config;
+    });
+    config?.load(context.read<GradingProvider>());
+  }
+
+  @override
+  void dispose() {
+    _config?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        body: Column(
-          children: [
-            const AppPageHeader(
-              title: 'Calificaciones',
-              subtitle: 'Configura la escala, las ponderaciones y consulta las notas del periodo.',
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TeachingPeriodSelector(
-                value: _period,
-                onChanged: (period) => setState(() => _period = period),
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (_period == null)
-              const Expanded(
-                child: AppEmptyState(
-                  title: 'Selecciona una clase',
-                  message:
-                      'Elige una clase arriba para configurar su escala de '
-                      'calificación o consultar sus notas.',
-                  icon: Icons.grade_outlined,
-                ),
-              )
-            else ...[
-              const TabBar(tabs: [Tab(text: 'Configuración'), Tab(text: 'Notas del periodo')]),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    GradingConfigurationTab(teachingPeriodId: _period!.id),
-                    PeriodGradesTab(teachingPeriodId: _period!.id),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
+    return ResponsiveBuilder(
+      mobile: (_) => GradesMobileView(
+        period: _period,
+        config: _config,
+        onPeriodChanged: _onPeriodChanged,
+      ),
+      desktop: (_) => GradesDesktopView(
+        period: _period,
+        config: _config,
+        onPeriodChanged: _onPeriodChanged,
       ),
     );
   }

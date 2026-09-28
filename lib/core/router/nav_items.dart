@@ -49,6 +49,15 @@ const primaryNavItems = <NavItem>[
   ),
 ];
 
+/// The teacher's weekly agenda. Desktop lists it right after the primary
+/// items; mobile/tablet reach it from "Más" and from the dashboard.
+const scheduleNavItem = NavItem(
+  path: RoutePaths.schedule,
+  label: 'Horario',
+  icon: Icons.calendar_today_outlined,
+  activeIcon: Icons.calendar_today,
+);
+
 /// Secondary items: desktop shows them in a second sidebar section; mobile
 /// and tablet group them under "Más" (§19).
 const secondaryNavItems = <NavItem>[
@@ -125,8 +134,16 @@ const profileNavItem = NavItem(
 
 /// All destinations shown on the mobile/tablet "More" page, in one list.
 List<NavItem> get moreNavItems => [
+  scheduleNavItem,
   ...secondaryNavItems,
   ...catalogNavItems,
   ...systemNavItems,
   profileNavItem,
 ];
+
+/// Whether [item] is the destination for [currentPath]. The dashboard only
+/// matches exactly; every other item also matches its nested routes.
+bool isNavItemActive(String currentPath, NavItem item) {
+  if (item.path == RoutePaths.dashboard) return currentPath == item.path;
+  return currentPath.startsWith(item.path);
+}

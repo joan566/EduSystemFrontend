@@ -13,6 +13,54 @@ class Formatters {
 
   static String dateTime(DateTime dateTime) => _dateTimeFormat.format(dateTime);
 
+  static const _weekdays = [
+    'Lunes',
+    'Martes',
+    'Miércoles',
+    'Jueves',
+    'Viernes',
+    'Sábado',
+    'Domingo',
+  ];
+
+  static const _months = [
+    'enero',
+    'febrero',
+    'marzo',
+    'abril',
+    'mayo',
+    'junio',
+    'julio',
+    'agosto',
+    'septiembre',
+    'octubre',
+    'noviembre',
+    'diciembre',
+  ];
+
+  /// Spanish weekday name for an ISO weekday (1 = Lunes … 7 = Domingo).
+  static String weekdayName(int isoWeekday) => _weekdays[isoWeekday - 1];
+
+  /// "Lunes, 29 de septiembre".
+  static String longDayMonth(DateTime value) =>
+      '${weekdayName(value.weekday)}, ${value.day} de ${_months[value.month - 1]}';
+
+  /// "28 sep".
+  static String shortDayMonth(DateTime value) =>
+      '${value.day} ${_months[value.month - 1].substring(0, 3)}';
+
+  /// Short Spanish relative time for recent events: "Hace un momento",
+  /// "Hace 12 min", "Hace 3 h", "Ayer", "Hace 4 días", then the date.
+  static String relativeTime(DateTime value, {DateTime? now}) {
+    final diff = (now ?? DateTime.now()).difference(value);
+    if (diff.inMinutes < 1) return 'Hace un momento';
+    if (diff.inHours < 1) return 'Hace ${diff.inMinutes} min';
+    if (diff.inDays < 1) return 'Hace ${diff.inHours} h';
+    if (diff.inDays == 1) return 'Ayer';
+    if (diff.inDays < 7) return 'Hace ${diff.inDays} días';
+    return date(value);
+  }
+
   /// Parses a backend `LocalDate` string ("2026-09-21").
   static DateTime parseApiDate(String value) => DateTime.parse(value);
 
