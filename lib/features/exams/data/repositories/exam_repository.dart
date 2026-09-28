@@ -1,6 +1,9 @@
+import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/state/list_state.dart';
 import '../../domain/entities/exam_entity.dart';
+import '../../domain/entities/submission_batch_entity.dart';
 import '../../domain/entities/submission_entity.dart';
 import '../datasources/exam_remote_datasource.dart';
 
@@ -70,6 +73,27 @@ class ExamRepository {
     studentId: studentId,
     replace: replace,
   );
+
+  Future<SubmissionBatchSummaryEntity> uploadSubmissionBatch(
+    int examId, {
+    required List<int> pdfBytes,
+    required String fileName,
+    bool replace = false,
+    ProgressCallback? onSendProgress,
+  }) => _remote.uploadSubmissionBatch(
+    examId,
+    pdfBytes: pdfBytes,
+    fileName: fileName,
+    replace: replace,
+    onSendProgress: onSendProgress,
+  );
+
+  Future<List<SubmissionBatchSummaryEntity>> getSubmissionBatches(
+    int examId,
+  ) => _remote.getSubmissionBatches(examId);
+
+  Future<SubmissionBatchEntity> getSubmissionBatch(int examId, int batchId) =>
+      _remote.getSubmissionBatch(examId, batchId);
 
   Future<ApiPage<SubmissionSummaryEntity>> getSubmissions(
     int examId, {

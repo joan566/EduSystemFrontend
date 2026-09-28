@@ -162,7 +162,7 @@ class _CaptureView extends StatelessWidget {
             AppUploadZone(
               allowedExtensions: const ['jpg', 'jpeg', 'png'],
               title: 'Arrastra una hoja de respuesta aquí',
-              subtitle: 'Formatos aceptados: JPG, PNG. Máximo 15 MB.',
+              subtitle: 'Formatos aceptados: JPG, PNG. Máximo 60 MB.',
               onFilePicked: onFilePicked,
             ),
         ] else ...[

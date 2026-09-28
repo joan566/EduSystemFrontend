@@ -38,6 +38,13 @@ class _ResultsTabState extends State<ResultsTab> {
     );
   }
 
+  /// Batch grading adds submissions in the background, so the listing is
+  /// re-read on return.
+  Future<void> _openBatches() async {
+    await context.push(RoutePaths.submissionBatches(widget.exam.id));
+    if (mounted) context.read<SubmissionsProvider>().load(widget.exam.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<SubmissionsProvider>().state;
@@ -49,6 +56,13 @@ class _ResultsTabState extends State<ResultsTab> {
           child: Row(
             children: [
               const Expanded(child: SizedBox.shrink()),
+              AppButton(
+                label: 'Calificar PDF',
+                icon: Icons.picture_as_pdf_outlined,
+                variant: AppButtonVariant.outlined,
+                onPressed: widget.exam.ready ? _openBatches : null,
+              ),
+              const SizedBox(width: 12),
               AppButton(
                 label: 'Escanear hoja',
                 icon: Icons.document_scanner_outlined,
@@ -91,7 +105,7 @@ class _ResultsTabState extends State<ResultsTab> {
         return AppEmptyState(
           title: 'Sin resultados todavía',
           message:
-              'Escanea la primera hoja de respuesta para ver resultados aquí.',
+              'Escanea una hoja o sube un PDF con todas las hojas para ver resultados aquí.',
           icon: Icons.fact_check_outlined,
           actionLabel: widget.exam.ready ? 'Escanear hoja' : null,
           onAction: widget.exam.ready

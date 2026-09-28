@@ -26,6 +26,9 @@ class RoutePaths {
   static String examQuestions(int id) => '/app/exams/$id/questions';
   static String examAnswerSheets(int id) => '/app/exams/$id/answer-sheets';
   static String examScanning(int id) => '/app/exams/$id/scanning';
+  static String submissionBatches(int examId) => '/app/exams/$examId/batches';
+  static String submissionBatch(int examId, int batchId) =>
+      '/app/exams/$examId/batches/$batchId';
   static String examResults(int id) => '/app/exams/$id/results';
   static String submissionDetail(int examId, int submissionId) =>
       '/app/exams/$examId/submissions/$submissionId';

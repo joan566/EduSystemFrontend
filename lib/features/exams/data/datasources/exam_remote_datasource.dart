@@ -1,11 +1,14 @@
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/state/list_state.dart';
 import '../../domain/entities/exam_entity.dart';
+import '../../domain/entities/submission_batch_entity.dart';
 import '../../domain/entities/submission_entity.dart';
 import '../models/exam_models.dart';
+import '../models/submission_batch_models.dart';
 import '../models/submission_models.dart';
 
 class ExamRemoteDataSource {
@@ -111,6 +114,55 @@ class ExamRemoteDataSource {
       queryParameters: {'studentId': studentId, 'replace': replace},
     );
     return SubmissionModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Uploads a PDF with every scanned sheet. The backend answers 202 right
+  /// away with the queued batch; grading happens in the background.
+  Future<SubmissionBatchSummaryEntity> uploadSubmissionBatch(
+    int examId, {
+    required List<int> pdfBytes,
+    required String fileName,
+    bool replace = false,
+    ProgressCallback? onSendProgress,
+  }) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(
+        pdfBytes,
+        filename: fileName,
+        contentType: MediaType('application', 'pdf'),
+      ),
+    });
+    final response = await _client.postMultipart(
+      ApiEndpoints.submissionBatches(examId),
+      formData: formData,
+      queryParameters: {'replace': replace},
+      onSendProgress: onSendProgress,
+    );
+    return SubmissionBatchSummaryModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
+  Future<List<SubmissionBatchSummaryEntity>> getSubmissionBatches(
+    int examId,
+  ) async {
+    final response = await _client.get(ApiEndpoints.submissionBatches(examId));
+    return (response.data as List<dynamic>)
+        .map(
+          (e) =>
+              SubmissionBatchSummaryModel.fromJson(e as Map<String, dynamic>),
+        )
+        .toList();
+  }
+
+  Future<SubmissionBatchEntity> getSubmissionBatch(
+    int examId,
+    int batchId,
+  ) async {
+    final response = await _client.get(
+      ApiEndpoints.submissionBatchById(examId, batchId),
+    );
+    return SubmissionBatchModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<ApiPage<SubmissionSummaryEntity>> getSubmissions(

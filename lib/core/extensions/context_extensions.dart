@@ -40,7 +40,7 @@ extension AppContext on BuildContext {
       case AppErrorCode.resourceNotFound:
         return 'No se encontró el recurso solicitado.';
       case AppErrorCode.fileTooLarge:
-        return 'El archivo supera el tamaño máximo permitido (15 MB).';
+        return 'El archivo supera el tamaño máximo permitido (60 MB).';
       case AppErrorCode.unsupportedMediaType:
         return 'El formato de archivo no es compatible.';
       case AppErrorCode.tooManyLoginAttempts:

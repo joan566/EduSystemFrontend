@@ -30,6 +30,7 @@ import 'features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'features/exams/data/datasources/exam_remote_datasource.dart';
 import 'features/exams/data/repositories/exam_repository.dart';
 import 'features/exams/presentation/providers/exams_provider.dart';
+import 'features/exams/presentation/providers/submission_batches_provider.dart';
 import 'features/exams/presentation/providers/submissions_provider.dart';
 import 'features/exports/data/export_datasource.dart';
 import 'features/grades/data/datasources/grading_remote_datasource.dart';
@@ -148,6 +149,11 @@ class EduSistemApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<SubmissionsProvider>(
           create: (context) => SubmissionsProvider(
+            ExamRepository(ExamRemoteDataSource(context.read<ApiClient>())),
+          ),
+        ),
+        ChangeNotifierProvider<SubmissionBatchesProvider>(
+          create: (context) => SubmissionBatchesProvider(
             ExamRepository(ExamRemoteDataSource(context.read<ApiClient>())),
           ),
         ),

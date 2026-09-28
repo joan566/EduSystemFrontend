@@ -77,6 +77,10 @@ class ApiEndpoints {
   ) => '/exams/$examId/submissions/$submissionId/answers/$questionNumber';
   static String submissionFinalGrade(int examId, int submissionId) =>
       '/exams/$examId/submissions/$submissionId/final-grade';
+  static String submissionBatches(int examId) =>
+      '/exams/$examId/submissions/batches';
+  static String submissionBatchById(int examId, int batchId) =>
+      '/exams/$examId/submissions/batches/$batchId';
 
   // Activities
   static const activities = '/activities';

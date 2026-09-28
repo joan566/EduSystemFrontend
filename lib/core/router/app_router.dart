@@ -15,6 +15,8 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/courses/presentation/pages/courses_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/data_management/presentation/pages/data_management_page.dart';
+import '../../features/exams/presentation/pages/batch_detail_page.dart';
+import '../../features/exams/presentation/pages/batch_upload_page.dart';
 import '../../features/exams/presentation/pages/exam_builder_page.dart';
 import '../../features/exams/presentation/pages/exam_detail_page.dart';
 import '../../features/exams/presentation/pages/exams_page.dart';
@@ -122,6 +124,21 @@ class AppRouter {
                     builder: (context, state) => ScanningPage(
                       examId: int.parse(state.pathParameters['id']!),
                     ),
+                  ),
+                  GoRoute(
+                    path: 'batches',
+                    builder: (context, state) => BatchUploadPage(
+                      examId: int.parse(state.pathParameters['id']!),
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: ':batchId',
+                        builder: (context, state) => BatchDetailPage(
+                          examId: int.parse(state.pathParameters['id']!),
+                          batchId: int.parse(state.pathParameters['batchId']!),
+                        ),
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: 'submissions/:submissionId',

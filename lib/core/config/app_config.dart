@@ -10,7 +10,7 @@ class AppConfig {
   /// without the `/api/v1` prefix (that is added by [apiBaseUrl]).
   static const String _host = String.fromEnvironment(
     'API_HOST',
-    defaultValue: 'http://192.168.0.106:8080',
+    defaultValue: 'http://192.168.0.102:8080',
   );
 
   /// Full base URL for API calls, e.g. http://localhost:8080/api/v1
@@ -30,7 +30,13 @@ class AppConfig {
   /// Longer timeout for submission uploads (image processing).
   static const Duration uploadTimeout = Duration(seconds: 60);
 
-  /// Maximum upload size accepted by the backend (15 MB), used for
+  /// Maximum upload size accepted by the backend (60 MB), used for
   /// client-side pre-validation before sending a request.
-  static const int maxUploadSizeBytes = 15 * 1024 * 1024;
+  static const int maxUploadSizeBytes = 60 * 1024 * 1024;
+
+  /// Maximum pages the backend accepts in one scanned-sheets PDF batch.
+  static const int maxBatchPdfPages = 200;
+
+  /// How often a running submission batch is polled for progress.
+  static const Duration batchPollInterval = Duration(milliseconds: 1500);
 }
