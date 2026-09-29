@@ -19,7 +19,12 @@ class StudentsProvider extends ChangeNotifier {
   DetailViewState<StudentDetailEntity> _detailState = const DetailViewState();
   DetailViewState<StudentDetailEntity> get detailState => _detailState;
 
-  Future<void> load({int page = 0, int? groupId, String? search, bool resetFilters = false}) async {
+  Future<void> load({
+    int page = 0,
+    int? groupId,
+    String? search,
+    bool resetFilters = false,
+  }) async {
     if (resetFilters) {
       _groupFilter = null;
     } else {
@@ -29,7 +34,11 @@ class StudentsProvider extends ChangeNotifier {
     _state = ListViewState.loading();
     notifyListeners();
     try {
-      final result = await _repository.getPage(page: page, groupId: _groupFilter, search: _search);
+      final result = await _repository.getPage(
+        page: page,
+        groupId: _groupFilter,
+        search: _search,
+      );
       _state = ListViewState.fromPage(
         content: result.content,
         page: result.page,
@@ -40,6 +49,17 @@ class StudentsProvider extends ChangeNotifier {
       _state = ListViewState.error(e);
     }
     notifyListeners();
+  }
+
+  int? get groupFilter => _groupFilter;
+  String? get searchFilter => _search;
+
+  /// Sets the listing's course and search exactly (null clears each) and
+  /// loads the first page; the screen's own filters are the source of truth.
+  Future<void> applyFilters({int? groupId, String? search}) {
+    _groupFilter = groupId;
+    _search = search == null || search.isEmpty ? null : search;
+    return load();
   }
 
   final Map<int, ListViewState<StudentEntity>> _groupRosters = {};
@@ -55,7 +75,11 @@ class StudentsProvider extends ChangeNotifier {
     try {
       // A whole class at once (the API's max page), so rosters and
       // per-student lists aren't cut at the default 20.
-      final result = await _repository.getPage(page: 0, size: 100, groupId: groupId);
+      final result = await _repository.getPage(
+        page: 0,
+        size: 100,
+        groupId: groupId,
+      );
       _groupRosters[groupId] = ListViewState.fromPage(
         content: result.content,
         page: result.page,
@@ -68,7 +92,8 @@ class StudentsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> search(String query) => load(page: 0, search: query.isEmpty ? null : query);
+  Future<void> search(String query) =>
+      load(page: 0, search: query.isEmpty ? null : query);
 
   Future<void> loadDetail(int id) async {
     _detailState = DetailViewState.loading();
@@ -85,7 +110,12 @@ class StudentsProvider extends ChangeNotifier {
   Future<AppException?> withdraw(int studentId, int groupId) async {
     try {
       await _repository.withdraw(studentId, groupId);
-      await loadDetail(studentId);
+      // Refresh whichever views show this student: its detail and/or the
+      // listing (whose status column changes).
+      await Future.wait([
+        if (_detailState.data?.student.id == studentId) loadDetail(studentId),
+        if (_state.items.any((s) => s.id == studentId)) load(page: _state.page),
+      ]);
       return null;
     } on AppException catch (e) {
       return e;

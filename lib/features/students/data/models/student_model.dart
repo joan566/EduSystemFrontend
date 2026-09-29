@@ -5,10 +5,14 @@ class StudentModel {
   static StudentEntity fromJson(Map<String, dynamic> json) => StudentEntity(
     id: json['id'] as int,
     studentCode: json['studentCode'] as String,
-    identificationNumber: json['identificationNumber'] as String,
+    identificationNumber: json['identificationNumber'] as String? ?? '',
     firstName: json['firstName'] as String,
     lastName: json['lastName'] as String,
-    email: json['email'] as String,
+    // Blank emails are stored as null by the backend.
+    email: json['email'] as String? ?? '',
+    currentEnrollment: json['currentEnrollment'] == null
+        ? null
+        : _enrollmentFromJson(json['currentEnrollment'] as Map<String, dynamic>),
   );
 
   static StudentDetailEntity detailFromJson(Map<String, dynamic> json) => StudentDetailEntity(

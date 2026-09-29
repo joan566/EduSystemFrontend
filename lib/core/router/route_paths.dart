@@ -16,7 +16,10 @@ class RoutePaths {
   static const schedule = '/app/schedule';
 
   static const students = '/app/students';
-  static String studentDetail(int id) => '/app/students/$id';
+  /// [tab]: 0 Información, 1 Historial académico, 2 Notas (desktop shows
+  /// the information beside the tabs, so 0 opens its first tab there).
+  static String studentDetail(int id, {int? tab}) =>
+      tab == null ? '/app/students/$id' : '/app/students/$id?tab=$tab';
 
   static const subjects = '/app/subjects';
   static const courses = '/app/courses';

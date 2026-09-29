@@ -79,6 +79,12 @@ class GradingProvider extends ChangeNotifier {
     }
   }
 
+  /// One class's period grades without touching [periodGradesState], for
+  /// screens that read several classes at once (e.g. a student's grades).
+  /// Throws [AppException].
+  Future<PeriodGradesEntity> fetchPeriodGrades(int teachingPeriodId) =>
+      _repository.getPeriodGrades(teachingPeriodId);
+
   Future<void> loadPeriodGrades(int teachingPeriodId) async {
     _periodGradesState = DetailViewState.loading();
     notifyListeners();
