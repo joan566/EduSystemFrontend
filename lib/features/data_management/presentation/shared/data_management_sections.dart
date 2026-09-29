@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_card.dart';
+import '../../../../core/widgets/shared/app_download.dart';
 import '../../../../core/widgets/shared/app_list_tile.dart';
 import '../../../../core/widgets/shared/picked_file.dart';
 import '../../../imports/domain/entities/import_batch_entity.dart';
@@ -328,8 +329,12 @@ class _UploadBlock extends StatelessWidget {
           ImportResultSummary(
             result: result,
             onDownloadErrors: result.batch.hasErrorReport
-                ? () => context.read<ImportsProvider>().downloadErrorReport(
-                    result.batch.id,
+                ? () => fetchAndSaveFile(
+                    context,
+                    fetch: () => context
+                        .read<ImportsProvider>()
+                        .downloadErrorReport(result.batch.id),
+                    errorMessage: 'No se pudo descargar el reporte.',
                   )
                 : null,
             onDismiss: onDismissResult,

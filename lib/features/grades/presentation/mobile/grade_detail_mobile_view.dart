@@ -108,6 +108,7 @@ class GradeDetailMobileView extends StatelessWidget {
           EvaluationType.activity => RoutePaths.activityDetail(e.activityId!),
           EvaluationType.attendance => RoutePaths.attendanceForClass(
             detail.teachingPeriodId,
+            date: e.evaluationDate,
           ),
         });
     }

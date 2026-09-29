@@ -116,6 +116,7 @@ class ApiEndpoints {
 
   // Attendance
   static const attendanceSessions = '/attendance-sessions';
+  static const attendanceDay = '/attendance-sessions/day';
   static String attendanceSessionById(int id) => '/attendance-sessions/$id';
   static String attendanceRecords(int id) => '/attendance-sessions/$id/records';
 

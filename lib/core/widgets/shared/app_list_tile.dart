@@ -39,7 +39,7 @@ class _AppListTileState extends State<AppListTile> {
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.iconColor ?? AppColors.primary;
+    final color = widget.iconColor ?? AppColors.accentBlue;
     final colors = Theme.of(context).colorScheme;
 
     final card = Card(

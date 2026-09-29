@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
-import '../../../../core/utils/downloads.dart';
 import '../../data/repositories/exam_repository.dart';
 import '../../domain/entities/exam_entity.dart';
 
@@ -137,13 +137,9 @@ class ExamsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> downloadAnswerSheet(int examId, int studentId) async {
-    final download = await _repository.getAnswerSheet(examId, studentId);
-    await Downloads.save(download);
-  }
+  Future<BinaryDownload> downloadAnswerSheet(int examId, int studentId) =>
+      _repository.getAnswerSheet(examId, studentId);
 
-  Future<void> downloadAnswerSheets(int examId) async {
-    final download = await _repository.getAnswerSheets(examId);
-    await Downloads.save(download);
-  }
+  Future<BinaryDownload> downloadAnswerSheets(int examId) =>
+      _repository.getAnswerSheets(examId);
 }

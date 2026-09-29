@@ -93,9 +93,9 @@ List<(String, String, Color)> batchResultItems(BatchResults results) {
       '${results.failed + results.rejected}',
       AppColors.error,
     ),
-    ('Nota promedio', grade(results.averageFinalGrade), AppColors.primary),
-    ('Nota más alta', grade(results.highestFinalGrade), AppColors.primary),
-    ('Nota más baja', grade(results.lowestFinalGrade), AppColors.primary),
+    ('Nota promedio', grade(results.averageFinalGrade), AppColors.accentBlue),
+    ('Nota más alta', grade(results.highestFinalGrade), AppColors.accentBlue),
+    ('Nota más baja', grade(results.lowestFinalGrade), AppColors.accentBlue),
   ];
 }
 

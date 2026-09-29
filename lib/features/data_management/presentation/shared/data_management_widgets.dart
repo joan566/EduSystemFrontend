@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/shared/app_button.dart';
+import '../../../../core/widgets/shared/app_download.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_form_frame.dart';
@@ -95,14 +95,14 @@ class RecommendedChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
+        color: AppColors.accentBlue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         'Recomendado',
         style: Theme.of(
           context,
-        ).textTheme.labelSmall?.copyWith(color: AppColors.primary),
+        ).textTheme.labelSmall?.copyWith(color: AppColors.accentBlue),
       ),
     );
   }
@@ -315,13 +315,13 @@ class _ImportBatchDetailState extends State<ImportBatchDetail> {
 
   Future<void> _download() async {
     setState(() => _downloading = true);
+    final provider = context.read<ImportsProvider>();
     try {
-      await context.read<ImportsProvider>().downloadErrorReport(
-        widget.batch.id,
+      await fetchAndSaveFile(
+        context,
+        fetch: () => provider.downloadErrorReport(widget.batch.id),
+        errorMessage: 'No se pudo descargar el reporte.',
       );
-      if (mounted) context.showSuccess('Reporte descargado.');
-    } catch (_) {
-      if (mounted) context.showError('No se pudo descargar el reporte.');
     } finally {
       if (mounted) setState(() => _downloading = false);
     }

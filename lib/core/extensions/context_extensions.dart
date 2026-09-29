@@ -12,7 +12,8 @@ extension AppContext on BuildContext {
   ColorScheme get colors => Theme.of(this).colorScheme;
   TextTheme get textStyles => Theme.of(this).textTheme;
 
-  void showSuccess(String message) => _showNotif(this, _NotifKind.success, message);
+  void showSuccess(String message, {Duration? duration}) =>
+      _showNotif(this, _NotifKind.success, message, duration: duration);
   void showError(String message) => _showNotif(this, _NotifKind.error, message);
   void showWarning(String message) => _showNotif(this, _NotifKind.warning, message);
   void showInfo(String message) => _showNotif(this, _NotifKind.info, message);
@@ -57,7 +58,12 @@ extension AppContext on BuildContext {
   }
 }
 
-void _showNotif(BuildContext context, _NotifKind kind, String message) {
+void _showNotif(
+  BuildContext context,
+  _NotifKind kind,
+  String message, {
+  Duration? duration,
+}) {
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
 
@@ -71,6 +77,7 @@ void _showNotif(BuildContext context, _NotifKind kind, String message) {
   messenger.hideCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(
+      duration: duration ?? const Duration(milliseconds: 4000),
       backgroundColor: bg,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

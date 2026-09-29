@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/widgets/shared/app_confirm_dialog.dart';
+import '../../../../core/widgets/shared/app_download.dart';
 import '../providers/exams_provider.dart';
 import '../providers/submissions_provider.dart';
 
@@ -47,17 +48,13 @@ class ExamActions {
   static Future<void> downloadAnswerSheets(
     BuildContext context,
     int examId,
-  ) async {
-    try {
-      await context.read<ExamsProvider>().downloadAnswerSheets(examId);
-      if (context.mounted) {
-        context.showSuccess('Hojas de respuesta descargadas.');
-      }
-    } catch (_) {
-      if (context.mounted) {
-        context.showError('No se pudieron generar las hojas de respuesta.');
-      }
-    }
+  ) {
+    final provider = context.read<ExamsProvider>();
+    return fetchAndSaveFile(
+      context,
+      fetch: () => provider.downloadAnswerSheets(examId),
+      errorMessage: 'No se pudieron generar las hojas de respuesta.',
+    );
   }
 
   /// A single student's sheet, e.g. for a reprint (§40).
@@ -65,18 +62,13 @@ class ExamActions {
     BuildContext context,
     int examId,
     int studentId,
-  ) async {
-    try {
-      await context.read<ExamsProvider>().downloadAnswerSheet(
-        examId,
-        studentId,
-      );
-      if (context.mounted) context.showSuccess('Hoja de respuesta descargada.');
-    } catch (_) {
-      if (context.mounted) {
-        context.showError('No se pudo generar la hoja de respuesta.');
-      }
-    }
+  ) {
+    final provider = context.read<ExamsProvider>();
+    return fetchAndSaveFile(
+      context,
+      fetch: () => provider.downloadAnswerSheet(examId, studentId),
+      errorMessage: 'No se pudo generar la hoja de respuesta.',
+    );
   }
 
   /// Batch grading adds submissions in the background, so the results

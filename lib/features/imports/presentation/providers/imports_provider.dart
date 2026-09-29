@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/state/list_state.dart';
-import '../../../../core/utils/downloads.dart';
 import '../../data/repositories/import_repository.dart';
 import '../../domain/entities/import_batch_entity.dart';
 
@@ -66,15 +66,10 @@ class ImportsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> downloadTemplate() async {
-    final download = await _repository.downloadTemplate();
-    await Downloads.save(download);
-  }
+  Future<BinaryDownload> downloadTemplate() => _repository.downloadTemplate();
 
-  Future<void> downloadErrorReport(int importId) async {
-    final download = await _repository.downloadErrorReport(importId);
-    await Downloads.save(download);
-  }
+  Future<BinaryDownload> downloadErrorReport(int importId) =>
+      _repository.downloadErrorReport(importId);
 
   Future<String?> getFailureReason(int batchId) =>
       _repository.getFailureReason(batchId);
@@ -139,10 +134,8 @@ class ImportsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> downloadSchoolSetupTemplate() async {
-    final download = await _repository.downloadSchoolSetupTemplate();
-    await Downloads.save(download);
-  }
+  Future<BinaryDownload> downloadSchoolSetupTemplate() =>
+      _repository.downloadSchoolSetupTemplate();
 
   Future<void> uploadSchoolSetup({
     required String fileName,

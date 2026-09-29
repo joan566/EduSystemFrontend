@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/state/detail_state.dart';
-import '../../../../core/utils/downloads.dart';
 import '../../data/repositories/gradebook_repository.dart';
 import '../../domain/entities/gradebook_entities.dart';
 
@@ -144,14 +144,11 @@ class GradebookProvider extends ChangeNotifier {
     await _refresh(detail);
   });
 
-  Future<AppException?> downloadAttachment(GradeDetailEntity detail) =>
-      _guard(() async {
-        final file = await _repository.downloadAttachment(
-          detail.evaluation.evaluationId,
-          detail.student.id,
-        );
-        await Downloads.save(file);
-      });
+  Future<BinaryDownload> downloadAttachment(GradeDetailEntity detail) =>
+      _repository.downloadAttachment(
+        detail.evaluation.evaluationId,
+        detail.student.id,
+      );
 
   Future<AppException?> deleteAttachment(GradeDetailEntity detail) =>
       _guard(() async {

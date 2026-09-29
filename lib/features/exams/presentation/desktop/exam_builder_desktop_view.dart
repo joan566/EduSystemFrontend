@@ -72,7 +72,7 @@ class _StepIndicator extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: i <= controller.sectionIndex
-                            ? AppColors.primary
+                            ? AppColors.accentBlue
                             : colorScheme.surfaceContainerHighest,
                       ),
                       alignment: Alignment.center,
@@ -96,7 +96,7 @@ class _StepIndicator extends StatelessWidget {
                       examBuilderSectionLabels[i],
                       style: i == controller.sectionIndex
                           ? textTheme.titleMedium?.copyWith(
-                              color: AppColors.primary,
+                              color: AppColors.accentBlue,
                             )
                           : textTheme.bodyMedium?.copyWith(
                               color: controller.canJumpTo(i)
@@ -115,7 +115,7 @@ class _StepIndicator extends StatelessWidget {
                 child: Divider(
                   thickness: 2,
                   color: i < controller.sectionIndex
-                      ? AppColors.primary
+                      ? AppColors.accentBlue
                       : colorScheme.outlineVariant,
                 ),
               ),

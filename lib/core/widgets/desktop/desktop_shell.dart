@@ -48,20 +48,26 @@ class DesktopShell extends StatefulWidget {
 }
 
 class _DesktopShellState extends State<DesktopShell> {
-  bool _collapsed = false;
+  /// Null until the user toggles it: then the sidebar follows the window
+  /// (compact below [_autoCollapseWidth]).
+  bool? _collapsed;
+
+  static const _autoCollapseWidth = 1200.0;
 
   @override
   Widget build(BuildContext context) {
     final currentPath = GoRouterState.of(context).uri.path;
+    final collapsed =
+        _collapsed ?? MediaQuery.sizeOf(context).width < _autoCollapseWidth;
 
     return Scaffold(
       body: SafeArea(
         child: Row(
           children: [
             _Sidebar(
-              collapsed: _collapsed,
+              collapsed: collapsed,
               currentPath: currentPath,
-              onToggleCollapse: () => setState(() => _collapsed = !_collapsed),
+              onToggleCollapse: () => setState(() => _collapsed = !collapsed),
             ),
             Expanded(
               child: Column(
@@ -78,7 +84,27 @@ class _DesktopShellState extends State<DesktopShell> {
   }
 }
 
-class _Sidebar extends StatelessWidget {
+/// A titled group of destinations; untitled for the day-to-day ones.
+class _NavSection {
+  const _NavSection(this.title, this.items);
+
+  final String? title;
+  final List<NavItem> items;
+}
+
+final _sections = [
+  _NavSection(null, [...primaryNavItems, scheduleNavItem]),
+  const _NavSection('Evaluación', secondaryNavItems),
+  const _NavSection('Catálogo', catalogNavItems),
+  const _NavSection('Configuración', settingsNavItems),
+  const _NavSection('Sistema', systemNavItems),
+];
+
+/// Light, quiet sidebar in the style of the app's screens: brand mark,
+/// destinations grouped in foldable sections (the active one opens by
+/// itself), the active page as a vivid blue pill, and the user at the
+/// bottom. Collapses to an icon rail with tooltips.
+class _Sidebar extends StatefulWidget {
   const _Sidebar({
     required this.collapsed,
     required this.currentPath,
@@ -90,220 +116,256 @@ class _Sidebar extends StatelessWidget {
   final VoidCallback onToggleCollapse;
 
   @override
+  State<_Sidebar> createState() => _SidebarState();
+}
+
+class _SidebarState extends State<_Sidebar> {
+  /// Sections the user folded; one holding the current page never folds.
+  final Set<String> _folded = {};
+
+  @override
   Widget build(BuildContext context) {
-    final width = collapsed ? 76.0 : 248.0;
+    final collapsed = widget.collapsed;
+    final colors = Theme.of(context).colorScheme;
+    final width = collapsed ? 76.0 : 256.0;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
       width: width,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: AppColors.brandGradient,
-        ),
+        color: colors.surface,
         border: Border(
-          right: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+          right: BorderSide(color: colors.outline.withValues(alpha: 0.7)),
         ),
-        boxShadow: const [
+      ),
+      // The content is laid out at its final width and clipped while the
+      // width animates, so it never squeezes mid-transition.
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.topLeft,
+          minWidth: width - 1,
+          maxWidth: width - 1,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Brand(
+                collapsed: collapsed,
+                onToggleCollapse: widget.onToggleCollapse,
+              ),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(
+                    collapsed ? 12 : 14,
+                    8,
+                    collapsed ? 12 : 14,
+                    16,
+                  ),
+                  children: [
+                    for (final section in _sections) ..._section(section),
+                  ],
+                ),
+              ),
+              _UserCard(collapsed: collapsed, currentPath: widget.currentPath),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _section(_NavSection section) {
+    final collapsed = widget.collapsed;
+    final title = section.title;
+    final holdsCurrent = section.items.any(
+      (i) => isNavItemActive(widget.currentPath, i),
+    );
+    final open =
+        title == null || collapsed || holdsCurrent || !_folded.contains(title);
+
+    return [
+      if (title != null)
+        collapsed
+            ? Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 12,
+                ),
+                child: Divider(
+                  height: 1,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              )
+            : _SectionHeader(
+                title: title,
+                open: open,
+                locked: holdsCurrent,
+                onTap: () => setState(() {
+                  if (!_folded.remove(title)) _folded.add(title);
+                }),
+              ),
+      AnimatedSize(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: open
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final item in section.items)
+                    _NavTile(
+                      item: item,
+                      collapsed: collapsed,
+                      active: isNavItemActive(widget.currentPath, item),
+                    ),
+                ],
+              )
+            : const SizedBox(width: double.infinity),
+      ),
+    ];
+  }
+}
+
+class _Brand extends StatelessWidget {
+  const _Brand({required this.collapsed, required this.onToggleCollapse});
+
+  final bool collapsed;
+  final VoidCallback onToggleCollapse;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
+    final mark = Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.accentBlue, AppColors.primaryMedium],
+        ),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
           BoxShadow(
-            color: AppColors.shadowMedium,
-            blurRadius: 20,
-            offset: Offset(6, 0),
+            color: AppColors.accentBlue.withValues(alpha: 0.28),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _Logo(collapsed: collapsed),
-          const SizedBox(height: 12),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
+    );
+    final toggle = IconButton(
+      tooltip: collapsed ? 'Expandir menú' : 'Contraer menú',
+      onPressed: onToggleCollapse,
+      visualDensity: VisualDensity.compact,
+      icon: Icon(
+        collapsed
+            ? Icons.keyboard_double_arrow_right
+            : Icons.keyboard_double_arrow_left,
+        size: 20,
+        color: colors.onSurface.withValues(alpha: 0.55),
+      ),
+    );
+
+    // Same height as the page header, so both lines align.
+    return SizedBox(
+      height: collapsed ? 104 : 64,
+      child: collapsed
+          ? Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [mark, const SizedBox(height: 6), toggle],
+            )
+          : Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 8, 0),
+              child: Row(
                 children: [
-                  for (final item in primaryNavItems)
-                    _SidebarTile(
-                      item: item,
-                      collapsed: collapsed,
-                      active: isNavItemActive(currentPath, item),
+                  mark,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'EduSistem',
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          'Panel docente',
+                          style: textTheme.bodySmall?.copyWith(fontSize: 11),
+                        ),
+                      ],
                     ),
-                  _SidebarTile(
-                    item: scheduleNavItem,
-                    collapsed: collapsed,
-                    active: isNavItemActive(currentPath, scheduleNavItem),
                   ),
-                  _SectionLabel(collapsed: collapsed, label: 'Evaluación'),
-                  for (final item in secondaryNavItems)
-                    _SidebarTile(
-                      item: item,
-                      collapsed: collapsed,
-                      active: isNavItemActive(currentPath, item),
-                    ),
-                  _SectionLabel(collapsed: collapsed, label: 'Catálogo'),
-                  for (final item in catalogNavItems)
-                    _SidebarTile(
-                      item: item,
-                      collapsed: collapsed,
-                      active: isNavItemActive(currentPath, item),
-                    ),
-                  _SectionLabel(collapsed: collapsed, label: 'Configuración'),
-                  for (final item in settingsNavItems)
-                    _SidebarTile(
-                      item: item,
-                      collapsed: collapsed,
-                      active: isNavItemActive(currentPath, item),
-                    ),
-                  _SectionLabel(collapsed: collapsed, label: 'Sistema'),
-                  for (final item in systemNavItems)
-                    _SidebarTile(
-                      item: item,
-                      collapsed: collapsed,
-                      active: isNavItemActive(currentPath, item),
-                    ),
+                  toggle,
                 ],
               ),
             ),
-          ),
-          const Divider(height: 1, color: Colors.white12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: _SidebarTile(
-              item: profileNavItem,
-              collapsed: collapsed,
-              active: isNavItemActive(currentPath, profileNavItem),
-            ),
-          ),
-          if (!collapsed) const _SecurityBadge(),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8, left: 12, right: 12),
-            child: Align(
-              alignment: collapsed ? Alignment.center : Alignment.centerRight,
-              child: IconButton(
-                onPressed: onToggleCollapse,
-                tooltip: collapsed ? 'Expandir' : 'Colapsar',
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.06),
-                ),
-                icon: Icon(
-                  collapsed ? Icons.chevron_right : Icons.chevron_left,
-                  color: Colors.white70,
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.open,
+    required this.locked,
+    required this.onTap,
+  });
+
+  final String title;
+  final bool open;
+
+  /// Holds the current page, so it can't fold.
+  final bool locked;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(
+      context,
+    ).colorScheme.onSurface.withValues(alpha: 0.45);
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: locked ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title.toUpperCase(),
+                  style: TextStyle(
+                    color: muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Small trust signal at the base of the sidebar — a quiet, persistent
-/// reminder that the session is authenticated and the connection is
-/// encrypted, reinforcing the "professional/secure" tone the product wants.
-class _SecurityBadge extends StatelessWidget {
-  const _SecurityBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-      child: Row(
-        children: [
-          Icon(
-            Icons.verified_user_outlined,
-            size: 14,
-            color: Colors.white.withValues(alpha: 0.45),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            'Conexión segura',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.45),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Logo extends StatelessWidget {
-  const _Logo({required this.collapsed});
-
-  final bool collapsed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-            ),
-            child: const Icon(
-              Icons.school_outlined,
-              color: Colors.white,
-              size: 18,
-            ),
-          ),
-          if (!collapsed) ...[
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'EduSistem',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
+              if (!locked)
+                AnimatedRotation(
+                  duration: const Duration(milliseconds: 180),
+                  turns: open ? 0 : -0.25,
+                  child: Icon(Icons.expand_more, size: 16, color: muted),
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.collapsed, required this.label});
-
-  final bool collapsed;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    if (collapsed) return const SizedBox(height: 16);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 18, 12, 6),
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.4),
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.6,
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SidebarTile extends StatelessWidget {
-  const _SidebarTile({
+class _NavTile extends StatefulWidget {
+  const _NavTile({
     required this.item,
     required this.collapsed,
     required this.active,
@@ -314,59 +376,208 @@ class _SidebarTile extends StatelessWidget {
   final bool active;
 
   @override
+  State<_NavTile> createState() => _NavTileState();
+}
+
+class _NavTileState extends State<_NavTile> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
-    final tile = Material(
-      color: active ? Colors.white.withValues(alpha: 0.14) : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: () => context.go(item.path),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            children: [
-              if (!collapsed)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: 3,
-                  height: 18,
-                  margin: const EdgeInsets.only(right: 9),
-                  decoration: BoxDecoration(
-                    color: active ? AppColors.primaryLight : Colors.transparent,
-                    borderRadius: BorderRadius.circular(4),
+    final item = widget.item;
+    final active = widget.active;
+    final collapsed = widget.collapsed;
+    final colors = Theme.of(context).colorScheme;
+    final foreground = active
+        ? Colors.white
+        : colors.onSurface.withValues(alpha: _hovering ? 0.9 : 0.72);
+
+    final tile = MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.accentBlue
+              : _hovering
+              ? colors.surfaceContainerHighest.withValues(alpha: 0.7)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: AppColors.accentBlue.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-              Icon(
-                active ? item.activeIcon : item.icon,
-                size: 20,
-                color: active ? Colors.white : Colors.white70,
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => context.go(item.path),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: collapsed ? 0 : 12,
+                vertical: 11,
               ),
-              if (!collapsed) ...[
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: active ? Colors.white : Colors.white70,
-                      fontSize: 14,
-                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                    ),
+              child: Row(
+                mainAxisAlignment: collapsed
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
+                children: [
+                  Icon(
+                    active ? item.activeIcon : item.icon,
+                    size: 20,
+                    color: foreground,
                   ),
-                ),
-              ],
-            ],
+                  if (!collapsed) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.label,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: foreground,
+                          fontSize: 14,
+                          fontWeight: active
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
 
-    if (!collapsed) {
-      return Padding(padding: const EdgeInsets.only(bottom: 2), child: tile);
-    }
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Tooltip(message: item.label, child: tile),
+      padding: const EdgeInsets.only(bottom: 3),
+      child: collapsed
+          ? Tooltip(
+              message: item.label,
+              waitDuration: const Duration(milliseconds: 300),
+              child: tile,
+            )
+          : tile,
+    );
+  }
+}
+
+/// The signed-in teacher at the bottom: profile and sign-out in a menu.
+class _UserCard extends StatelessWidget {
+  const _UserCard({required this.collapsed, required this.currentPath});
+
+  final bool collapsed;
+  final String currentPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final onProfile = isNavItemActive(currentPath, profileNavItem);
+
+    final avatar = CircleAvatar(
+      radius: 17,
+      backgroundColor: AppColors.accentBlue.withValues(alpha: 0.14),
+      child: Text(
+        user?.initials ?? '',
+        style: textTheme.labelMedium?.copyWith(
+          color: AppColors.accentBlue,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+
+    return Container(
+      padding: EdgeInsets.all(collapsed ? 10 : 12),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: colors.outline.withValues(alpha: 0.7)),
+        ),
+      ),
+      child: PopupMenuButton<String>(
+        tooltip: 'Tu cuenta',
+        position: PopupMenuPosition.over,
+        offset: const Offset(0, -110),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        onSelected: (value) {
+          if (value == 'profile') context.go(RoutePaths.profile);
+          if (value == 'logout') _handleLogout(context);
+        },
+        itemBuilder: (context) => const [
+          PopupMenuItem(
+            value: 'profile',
+            child: ListTile(
+              leading: Icon(Icons.person_outline),
+              title: Text('Mi perfil'),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          ),
+          PopupMenuItem(
+            value: 'logout',
+            child: ListTile(
+              leading: Icon(Icons.logout),
+              title: Text('Cerrar sesión'),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+            ),
+          ),
+        ],
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: EdgeInsets.all(collapsed ? 4 : 8),
+          decoration: BoxDecoration(
+            color: onProfile
+                ? AppColors.accentBlue.withValues(alpha: 0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: collapsed
+              ? Center(child: avatar)
+              : Row(
+                  children: [
+                    avatar,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?.fullName ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            user?.email ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.unfold_more,
+                      size: 18,
+                      color: colors.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ],
+                ),
+        ),
+      ),
     );
   }
 }
@@ -444,7 +655,7 @@ class _Header extends StatelessWidget {
                   ),
                   child: CircleAvatar(
                     radius: 16,
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: AppColors.accentBlue,
                     child: Text(
                       user?.initials ?? '',
                       style: const TextStyle(

@@ -11,7 +11,9 @@ class AppTheme {
   static ThemeData get light {
     const colorScheme = ColorScheme(
       brightness: Brightness.light,
-      primary: AppColors.primary,
+      // The vivid blue used across the app's accents, so buttons, focus and
+      // selection match them (the navy stays for brand surfaces).
+      primary: AppColors.accentBlue,
       onPrimary: Colors.white,
       secondary: AppColors.primaryMedium,
       onSecondary: Colors.white,
@@ -34,8 +36,8 @@ class AppTheme {
   static ThemeData get dark {
     const colorScheme = ColorScheme(
       brightness: Brightness.dark,
-      primary: AppColors.primaryLight,
-      onPrimary: AppColors.primaryDarkest,
+      primary: AppColors.accentBlue,
+      onPrimary: Colors.white,
       secondary: AppColors.primaryMedium,
       onSecondary: Colors.white,
       error: AppColors.error,
@@ -141,6 +143,24 @@ class AppTheme {
         ),
       ),
 
+      // Selected segment in the vivid blue tint, not the dull default
+      // secondary container.
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? colorScheme.primary.withValues(alpha: 0.12)
+                : null,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? colorScheme.primary
+                : colorScheme.onSurface,
+          ),
+          side: WidgetStatePropertyAll(BorderSide(color: borderColor)),
+        ),
+      ),
+
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
@@ -157,9 +177,7 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: textTheme.labelLarge,
         ),
       ),

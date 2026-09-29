@@ -29,15 +29,15 @@ class GettingStartedCard extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppColors.primary.withValues(alpha: 0.12),
-                      AppColors.primary.withValues(alpha: 0.06),
+                      AppColors.accentBlue.withValues(alpha: 0.12),
+                      AppColors.accentBlue.withValues(alpha: 0.06),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.rocket_launch_outlined,
-                  color: AppColors.primary,
+                  color: AppColors.accentBlue,
                   size: 22,
                 ),
               ),

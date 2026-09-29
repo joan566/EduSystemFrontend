@@ -1,3 +1,5 @@
+import '../utils/formatters.dart';
+
 /// Centralized route paths (§17). Only routes the backend actually
 /// supports data for exist here.
 class RoutePaths {
@@ -52,9 +54,10 @@ class RoutePaths {
   static String activityDetail(int id) => '/app/activities/$id';
 
   static const attendance = '/app/attendance';
-  static String attendanceForClass(int teachingPeriodId) =>
-      '$attendance?teachingPeriodId=$teachingPeriodId';
-  static String attendanceSessionDetail(int id) => '/app/attendance/$id';
+  /// Attendance of a class, on [date] when given (else today).
+  static String attendanceForClass(int teachingPeriodId, {DateTime? date}) =>
+      '$attendance?teachingPeriodId=$teachingPeriodId'
+      '${date == null ? '' : '&date=${Formatters.toApiDate(date)}'}';
 
   static const grades = '/app/grades';
 

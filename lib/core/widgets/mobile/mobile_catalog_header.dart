@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import 'mobile_header_action.dart';
 
 /// Top of a mobile catalog screen (Materias, Cursos, ...): back when the
 /// screen was pushed, a large title with a count line, and the add button.
@@ -11,12 +12,14 @@ class MobileCatalogHeader extends StatelessWidget {
     this.subtitle,
     this.onAdd,
     this.addTooltip = 'Agregar',
+    this.addIcon = Icons.add,
   });
 
   final String title;
   final String? subtitle;
   final VoidCallback? onAdd;
   final String addTooltip;
+  final IconData addIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -51,10 +54,10 @@ class MobileCatalogHeader extends StatelessWidget {
             ),
           ),
           if (onAdd != null)
-            IconButton.filledTonal(
+            MobileHeaderAction(
+              icon: addIcon,
               tooltip: addTooltip,
-              onPressed: onAdd,
-              icon: const Icon(Icons.add),
+              onPressed: onAdd!,
             ),
         ],
       ),

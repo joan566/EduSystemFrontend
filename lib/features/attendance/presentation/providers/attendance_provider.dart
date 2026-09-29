@@ -6,6 +6,8 @@ import '../../../../core/state/list_state.dart';
 import '../../data/repositories/attendance_repository.dart';
 import '../../domain/entities/attendance_entity.dart';
 
+/// A class's attendance sessions (most recent first) and the attendance of
+/// one class on one date, which is what the screen marks.
 class AttendanceProvider extends ChangeNotifier {
   AttendanceProvider(this._repository);
 
@@ -14,14 +16,18 @@ class AttendanceProvider extends ChangeNotifier {
   ListViewState<AttendanceSessionEntity> _state = const ListViewState();
   ListViewState<AttendanceSessionEntity> get state => _state;
 
-  DetailViewState<SessionDetailEntity> _detailState = const DetailViewState();
-  DetailViewState<SessionDetailEntity> get detailState => _detailState;
+  /// One class's attendance on one date.
+  DetailViewState<AttendanceDayEntity> _day = const DetailViewState();
+  DetailViewState<AttendanceDayEntity> get day => _day;
 
   Future<void> load({required int teachingPeriodId, int page = 0}) async {
     _state = ListViewState.loading();
     notifyListeners();
     try {
-      final result = await _repository.getPage(teachingPeriodId: teachingPeriodId, page: page);
+      final result = await _repository.getPage(
+        teachingPeriodId: teachingPeriodId,
+        page: page,
+      );
       _state = ListViewState.fromPage(
         content: result.content,
         page: result.page,
@@ -34,58 +40,66 @@ class AttendanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  AppException? _lastError;
-  AppException? get lastError => _lastError;
+  int _dayRequest = 0;
 
-  Future<AttendanceSessionEntity?> create({
+  Future<AttendanceDayEntity?> loadDay({
     required int teachingPeriodId,
-    required DateTime sessionDate,
-    String? name,
+    required DateTime date,
   }) async {
+    final request = ++_dayRequest;
+    _day = DetailViewState.loading();
+    notifyListeners();
     try {
-      final session = await _repository.create(
+      final day = await _repository.getDay(
         teachingPeriodId: teachingPeriodId,
-        sessionDate: sessionDate,
-        name: name,
+        date: date,
       );
-      await load(teachingPeriodId: teachingPeriodId);
-      return session;
+      // A newer request (another class or date) may have started meanwhile.
+      if (request != _dayRequest) return null;
+      _day = DetailViewState.success(day);
+      notifyListeners();
+      return day;
     } on AppException catch (e) {
-      _lastError = e;
-      return null;
-    }
-  }
-
-  Future<void> loadDetail(int id) async {
-    _detailState = DetailViewState.loading();
-    notifyListeners();
-    try {
-      final detail = await _repository.getById(id);
-      _detailState = DetailViewState.success(detail);
-    } on AppException catch (e) {
-      _detailState = DetailViewState.error(e);
-    }
-    notifyListeners();
-  }
-
-  Future<AppException?> saveRecords(
-    int id,
-    List<({int studentId, AttendanceStatus status, String? observation})> records,
-  ) async {
-    try {
-      final detail = await _repository.putRecords(id, records);
-      _detailState = DetailViewState.success(detail);
+      if (request != _dayRequest) return null;
+      _day = DetailViewState.error(e);
       notifyListeners();
       return null;
-    } on AppException catch (e) {
-      return e;
     }
   }
 
-  Future<AppException?> delete(int id, {required int teachingPeriodId}) async {
+  /// Saves [records] for the loaded day, creating that day's session first
+  /// if it doesn't exist yet.
+  Future<AppException?> saveDay(
+    List<({int studentId, AttendanceStatus status, String? observation})>
+    records,
+  ) async {
+    final day = _day.data;
+    if (day == null) return null;
     try {
-      await _repository.delete(id);
-      await load(teachingPeriodId: teachingPeriodId);
+      final session =
+          day.session ??
+          await _repository.create(
+            teachingPeriodId: day.teachingPeriodId,
+            sessionDate: day.date,
+          );
+      final detail = await _repository.putRecords(session.id, records);
+      final current = _day.data;
+      if (current != null &&
+          current.teachingPeriodId == day.teachingPeriodId &&
+          current.date == day.date) {
+        _day = DetailViewState.success(
+          AttendanceDayEntity(
+            teachingPeriodId: day.teachingPeriodId,
+            date: day.date,
+            session: detail.session,
+            students: detail.students,
+          ),
+        );
+        notifyListeners();
+      }
+      if (day.session == null && _state.status != ViewStatus.initial) {
+        await load(teachingPeriodId: day.teachingPeriodId);
+      }
       return null;
     } on AppException catch (e) {
       return e;

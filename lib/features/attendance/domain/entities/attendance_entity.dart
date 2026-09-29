@@ -62,3 +62,22 @@ class SessionDetailEntity {
   final AttendanceSessionEntity session;
   final List<SessionStudentRecord> students;
 }
+
+/// A class's attendance on one date: that day's session if it was already
+/// created ([session] null otherwise) and every active student with their
+/// status (null = not marked yet).
+class AttendanceDayEntity {
+  const AttendanceDayEntity({
+    required this.teachingPeriodId,
+    required this.date,
+    required this.session,
+    required this.students,
+  });
+
+  final int teachingPeriodId;
+
+  /// Date only (no time).
+  final DateTime date;
+  final AttendanceSessionEntity? session;
+  final List<SessionStudentRecord> students;
+}

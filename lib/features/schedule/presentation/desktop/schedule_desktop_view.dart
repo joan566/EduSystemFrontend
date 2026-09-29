@@ -1,202 +1,170 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/detail_state.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/subject_visuals.dart';
-import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/desktop/desktop_page_header.dart';
+import '../../../../core/widgets/desktop/desktop_catalog_header.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_loading.dart';
-import '../../domain/entities/schedule_entities.dart';
 import '../providers/schedule_provider.dart';
 import '../shared/schedule_week.dart';
-import '../shared/schedule_widgets.dart';
+import 'widgets/schedule_side_panel.dart';
+import 'widgets/week_time_grid.dart';
 
-/// Desktop: the week as a seven-column grid, one column per day.
+/// Desktop: the week as an hour-by-hour calendar, with the selected day's
+/// agenda and the week's totals beside it. ←/→ move a week, T goes to
+/// today.
 class ScheduleDesktopView extends StatelessWidget {
   const ScheduleDesktopView({super.key, required this.week});
 
   final ScheduleWeek week;
 
+  static const _sideWidth = 330.0;
+
+  Future<void> _pickDate(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: week.selectedDay,
+      firstDate: DateTime(now.year - 2),
+      lastDate: DateTime(now.year + 2, 12, 31),
+      helpText: 'Ir a una fecha',
+    );
+    if (picked != null) week.onSelectDay(picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<ScheduleProvider>().calendar;
+    final range = state.status == DetailStatus.success ? state.data : null;
+    final classCount = range?.days.fold(0, (n, d) => n + d.classes.length);
+    final selected = range?.days
+        .where((d) => isSameDay(d.date, week.selectedDay))
+        .firstOrNull;
+    final viewingToday =
+        week.isCurrent && isSameDay(week.selectedDay, DateTime.now());
 
-    return Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          DesktopPageHeader(
-            title: 'Horario',
-            subtitle: week.label,
-            actions: [
-              IconButton(
-                tooltip: 'Semana anterior',
-                icon: const Icon(Icons.chevron_left),
-                onPressed: week.onPrevious,
-              ),
-              AppButton(
-                label: 'Esta semana',
-                variant: AppButtonVariant.outlined,
-                onPressed: week.isCurrent ? null : week.onToday,
-              ),
-              IconButton(
-                tooltip: 'Semana siguiente',
-                icon: const Icon(Icons.chevron_right),
-                onPressed: week.onNext,
-              ),
-            ],
-          ),
-          Expanded(
-            child: switch (state.status) {
-              DetailStatus.error => AppErrorState(
-                exception: state.error!,
-                onRetry: week.onRetry,
-              ),
-              DetailStatus.success => SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final (i, day) in state.data!.days.indexed) ...[
-                      if (i > 0) const SizedBox(width: 10),
-                      Expanded(child: _DayColumn(day: day)),
-                    ],
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): week.onPrevious,
+        const SingleActivator(LogicalKeyboardKey.arrowRight): week.onNext,
+        const SingleActivator(LogicalKeyboardKey.keyT): week.onToday,
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DesktopCatalogHeader(
+                  title: 'Horario',
+                  subtitle: [
+                    if (week.relativeName != null) week.relativeName!,
+                    week.label,
+                    if (classCount != null)
+                      classCount == 1 ? '1 clase' : '$classCount clases',
+                  ].join(' · '),
+                  actions: [
+                    _WeekNavigator(week: week, viewingToday: viewingToday),
+                    AppButton(
+                      label: 'Ir a una fecha',
+                      icon: Icons.edit_calendar_outlined,
+                      variant: AppButtonVariant.outlined,
+                      onPressed: () => _pickDate(context),
+                    ),
                   ],
                 ),
-              ),
-              _ => const AppLoading(),
-            },
+                const SizedBox(height: 20),
+                Expanded(
+                  child: switch (state.status) {
+                    DetailStatus.error => AppErrorState(
+                      exception: state.error!,
+                      onRetry: week.onRetry,
+                    ),
+                    DetailStatus.success => Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: WeekTimeGrid(week: week, range: range!),
+                        ),
+                        const SizedBox(width: 20),
+                        SizedBox(
+                          width: _sideWidth,
+                          child: ListView(
+                            children: [
+                              if (selected != null) ...[
+                                DayAgendaCard(day: selected),
+                                const SizedBox(height: 16),
+                              ],
+                              WeekSummaryCard(range: range),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    _ => const AppLoading(),
+                  },
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _DayColumn extends StatelessWidget {
-  const _DayColumn({required this.day});
+/// ‹ Hoy › as one segmented control.
+class _WeekNavigator extends StatelessWidget {
+  const _WeekNavigator({required this.week, required this.viewingToday});
 
-  final DayScheduleEntity day;
+  final ScheduleWeek week;
+  final bool viewingToday;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
-    final isToday = isSameDay(day.date, day.serverTime);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isToday
-                ? AppColors.accentBlue.withValues(alpha: 0.1)
-                : colors.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Column(
-            children: [
-              Text(
-                Formatters.weekdayName(day.date.weekday),
-                style: textTheme.labelMedium?.copyWith(
-                  color: isToday ? AppColors.accentBlue : null,
-                ),
-              ),
-              Text(
-                '${day.date.day}',
-                style: textTheme.titleLarge?.copyWith(
-                  color: isToday ? AppColors.accentBlue : null,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        if (day.classes.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              'Sin clases',
-              textAlign: TextAlign.center,
-              style: textTheme.bodySmall,
-            ),
-          )
-        else
-          for (final c in day.classes)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _ClassBlock(
-                scheduled: c,
-                status: isToday ? day.statusOf(c) : null,
-              ),
-            ),
-      ],
+    final divider = SizedBox(
+      height: 22,
+      child: VerticalDivider(width: 1, color: colors.outline),
     );
-  }
-}
 
-class _ClassBlock extends StatelessWidget {
-  const _ClassBlock({required this.scheduled, required this.status});
-
-  final ScheduledClassEntity scheduled;
-  final ScheduledClassStatus? status;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final color = subjectAccent(scheduled.subjectId);
-
-    return Material(
-      color: color.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(10),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push(
-          RoutePaths.teachingPeriodDetail(scheduled.teachingPeriodId),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: color, width: 3)),
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outline),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: 'Semana anterior (←)',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.chevron_left),
+            onPressed: week.onPrevious,
           ),
-          padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                formatTimeRange(scheduled.startTime, scheduled.endTime),
-                style: textTheme.labelMedium,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                scheduled.subjectName,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                [
-                  scheduled.courseLabel,
-                  if (scheduled.room != null) scheduled.room!,
-                ].join(' · '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.bodySmall,
-              ),
-              if (status != null) ...[
-                const SizedBox(height: 6),
-                ScheduleStatusChip(status: status!),
-              ],
-            ],
+          divider,
+          TextButton(
+            onPressed: viewingToday ? null : week.onToday,
+            style: TextButton.styleFrom(
+              shape: const RoundedRectangleBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+            child: const Text('Hoy'),
           ),
-        ),
+          divider,
+          IconButton(
+            tooltip: 'Semana siguiente (→)',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.chevron_right),
+            onPressed: week.onNext,
+          ),
+        ],
       ),
     );
   }

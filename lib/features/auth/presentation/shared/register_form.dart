@@ -62,12 +62,12 @@ class _RegisterFormState extends State<RegisterForm> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
+              color: AppColors.accentBlue.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.person_add_alt_outlined,
-              color: AppColors.primary,
+              color: AppColors.accentBlue,
               size: 22,
             ),
           ),

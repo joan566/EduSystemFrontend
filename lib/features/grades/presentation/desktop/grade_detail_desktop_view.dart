@@ -909,6 +909,7 @@ class _FactsCard extends StatelessWidget {
         EvaluationType.activity => RoutePaths.activityDetail(e.activityId!),
         EvaluationType.attendance => RoutePaths.attendanceForClass(
           detail.teachingPeriodId,
+          date: e.evaluationDate,
         ),
       }),
       child: Column(

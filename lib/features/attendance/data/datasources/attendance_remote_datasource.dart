@@ -39,6 +39,36 @@ class AttendanceRemoteDataSource {
     return ApiPage.fromJson(response.data as Map<String, dynamic>, AttendanceSessionModel.fromJson);
   }
 
+  /// The class's attendance on [date]; `session` is null when that day has
+  /// no session yet (students come back unmarked).
+  Future<AttendanceDayEntity> getDay({
+    required int teachingPeriodId,
+    required DateTime date,
+  }) async {
+    final response = await _client.get(
+      ApiEndpoints.attendanceDay,
+      queryParameters: {
+        'teachingPeriodId': teachingPeriodId,
+        'date': Formatters.toApiDate(date),
+      },
+    );
+    final json = response.data as Map<String, dynamic>;
+    final session = json['session'] as Map<String, dynamic>?;
+    return AttendanceDayEntity(
+      teachingPeriodId: teachingPeriodId,
+      date: DateTime(date.year, date.month, date.day),
+      session: session == null
+          ? null
+          : AttendanceSessionModel.fromJson(session),
+      students: (json['students'] as List<dynamic>)
+          .map(
+            (e) =>
+                SessionStudentRecordModel.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
+    );
+  }
+
   Future<SessionDetailEntity> getById(int id) async {
     final response = await _client.get(ApiEndpoints.attendanceSessionById(id));
     return SessionDetailModel.fromJson(response.data as Map<String, dynamic>);

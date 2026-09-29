@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/extensions/context_extensions.dart';
-import '../../../../core/utils/downloads.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../../core/widgets/shared/app_download.dart';
 import '../../../../core/widgets/shared/picked_file.dart';
 import '../../../exports/data/export_datasource.dart';
 import '../../../imports/presentation/providers/imports_provider.dart';
@@ -45,91 +46,79 @@ class DataManagementController extends ChangeNotifier {
   Future<void> _runExport(
     BuildContext context,
     String action,
-    Future<void> Function() task,
+    Future<BinaryDownload> Function() fetch,
   ) async {
     _update(() => _exportLoadingAction = action);
     try {
-      await task();
-      if (context.mounted) context.showSuccess('Archivo descargado.');
-    } catch (_) {
-      if (context.mounted) {
-        context.showError('No se pudo generar la exportación.');
-      }
+      await fetchAndSaveFile(
+        context,
+        fetch: fetch,
+        errorMessage: 'No se pudo generar la exportación.',
+      );
     } finally {
       _update(() => _exportLoadingAction = null);
     }
   }
 
-  Future<void> _downloadTemplate(
-    BuildContext context,
-    Future<void> Function() task,
-  ) async {
-    try {
-      await task();
-      if (context.mounted) context.showSuccess('Plantilla descargada.');
-    } catch (_) {
-      if (context.mounted) {
-        context.showError('No se pudo descargar la plantilla.');
-      }
-    }
+  Future<void> downloadStudentsTemplate(BuildContext context) {
+    final provider = context.read<ImportsProvider>();
+    return fetchAndSaveFile(
+      context,
+      fetch: provider.downloadTemplate,
+      errorMessage: 'No se pudo descargar la plantilla.',
+    );
   }
 
-  Future<void> downloadStudentsTemplate(BuildContext context) =>
-      _downloadTemplate(
-        context,
-        context.read<ImportsProvider>().downloadTemplate,
-      );
-
-  Future<void> downloadSchoolSetupTemplate(BuildContext context) =>
-      _downloadTemplate(
-        context,
-        context.read<ImportsProvider>().downloadSchoolSetupTemplate,
-      );
+  Future<void> downloadSchoolSetupTemplate(BuildContext context) {
+    final provider = context.read<ImportsProvider>();
+    return fetchAndSaveFile(
+      context,
+      fetch: provider.downloadSchoolSetupTemplate,
+      errorMessage: 'No se pudo descargar la plantilla.',
+    );
+  }
 
   Future<void> downloadPeriodFull(BuildContext context) async {
     final period = _period;
     if (period == null) return;
     final dataSource = context.read<ExportDataSource>();
-    await _runExport(context, 'full', () async {
-      final download = await dataSource.exportTeachingPeriodFull(
-        teachingPeriodId: period.id,
-      );
-      await Downloads.save(download);
-    });
+    await _runExport(
+      context,
+      'full',
+      () => dataSource.exportTeachingPeriodFull(teachingPeriodId: period.id),
+    );
   }
 
   Future<void> exportStudents(BuildContext context) async {
     final dataSource = context.read<ExportDataSource>();
-    await _runExport(context, 'students', () async {
-      final download = await dataSource.exportStudents(
-        teachingPeriodId: _period?.id,
-      );
-      await Downloads.save(download);
-    });
+    final periodId = _period?.id;
+    await _runExport(
+      context,
+      'students',
+      () => dataSource.exportStudents(teachingPeriodId: periodId),
+    );
   }
 
   Future<void> exportGrades(BuildContext context) async {
     final period = _period;
     if (period == null) return;
     final dataSource = context.read<ExportDataSource>();
-    await _runExport(context, 'grades', () async {
-      final download = await dataSource.exportGrades(
-        teachingPeriodId: period.id,
-      );
-      await Downloads.save(download);
-    });
+    await _runExport(
+      context,
+      'grades',
+      () => dataSource.exportGrades(teachingPeriodId: period.id),
+    );
   }
 
   Future<void> exportAttendance(BuildContext context) async {
     final period = _period;
     if (period == null) return;
     final dataSource = context.read<ExportDataSource>();
-    await _runExport(context, 'attendance', () async {
-      final download = await dataSource.exportAttendance(
-        teachingPeriodId: period.id,
-      );
-      await Downloads.save(download);
-    });
+    await _runExport(
+      context,
+      'attendance',
+      () => dataSource.exportAttendance(teachingPeriodId: period.id),
+    );
   }
 
   Future<void> uploadStudents(BuildContext context) async {

@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/subject_visuals.dart';
 import '../../../../core/widgets/mobile/mobile_brand_bar.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_header_action.dart';
 import '../../../../core/widgets/mobile/mobile_select_field.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
@@ -183,10 +184,10 @@ class TeachingMobileView extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton.filledTonal(
+                MobileHeaderAction(
+                  icon: Icons.add,
                   tooltip: 'Crear',
                   onPressed: () => _openCreateMenu(context),
-                  icon: const Icon(Icons.add),
                 ),
               ],
             ),

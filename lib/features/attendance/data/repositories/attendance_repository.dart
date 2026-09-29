@@ -22,6 +22,11 @@ class AttendanceRepository {
   Future<ApiPage<AttendanceSessionEntity>> getPage({required int teachingPeriodId, int page = 0}) =>
       _remote.getPage(teachingPeriodId: teachingPeriodId, page: page);
 
+  Future<AttendanceDayEntity> getDay({
+    required int teachingPeriodId,
+    required DateTime date,
+  }) => _remote.getDay(teachingPeriodId: teachingPeriodId, date: date);
+
   Future<SessionDetailEntity> getById(int id) => _remote.getById(id);
 
   Future<SessionDetailEntity> putRecords(

@@ -6,6 +6,7 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_header_action.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_loading.dart';
@@ -117,10 +118,10 @@ class StudentsMobileView extends StatelessWidget {
                     style: textTheme.headlineLarge?.copyWith(fontSize: 26),
                   ),
                 ),
-                IconButton.filledTonal(
+                MobileHeaderAction(
+                  icon: Icons.person_add_alt_outlined,
                   tooltip: 'Importar estudiantes',
                   onPressed: () => context.push(RoutePaths.dataManagement),
-                  icon: const Icon(Icons.person_add_alt_outlined),
                 ),
               ],
             ),

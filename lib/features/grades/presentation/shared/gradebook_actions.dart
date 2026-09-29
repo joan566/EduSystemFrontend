@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/widgets/shared/app_confirm_dialog.dart';
+import '../../../../core/widgets/shared/app_download.dart';
 import '../../../../core/widgets/shared/picked_file.dart';
 import '../../domain/entities/gradebook_entities.dart';
 import '../providers/gradebook_provider.dart';
@@ -59,16 +60,13 @@ class GradebookActions {
   static Future<void> download(
     BuildContext context,
     GradeDetailEntity detail,
-  ) async {
-    final error = await context.read<GradebookProvider>().downloadAttachment(
-      detail,
+  ) {
+    final provider = context.read<GradebookProvider>();
+    return fetchAndSaveFile(
+      context,
+      fetch: () => provider.downloadAttachment(detail),
+      errorMessage: 'No se pudo descargar el archivo.',
     );
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Archivo descargado.');
-    }
   }
 
   static Future<void> deleteAttachment(

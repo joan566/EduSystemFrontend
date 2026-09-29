@@ -118,12 +118,12 @@ class _LoginCardContent extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.08),
+            color: AppColors.accentBlue.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(
             Icons.lock_outline,
-            color: AppColors.primary,
+            color: AppColors.accentBlue,
             size: 22,
           ),
         ),

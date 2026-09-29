@@ -6,7 +6,6 @@ import '../../features/academic_periods/presentation/pages/academic_periods_page
 import '../../features/activities/presentation/pages/activities_page.dart';
 import '../../features/activities/presentation/pages/activity_detail_page.dart';
 import '../../features/attendance/presentation/pages/attendance_page.dart';
-import '../../features/attendance/presentation/pages/attendance_session_detail_page.dart';
 import '../../features/audit/presentation/pages/audit_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -198,15 +197,10 @@ class AppRouter {
             path: RoutePaths.attendance,
             builder: (context, state) => AttendancePage(
               initialTeachingPeriodId: _teachingPeriodIdParam(state),
-            ),
-            routes: [
-              GoRoute(
-                path: ':id',
-                builder: (context, state) => AttendanceSessionDetailPage(
-                  sessionId: int.parse(state.pathParameters['id']!),
-                ),
+              initialDate: DateTime.tryParse(
+                state.uri.queryParameters['date'] ?? '',
               ),
-            ],
+            ),
           ),
           GoRoute(
             path: RoutePaths.grades,
