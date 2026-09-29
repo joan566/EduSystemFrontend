@@ -24,10 +24,14 @@ class ActivitiesMobileView extends StatelessWidget {
     super.key,
     required this.period,
     required this.onPeriodChanged,
+    this.preferredPeriodId,
   });
 
   final TeachingPeriodEntity? period;
   final ValueChanged<TeachingPeriodEntity?> onPeriodChanged;
+
+  /// Class the selector picks on first load, if present.
+  final int? preferredPeriodId;
 
   Future<void> _create(BuildContext context) async {
     final period = this.period;
@@ -61,6 +65,7 @@ class ActivitiesMobileView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TeachingPeriodSelector(
+              preferredId: preferredPeriodId,
               value: period,
               onChanged: onPeriodChanged,
             ),

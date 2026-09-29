@@ -12,7 +12,7 @@ import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../schedule/presentation/shared/schedule_widgets.dart';
 import '../../shared/dashboard_error_notice.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
-import 'mobile_dashboard_section.dart';
+import '../../../../../core/widgets/mobile/mobile_section_card.dart';
 
 /// "Hoy": the next (or current) class highlighted, then the day's classes
 /// as a timeline, and a link to the full calendar. Statuses use the
@@ -26,7 +26,7 @@ class TodaySection extends StatelessWidget {
     final state = provider.today;
     final today = state.data;
 
-    return MobileDashboardSection(
+    return MobileSectionCard(
       icon: Icons.calendar_month_outlined,
       title: 'Hoy',
       subtitle: Formatters.longDayMonth(today?.date ?? DateTime.now()),

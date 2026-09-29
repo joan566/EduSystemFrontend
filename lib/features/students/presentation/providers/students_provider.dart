@@ -42,6 +42,30 @@ class StudentsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  final Map<int, ListViewState<StudentEntity>> _groupRosters = {};
+
+  /// Students of one group (e.g. a class's roster). Kept apart from
+  /// [state] so it never changes the Students screen's own filters.
+  ListViewState<StudentEntity> groupRoster(int groupId) =>
+      _groupRosters[groupId] ?? const ListViewState();
+
+  Future<void> loadGroupRoster(int groupId) async {
+    _groupRosters[groupId] = ListViewState.loading();
+    notifyListeners();
+    try {
+      final result = await _repository.getPage(page: 0, groupId: groupId);
+      _groupRosters[groupId] = ListViewState.fromPage(
+        content: result.content,
+        page: result.page,
+        totalPages: result.totalPages,
+        totalElements: result.totalElements,
+      );
+    } on AppException catch (e) {
+      _groupRosters[groupId] = ListViewState.error(e);
+    }
+    notifyListeners();
+  }
+
   Future<void> search(String query) => load(page: 0, search: query.isEmpty ? null : query);
 
   Future<void> loadDetail(int id) async {

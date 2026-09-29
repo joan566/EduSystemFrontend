@@ -3,6 +3,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/state/list_state.dart';
 import '../../domain/entities/teaching_assignment_entity.dart';
 import '../../domain/entities/teaching_period_entity.dart';
+import '../../domain/entities/teaching_period_summary_entity.dart';
 import '../models/teaching_models.dart';
 
 class TeachingRemoteDataSource {
@@ -90,6 +91,13 @@ class TeachingRemoteDataSource {
   Future<TeachingPeriodEntity> getPeriod(int id) async {
     final response = await _client.get(ApiEndpoints.teachingPeriodById(id));
     return TeachingPeriodModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<TeachingPeriodSummaryEntity> getPeriodSummary(int id) async {
+    final response = await _client.get(ApiEndpoints.teachingPeriodSummary(id));
+    return TeachingPeriodSummaryModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
   }
 
   Future<void> deletePeriod(int id) =>

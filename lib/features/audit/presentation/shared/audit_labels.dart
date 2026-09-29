@@ -30,7 +30,10 @@ String auditActionLabel(AuditAction action) => switch (action) {
   AuditAction.answerUpdated => 'Respuesta corregida',
 };
 
+/// The backend's readable label ("Parcial 1 · Ana Pérez") when it has
+/// one; older or non-class entries fall back to "Tipo #id".
 String auditEntityLabel(AuditLogEntity log) =>
+    log.entityLabel ??
     '${log.entityType}${log.entityId != null ? ' #${log.entityId}' : ''}';
 
 IconData auditResultIcon(AuditLogEntity log) =>
@@ -50,4 +53,16 @@ IconData auditActionIcon(AuditAction action) => switch (action) {
   AuditAction.examProcessed => Icons.fact_check_outlined,
   AuditAction.gradeUpdated => Icons.grade_outlined,
   AuditAction.answerUpdated => Icons.rule_outlined,
+};
+
+/// Accent for a successful audit action in the activity feeds (failures
+/// use the error color instead).
+Color auditActionAccent(AuditAction action) => switch (action) {
+  AuditAction.create ||
+  AuditAction.examProcessed ||
+  AuditAction.gradeUpdated => AppColors.accentGreen,
+  AuditAction.import || AuditAction.export => AppColors.accentTeal,
+  AuditAction.update || AuditAction.answerUpdated => AppColors.accentPurple,
+  AuditAction.delete => AppColors.accentOrange,
+  AuditAction.login || AuditAction.logout => AppColors.accentBlue,
 };

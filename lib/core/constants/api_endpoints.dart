@@ -38,6 +38,8 @@ class ApiEndpoints {
 
   static const teachingPeriods = '/teaching-periods';
   static String teachingPeriodById(int id) => '/teaching-periods/$id';
+  static String teachingPeriodSummary(int id) =>
+      '/teaching-periods/$id/summary';
   static String gradingConfiguration(int teachingPeriodId) =>
       '/teaching-periods/$teachingPeriodId/grading-configuration';
   static String periodGrades(int teachingPeriodId) =>

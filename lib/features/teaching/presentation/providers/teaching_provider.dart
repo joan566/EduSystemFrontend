@@ -6,6 +6,7 @@ import '../../../../core/state/list_state.dart';
 import '../../data/repositories/teaching_repository.dart';
 import '../../domain/entities/teaching_assignment_entity.dart';
 import '../../domain/entities/teaching_period_entity.dart';
+import '../../domain/entities/teaching_period_summary_entity.dart';
 
 /// Owns both teaching assignments (group + subject) and teaching periods
 /// (assignment + academic period) — the two are tightly coupled (§4) and
@@ -36,6 +37,25 @@ class TeachingProvider extends ChangeNotifier {
       _periodDetail = DetailViewState.success(await _repository.getPeriod(id));
     } on AppException catch (e) {
       _periodDetail = DetailViewState.error(e);
+    }
+    notifyListeners();
+  }
+
+  final Map<int, DetailViewState<TeachingPeriodSummaryEntity>> _summaries = {};
+
+  /// Grading progress and counts of one class.
+  DetailViewState<TeachingPeriodSummaryEntity> periodSummary(int id) =>
+      _summaries[id] ?? const DetailViewState();
+
+  Future<void> loadPeriodSummary(int id) async {
+    _summaries[id] = DetailViewState.loading();
+    notifyListeners();
+    try {
+      _summaries[id] = DetailViewState.success(
+        await _repository.getPeriodSummary(id),
+      );
+    } on AppException catch (e) {
+      _summaries[id] = DetailViewState.error(e);
     }
     notifyListeners();
   }
@@ -127,6 +147,7 @@ class TeachingProvider extends ChangeNotifier {
       );
       _allPeriodsLoaded = false;
       await loadPeriods(teachingAssignmentId: teachingAssignmentId);
+      await ensureAllPeriodsLoaded();
       return null;
     } on AppException catch (e) {
       return e;
@@ -138,6 +159,7 @@ class TeachingProvider extends ChangeNotifier {
       await _repository.deletePeriod(id);
       _allPeriodsLoaded = false;
       await loadPeriods(teachingAssignmentId: teachingAssignmentId);
+      await ensureAllPeriodsLoaded();
       return null;
     } on AppException catch (e) {
       return e;

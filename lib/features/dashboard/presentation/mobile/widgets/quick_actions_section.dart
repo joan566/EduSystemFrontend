@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../shared/quick_actions.dart';
-import 'mobile_dashboard_section.dart';
+import '../../../../../core/widgets/mobile/mobile_section_card.dart';
 
 /// 2×2 grid of the teacher's most frequent tasks. Each one opens the
 /// screen where that task starts (picking the class happens there).
@@ -12,7 +12,7 @@ class QuickActionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MobileDashboardSection(
+    return MobileSectionCard(
       icon: Icons.bolt_outlined,
       title: 'Acciones rápidas',
       padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),

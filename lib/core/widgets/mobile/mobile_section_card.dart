@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/theme/app_colors.dart';
+import '../../theme/app_colors.dart';
 
-/// Rounded white section of the mobile dashboard: icon + title header with
+/// Rounded white section card of mobile screens: icon + title header with
 /// an optional "Ver todo"-style link, then [child].
-class MobileDashboardSection extends StatelessWidget {
-  const MobileDashboardSection({
+class MobileSectionCard extends StatelessWidget {
+  const MobileSectionCard({
     super.key,
     required this.icon,
     required this.title,

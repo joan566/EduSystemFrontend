@@ -9,9 +9,9 @@ import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../../teaching/presentation/providers/teaching_provider.dart';
-import '../../shared/class_counts.dart';
+import '../../../../teaching/presentation/shared/class_counts.dart';
 import '../../shared/dashboard_error_notice.dart';
-import 'desktop_dashboard_card.dart';
+import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 
 /// "Tus clases": a two-column grid of class cards.
 class ClassesGridCard extends StatelessWidget {
@@ -28,7 +28,7 @@ class ClassesGridCard extends StatelessWidget {
         .data
         ?.occurrencesByTeachingPeriod;
 
-    return DesktopDashboardCard(
+    return DesktopSectionCard(
       icon: Icons.menu_book_outlined,
       title: 'Tus clases',
       linkLabel: 'Ver todas',
@@ -81,7 +81,7 @@ class _ClassTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
-    return DesktopDashboardTile(
+    return DesktopHoverTile(
       onTap: () => context.push(RoutePaths.teachingPeriodDetail(period.id)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

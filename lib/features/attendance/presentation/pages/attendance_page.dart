@@ -8,7 +8,11 @@ import '../mobile/attendance_mobile_view.dart';
 import '../providers/attendance_provider.dart';
 
 class AttendancePage extends StatefulWidget {
-  const AttendancePage({super.key});
+  const AttendancePage({super.key, this.initialTeachingPeriodId});
+
+  /// Class to preselect (from `?teachingPeriodId=`), e.g. when opened from
+  /// a class screen.
+  final int? initialTeachingPeriodId;
 
   @override
   State<AttendancePage> createState() => _AttendancePageState();
@@ -30,10 +34,12 @@ class _AttendancePageState extends State<AttendancePage> {
   Widget build(BuildContext context) {
     return ResponsiveBuilder(
       mobile: (_) => AttendanceMobileView(
+        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
         onPeriodChanged: _onPeriodChanged,
       ),
       desktop: (_) => AttendanceDesktopView(
+        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
         onPeriodChanged: _onPeriodChanged,
       ),

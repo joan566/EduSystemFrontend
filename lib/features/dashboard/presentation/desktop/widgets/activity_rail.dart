@@ -10,9 +10,8 @@ import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../audit/domain/entities/audit_log_entity.dart';
 import '../../../../audit/presentation/providers/audit_provider.dart';
 import '../../../../audit/presentation/shared/audit_labels.dart';
-import '../../shared/activity_visuals.dart';
 import '../../shared/dashboard_error_notice.dart';
-import 'desktop_dashboard_card.dart';
+import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 
 /// "Actividad reciente" as a vertical timeline (icons joined by a line).
 class ActivityRail extends StatelessWidget {
@@ -24,7 +23,7 @@ class ActivityRail extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AuditProvider>().state;
 
-    return DesktopDashboardCard(
+    return DesktopSectionCard(
       icon: Icons.history_rounded,
       title: 'Actividad reciente',
       linkLabel: 'Ver todas',

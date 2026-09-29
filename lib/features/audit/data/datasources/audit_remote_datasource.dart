@@ -15,6 +15,7 @@ class AuditRemoteDataSource {
     String? action,
     String? entityType,
     int? entityId,
+    int? teachingPeriodId,
   }) async {
     final response = await _client.get(
       ApiEndpoints.auditLogs,
@@ -24,6 +25,7 @@ class AuditRemoteDataSource {
         'action': action,
         'entityType': entityType,
         'entityId': entityId,
+        'teachingPeriodId': teachingPeriodId,
       },
     );
     return ApiPage.fromJson(response.data as Map<String, dynamic>, AuditLogModel.fromJson);

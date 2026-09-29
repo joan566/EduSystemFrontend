@@ -19,10 +19,20 @@ class AuditMobileView extends StatelessWidget {
   const AuditMobileView({
     super.key,
     required this.actionFilter,
+    required this.classFiltered,
+    required this.onClearClassFilter,
+    required this.onLoadPage,
     required this.onActionFilterChanged,
   });
 
   final AuditAction? actionFilter;
+
+  /// Whether only one class's actions are shown.
+  final bool classFiltered;
+  final VoidCallback onClearClassFilter;
+
+  /// Loads a page keeping the active filters.
+  final ValueChanged<int> onLoadPage;
   final ValueChanged<AuditAction?> onActionFilterChanged;
 
   @override
@@ -45,6 +55,19 @@ class AuditMobileView extends StatelessWidget {
               onChanged: onActionFilterChanged,
             ),
           ),
+          if (classFiltered)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: InputChip(
+                  label: const Text('Solo esta clase'),
+                  avatar: const Icon(Icons.filter_alt_outlined, size: 18),
+                  onDeleted: onClearClassFilter,
+                  deleteButtonTooltipMessage: 'Ver toda la actividad',
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           Expanded(child: _buildBody(context, state)),
         ],
@@ -60,7 +83,7 @@ class AuditMobileView extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<AuditProvider>().load(),
+          onRetry: () => onLoadPage(0),
         );
       case ViewStatus.empty:
         return const AppEmptyState(
@@ -74,8 +97,7 @@ class AuditMobileView extends StatelessWidget {
             page: state.page,
             totalPages: state.totalPages,
             totalElements: state.totalElements,
-            onPageChanged: (page) =>
-                context.read<AuditProvider>().load(page: page),
+            onPageChanged: onLoadPage,
           ),
           itemBuilder: (context, log) => AppListTile(
             icon: auditResultIcon(log),

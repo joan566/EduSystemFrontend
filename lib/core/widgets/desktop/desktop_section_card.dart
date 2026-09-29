@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../core/theme/app_colors.dart';
+import '../../theme/app_colors.dart';
 
-/// White section card of the desktop dashboard: icon + title (+ subtitle)
+/// White section card of desktop screens: icon + title (+ subtitle)
 /// header with an optional link on the right, then [child].
-class DesktopDashboardCard extends StatelessWidget {
-  const DesktopDashboardCard({
+class DesktopSectionCard extends StatelessWidget {
+  const DesktopSectionCard({
     super.key,
     required this.icon,
     required this.title,
@@ -93,9 +93,9 @@ class DesktopDashboardCard extends StatelessWidget {
   }
 }
 
-/// Bordered, hoverable row/tile used inside dashboard cards.
-class DesktopDashboardTile extends StatefulWidget {
-  const DesktopDashboardTile({
+/// Bordered, hoverable row/tile used inside desktop section cards.
+class DesktopHoverTile extends StatefulWidget {
+  const DesktopHoverTile({
     super.key,
     required this.child,
     required this.onTap,
@@ -107,10 +107,10 @@ class DesktopDashboardTile extends StatefulWidget {
   final EdgeInsetsGeometry padding;
 
   @override
-  State<DesktopDashboardTile> createState() => _DesktopDashboardTileState();
+  State<DesktopHoverTile> createState() => _DesktopHoverTileState();
 }
 
-class _DesktopDashboardTileState extends State<DesktopDashboardTile> {
+class _DesktopHoverTileState extends State<DesktopHoverTile> {
   bool _hovering = false;
 
   @override

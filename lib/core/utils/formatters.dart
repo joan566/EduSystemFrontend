@@ -45,6 +45,14 @@ class Formatters {
   static String longDayMonth(DateTime value) =>
       '${weekdayName(value.weekday)}, ${value.day} de ${_months[value.month - 1]}';
 
+  /// "sep".
+  static String shortMonth(DateTime value) =>
+      _months[value.month - 1].substring(0, 3);
+
+  /// "Lun".
+  static String shortWeekday(DateTime value) =>
+      weekdayName(value.weekday).substring(0, 3);
+
   /// "28 sep".
   static String shortDayMonth(DateTime value) =>
       '${value.day} ${_months[value.month - 1].substring(0, 3)}';

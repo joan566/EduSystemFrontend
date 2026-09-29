@@ -23,10 +23,14 @@ class AttendanceDesktopView extends StatelessWidget {
     super.key,
     required this.period,
     required this.onPeriodChanged,
+    this.preferredPeriodId,
   });
 
   final TeachingPeriodEntity? period;
   final ValueChanged<TeachingPeriodEntity?> onPeriodChanged;
+
+  /// Class the selector picks on first load, if present.
+  final int? preferredPeriodId;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +58,7 @@ class AttendanceDesktopView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: TeachingPeriodSelector(
+              preferredId: preferredPeriodId,
               value: period,
               onChanged: onPeriodChanged,
             ),

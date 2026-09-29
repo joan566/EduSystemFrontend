@@ -44,12 +44,14 @@ features/<feature>/presentation/
 - `core/widgets/shared/`: platform-neutral primitives (buttons, fields,
   cards, chips, states, `TintedIcon`, `AppFormFrame`, `showAppConfirmDialog`,
   `PickedFile`).
-- `core/widgets/mobile/`: `MobileShell`/`MobileBottomNav`, `MobilePageHeader`,
-  `MobileCardList`, `showMobileForm`/`showMobileSheet`,
+- `core/widgets/mobile/`: `MobileShell`/`MobileBottomNav`, `MobileBrandBar`
+  (top bar of home-level screens), `MobilePageHeader`, `MobileSectionCard`,
+  `MobileSelectField`, `MobileCardList`, `showMobileForm`/`showMobileSheet`,
   `MobileFilePickerButton`, `MobileMorePage`.
 - `core/widgets/desktop/`: `DesktopShell`/`TabletShell`, `DesktopPageHeader`,
-  `DesktopDataTable`, `showDesktopDialog`, `DesktopUploadZone`,
-  `DesktopHeroBanner`, `DesktopStatCard`.
+  `DesktopSectionCard`/`DesktopHoverTile`, `DesktopDataTable`,
+  `showDesktopDialog`, `DesktopUploadZone`, `DesktopHeroBanner`,
+  `DesktopStatCard`.
 
 ## Commands
 

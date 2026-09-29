@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../../core/router/route_paths.dart';
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../auth/presentation/providers/auth_provider.dart';
+import '../../../features/auth/presentation/providers/auth_provider.dart';
+import '../../router/route_paths.dart';
+import '../../theme/app_colors.dart';
 
-/// Brand mark + app name on the left, the user's avatar (-> profile) on
-/// the right.
-class MobileDashboardTopBar extends StatelessWidget {
-  const MobileDashboardTopBar({super.key});
+/// Top bar of the mobile home-level screens (Inicio, Clases): brand mark +
+/// app name on the left, the user's avatar (-> profile) on the right.
+class MobileBrandBar extends StatelessWidget {
+  const MobileBrandBar({super.key});
 
   @override
   Widget build(BuildContext context) {

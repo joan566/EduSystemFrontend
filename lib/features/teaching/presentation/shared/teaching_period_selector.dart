@@ -17,11 +17,16 @@ class TeachingPeriodSelector extends StatefulWidget {
     required this.value,
     required this.onChanged,
     this.label = 'Clase',
+    this.preferredId,
   });
 
   final TeachingPeriodEntity? value;
   final void Function(TeachingPeriodEntity?) onChanged;
   final String label;
+
+  /// Class to select on first load instead of the first one (e.g. when a
+  /// class screen opens this page for a specific class).
+  final int? preferredId;
 
   @override
   State<TeachingPeriodSelector> createState() => _TeachingPeriodSelectorState();
@@ -36,7 +41,10 @@ class _TeachingPeriodSelectorState extends State<TeachingPeriodSelector> {
       await provider.ensureAllPeriodsLoaded();
       if (!mounted) return;
       if (widget.value == null && provider.allPeriods.isNotEmpty) {
-        widget.onChanged(provider.allPeriods.first);
+        final preferred = provider.allPeriods
+            .where((p) => p.id == widget.preferredId)
+            .firstOrNull;
+        widget.onChanged(preferred ?? provider.allPeriods.first);
       }
     });
   }

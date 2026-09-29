@@ -97,4 +97,57 @@ void main() {
       expect(isoDayToJson(DateTime.sunday), 'SUNDAY');
     });
   });
+
+  group('nextClassOccurrence', () {
+    const monday7 = ClassScheduleEntity(
+      id: 1,
+      teachingPeriodId: 1,
+      dayOfWeek: DateTime.monday,
+      startTime: ClockTime(7, 0),
+      endTime: ClockTime(8, 0),
+    );
+    const wednesday10 = ClassScheduleEntity(
+      id: 2,
+      teachingPeriodId: 1,
+      dayOfWeek: DateTime.wednesday,
+      startTime: ClockTime(10, 0),
+      endTime: ClockTime(11, 0),
+    );
+    // Monday 2026-09-28.
+    final monday = DateTime(2026, 9, 28);
+
+    test('returns the block in progress today', () {
+      final next = nextClassOccurrence([
+        monday7,
+        wednesday10,
+      ], monday.add(const Duration(hours: 7, minutes: 30)));
+      expect(next!.block.id, 1);
+      expect(next.date, monday);
+    });
+
+    test('skips blocks already over and finds the next day', () {
+      final next = nextClassOccurrence([
+        monday7,
+        wednesday10,
+      ], monday.add(const Duration(hours: 9)));
+      expect(next!.block.id, 2);
+      expect(next.date, DateTime(2026, 9, 30));
+    });
+
+    test('wraps to next week', () {
+      final next = nextClassOccurrence([
+        monday7,
+      ], monday.add(const Duration(hours: 9)));
+      expect(next!.date, DateTime(2026, 10, 5));
+    });
+
+    test('stops at the class end date', () {
+      final next = nextClassOccurrence(
+        [monday7],
+        monday.add(const Duration(hours: 9)),
+        lastDate: DateTime(2026, 10, 1),
+      );
+      expect(next, isNull);
+    });
+  });
 }

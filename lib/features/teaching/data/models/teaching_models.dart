@@ -1,6 +1,7 @@
 import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/teaching_assignment_entity.dart';
 import '../../domain/entities/teaching_period_entity.dart';
+import '../../domain/entities/teaching_period_summary_entity.dart';
 
 class TeachingAssignmentModel {
   static TeachingAssignmentEntity fromJson(Map<String, dynamic> json) =>
@@ -33,4 +34,19 @@ class TeachingPeriodModel {
         endDate: Formatters.parseApiDate(json['endDate'] as String),
         studentCount: (json['studentCount'] as num?)?.toInt() ?? 0,
       );
+}
+
+class TeachingPeriodSummaryModel {
+  static TeachingPeriodSummaryEntity fromJson(Map<String, dynamic> json) {
+    final grading = json['grading'] as Map<String, dynamic>;
+    return TeachingPeriodSummaryEntity(
+      teachingPeriodId: json['teachingPeriodId'] as int,
+      studentCount: (json['studentCount'] as num).toInt(),
+      activityCount: (json['activityCount'] as num).toInt(),
+      examCount: (json['examCount'] as num).toInt(),
+      expectedGrades: (grading['expectedGrades'] as num).toInt(),
+      registeredGrades: (grading['registeredGrades'] as num).toInt(),
+      progressPercent: (grading['progressPercent'] as num).toInt(),
+    );
+  }
 }

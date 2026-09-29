@@ -18,10 +18,20 @@ class AuditDesktopView extends StatelessWidget {
   const AuditDesktopView({
     super.key,
     required this.actionFilter,
+    required this.classFiltered,
+    required this.onClearClassFilter,
+    required this.onLoadPage,
     required this.onActionFilterChanged,
   });
 
   final AuditAction? actionFilter;
+
+  /// Whether only one class's actions are shown.
+  final bool classFiltered;
+  final VoidCallback onClearClassFilter;
+
+  /// Loads a page keeping the active filters.
+  final ValueChanged<int> onLoadPage;
   final ValueChanged<AuditAction?> onActionFilterChanged;
 
   @override
@@ -37,20 +47,30 @@ class AuditDesktopView extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: SizedBox(
-                width: 240,
-                child: AppDropdown<AuditAction?>(
-                  label: 'Filtrar por acción',
-                  value: actionFilter,
-                  items: [null, ...AuditAction.values],
-                  itemLabel: (action) => action == null
-                      ? 'Todas las acciones'
-                      : auditActionLabel(action),
-                  onChanged: onActionFilterChanged,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 240,
+                  child: AppDropdown<AuditAction?>(
+                    label: 'Filtrar por acción',
+                    value: actionFilter,
+                    items: [null, ...AuditAction.values],
+                    itemLabel: (action) => action == null
+                        ? 'Todas las acciones'
+                        : auditActionLabel(action),
+                    onChanged: onActionFilterChanged,
+                  ),
                 ),
-              ),
+                if (classFiltered) ...[
+                  const SizedBox(width: 12),
+                  InputChip(
+                    label: const Text('Solo esta clase'),
+                    avatar: const Icon(Icons.filter_alt_outlined, size: 18),
+                    onDeleted: onClearClassFilter,
+                    deleteButtonTooltipMessage: 'Ver toda la actividad',
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: 8),
@@ -60,8 +80,7 @@ class AuditDesktopView extends StatelessWidget {
               page: state.page,
               totalPages: state.totalPages,
               totalElements: state.totalElements,
-              onPageChanged: (page) =>
-                  context.read<AuditProvider>().load(page: page),
+              onPageChanged: onLoadPage,
             ),
         ],
       ),
@@ -76,7 +95,7 @@ class AuditDesktopView extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<AuditProvider>().load(),
+          onRetry: () => onLoadPage(0),
         );
       case ViewStatus.empty:
         return const AppEmptyState(

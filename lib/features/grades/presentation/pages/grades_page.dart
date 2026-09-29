@@ -9,7 +9,11 @@ import '../providers/grading_provider.dart';
 import '../shared/grading_configuration_controller.dart';
 
 class GradesPage extends StatefulWidget {
-  const GradesPage({super.key});
+  const GradesPage({super.key, this.initialTeachingPeriodId});
+
+  /// Class to preselect (from `?teachingPeriodId=`), e.g. when opened from
+  /// a class screen.
+  final int? initialTeachingPeriodId;
 
   @override
   State<GradesPage> createState() => _GradesPageState();
@@ -43,11 +47,13 @@ class _GradesPageState extends State<GradesPage> {
   Widget build(BuildContext context) {
     return ResponsiveBuilder(
       mobile: (_) => GradesMobileView(
+        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
         config: _config,
         onPeriodChanged: _onPeriodChanged,
       ),
       desktop: (_) => GradesDesktopView(
+        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
         config: _config,
         onPeriodChanged: _onPeriodChanged,

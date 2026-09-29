@@ -154,3 +154,37 @@ class ScheduleRangeEntity {
     return counts;
   }
 }
+
+/// A concrete occurrence of a weekly block.
+class ClassOccurrence {
+  const ClassOccurrence({required this.date, required this.block});
+
+  /// Date only (no time).
+  final DateTime date;
+  final ClassScheduleEntity block;
+
+  DateTime get start => block.startTime.on(date);
+  DateTime get end => block.endTime.on(date);
+}
+
+/// The occurrence in progress at [now], else the next one to start, among
+/// a class's weekly [blocks], within the class's dates ([lastDate]
+/// inclusive). Null when there is none within the next week.
+ClassOccurrence? nextClassOccurrence(
+  List<ClassScheduleEntity> blocks,
+  DateTime now, {
+  DateTime? lastDate,
+}) {
+  final today = DateTime(now.year, now.month, now.day);
+  final sorted = [...blocks]
+    ..sort((a, b) => a.startTime.compareTo(b.startTime));
+  for (var offset = 0; offset <= 7; offset++) {
+    final date = DateTime(today.year, today.month, today.day + offset);
+    if (lastDate != null && date.isAfter(lastDate)) return null;
+    for (final block in sorted.where((b) => b.dayOfWeek == date.weekday)) {
+      final occurrence = ClassOccurrence(date: date, block: block);
+      if (occurrence.end.isAfter(now)) return occurrence;
+    }
+  }
+  return null;
+}

@@ -19,11 +19,15 @@ class GradesDesktopView extends StatelessWidget {
     required this.period,
     required this.config,
     required this.onPeriodChanged,
+    this.preferredPeriodId,
   });
 
   final TeachingPeriodEntity? period;
   final GradingConfigurationController? config;
   final ValueChanged<TeachingPeriodEntity?> onPeriodChanged;
+
+  /// Class the selector picks on first load, if present.
+  final int? preferredPeriodId;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +47,7 @@ class GradesDesktopView extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: TeachingPeriodSelector(
+                preferredId: preferredPeriodId,
                 value: period,
                 onChanged: onPeriodChanged,
               ),

@@ -31,6 +31,8 @@ class AuditLogEntity {
     required this.action,
     required this.entityType,
     required this.entityId,
+    this.teachingPeriodId,
+    this.entityLabel,
     required this.result,
     required this.details,
     required this.createdAt,
@@ -40,6 +42,12 @@ class AuditLogEntity {
   final AuditAction action;
   final String entityType;
   final int? entityId;
+
+  /// Class (teaching period) the action belongs to, when it belongs to one.
+  final int? teachingPeriodId;
+
+  /// Human-readable target, e.g. "Parcial 1 · Ana Pérez".
+  final String? entityLabel;
   final String result;
   final String? details;
   final DateTime createdAt;

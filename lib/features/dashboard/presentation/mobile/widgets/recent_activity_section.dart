@@ -11,8 +11,7 @@ import '../../../../audit/presentation/providers/audit_provider.dart';
 import '../../../../audit/presentation/shared/audit_labels.dart';
 import '../../shared/dashboard_error_notice.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
-import '../../shared/activity_visuals.dart';
-import 'mobile_dashboard_section.dart';
+import '../../../../../core/widgets/mobile/mobile_section_card.dart';
 
 /// Latest actions on the account (from the audit trail), newest first.
 class RecentActivitySection extends StatelessWidget {
@@ -24,7 +23,7 @@ class RecentActivitySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AuditProvider>().state;
 
-    return MobileDashboardSection(
+    return MobileSectionCard(
       icon: Icons.history_rounded,
       title: 'Actividad reciente',
       linkLabel: 'Ver todo',

@@ -9,7 +9,7 @@ import '../../../../../core/theme/subject_visuals.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../schedule/domain/entities/schedule_entities.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
-import 'desktop_dashboard_card.dart';
+import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 
 /// The class in progress, or the next one today, with a "Ver clase" CTA.
 /// Renders nothing until today's schedule has loaded successfully.
@@ -27,7 +27,7 @@ class NextClassCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
-    return DesktopDashboardCard(
+    return DesktopSectionCard(
       icon: Icons.schedule_outlined,
       title: inProgress ? 'En curso' : 'Próxima clase',
       child: next == null

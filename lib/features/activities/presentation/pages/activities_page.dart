@@ -8,7 +8,11 @@ import '../mobile/activities_mobile_view.dart';
 import '../providers/activities_provider.dart';
 
 class ActivitiesPage extends StatefulWidget {
-  const ActivitiesPage({super.key});
+  const ActivitiesPage({super.key, this.initialTeachingPeriodId});
+
+  /// Class to preselect (from `?teachingPeriodId=`), e.g. when opened from
+  /// a class screen.
+  final int? initialTeachingPeriodId;
 
   @override
   State<ActivitiesPage> createState() => _ActivitiesPageState();
@@ -30,10 +34,12 @@ class _ActivitiesPageState extends State<ActivitiesPage> {
   Widget build(BuildContext context) {
     return ResponsiveBuilder(
       mobile: (_) => ActivitiesMobileView(
+        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
         onPeriodChanged: _onPeriodChanged,
       ),
       desktop: (_) => ActivitiesDesktopView(
+        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
         onPeriodChanged: _onPeriodChanged,
       ),

@@ -12,7 +12,7 @@ import '../../../../schedule/domain/entities/schedule_entities.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../schedule/presentation/shared/schedule_widgets.dart';
 import '../../shared/dashboard_error_notice.dart';
-import 'desktop_dashboard_card.dart';
+import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 
 /// "Hoy": the day's classes as a timeline with statuses (server clock).
 class TodayCard extends StatelessWidget {
@@ -24,7 +24,7 @@ class TodayCard extends StatelessWidget {
     final state = provider.today;
     final today = state.data;
 
-    return DesktopDashboardCard(
+    return DesktopSectionCard(
       icon: Icons.calendar_month_outlined,
       title: 'Hoy',
       subtitle: Formatters.longDayMonth(today?.date ?? DateTime.now()),

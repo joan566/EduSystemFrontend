@@ -87,6 +87,27 @@ class TeachingActions {
     }
   }
 
+  /// Creates [assignment]'s class in [academicPeriod] directly — both are
+  /// already known, so no form is needed.
+  static Future<void> createClassFor(
+    BuildContext context, {
+    required TeachingAssignmentEntity assignment,
+    required AcademicPeriodEntity academicPeriod,
+  }) async {
+    final error = await context.read<TeachingProvider>().createPeriod(
+      teachingAssignmentId: assignment.id,
+      academicPeriodId: academicPeriod.id,
+    );
+    if (!context.mounted) return;
+    if (error != null) {
+      context.showApiError(error);
+    } else {
+      context.showSuccess(
+        'Clase de ${assignment.subjectName} creada en ${academicPeriod.name}.',
+      );
+    }
+  }
+
   static Future<void> setAssignmentActive(
     BuildContext context,
     TeachingAssignmentEntity item,
@@ -116,7 +137,8 @@ class TeachingActions {
     if (context.mounted && error != null) context.showApiError(error);
   }
 
-  static Future<void> deletePeriod(
+  /// Returns whether the class was deleted.
+  static Future<bool> deletePeriod(
     BuildContext context,
     TeachingPeriodEntity item,
   ) async {
@@ -126,9 +148,15 @@ class TeachingActions {
       message: 'Esta acción no se puede deshacer.',
       confirmLabel: 'Eliminar',
     );
-    if (!confirmed || !context.mounted) return;
+    if (!confirmed || !context.mounted) return false;
     final error = await context.read<TeachingProvider>().deletePeriod(item.id);
-    if (context.mounted && error != null) context.showApiError(error);
+    if (!context.mounted) return error == null;
+    if (error != null) {
+      context.showApiError(error);
+      return false;
+    }
+    context.showSuccess('Clase eliminada.');
+    return true;
   }
 }
 

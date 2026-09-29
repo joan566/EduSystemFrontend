@@ -10,8 +10,8 @@ import '../../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../shared/dashboard_error_notice.dart';
 import '../../../../../core/theme/subject_visuals.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
-import '../../shared/class_counts.dart';
-import 'mobile_dashboard_section.dart';
+import '../../../../teaching/presentation/shared/class_counts.dart';
+import '../../../../../core/widgets/mobile/mobile_section_card.dart';
 
 /// "Tus clases": the teacher's classes as a horizontal, swipeable row of
 /// cards (subject, course, period, sessions this week, students).
@@ -29,7 +29,7 @@ class ClassesCarouselSection extends StatelessWidget {
         .data
         ?.occurrencesByTeachingPeriod;
 
-    return MobileDashboardSection(
+    return MobileSectionCard(
       icon: Icons.menu_book_outlined,
       title: 'Tus clases',
       linkLabel: 'Ver todas',

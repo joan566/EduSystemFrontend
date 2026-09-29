@@ -25,6 +25,8 @@ class RoutePaths {
 
   static const exams = '/app/exams';
   static const examCreate = '/app/exams/create';
+  static String examCreateForClass(int teachingPeriodId) =>
+      '$examCreate?teachingPeriodId=$teachingPeriodId';
   static String examDetail(int id) => '/app/exams/$id';
   static String examQuestions(int id) => '/app/exams/$id/questions';
   static String examAnswerSheets(int id) => '/app/exams/$id/answer-sheets';
@@ -37,14 +39,22 @@ class RoutePaths {
       '/app/exams/$examId/submissions/$submissionId';
 
   static const activities = '/app/activities';
+  static String activitiesForClass(int teachingPeriodId) =>
+      '$activities?teachingPeriodId=$teachingPeriodId';
   static String activityDetail(int id) => '/app/activities/$id';
 
   static const attendance = '/app/attendance';
+  static String attendanceForClass(int teachingPeriodId) =>
+      '$attendance?teachingPeriodId=$teachingPeriodId';
   static String attendanceSessionDetail(int id) => '/app/attendance/$id';
 
   static const grades = '/app/grades';
+  static String gradesForClass(int teachingPeriodId) =>
+      '$grades?teachingPeriodId=$teachingPeriodId';
   static const dataManagement = '/app/data';
   static const audit = '/app/audit';
+  static String auditForClass(int teachingPeriodId) =>
+      '$audit?teachingPeriodId=$teachingPeriodId';
   static const profile = '/app/profile';
   static const more = '/app/more';
 }

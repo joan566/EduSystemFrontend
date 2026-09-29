@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/widgets/mobile/mobile_brand_bar.dart';
 import '../providers/dashboard_provider.dart';
 import '../shared/dashboard_state.dart';
 import '../shared/getting_started_card.dart';
 import 'widgets/classes_carousel_section.dart';
-import 'widgets/mobile_dashboard_top_bar.dart';
 import 'widgets/quick_actions_section.dart';
 import 'widgets/recent_activity_section.dart';
 import 'widgets/today_section.dart';
@@ -26,7 +26,7 @@ class DashboardMobileView extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
           children: [
-            const MobileDashboardTopBar(),
+            const MobileBrandBar(),
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),

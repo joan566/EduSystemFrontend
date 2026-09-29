@@ -169,7 +169,9 @@ class AppRouter {
           ),
           GoRoute(
             path: RoutePaths.activities,
-            builder: (context, state) => const ActivitiesPage(),
+            builder: (context, state) => ActivitiesPage(
+              initialTeachingPeriodId: _teachingPeriodIdParam(state),
+            ),
             routes: [
               GoRoute(
                 path: ':id',
@@ -181,7 +183,9 @@ class AppRouter {
           ),
           GoRoute(
             path: RoutePaths.attendance,
-            builder: (context, state) => const AttendancePage(),
+            builder: (context, state) => AttendancePage(
+              initialTeachingPeriodId: _teachingPeriodIdParam(state),
+            ),
             routes: [
               GoRoute(
                 path: ':id',
@@ -193,7 +197,9 @@ class AppRouter {
           ),
           GoRoute(
             path: RoutePaths.grades,
-            builder: (context, state) => const GradesPage(),
+            builder: (context, state) => GradesPage(
+              initialTeachingPeriodId: _teachingPeriodIdParam(state),
+            ),
           ),
           GoRoute(
             path: RoutePaths.dataManagement,
@@ -201,7 +207,9 @@ class AppRouter {
           ),
           GoRoute(
             path: RoutePaths.audit,
-            builder: (context, state) => const AuditPage(),
+            builder: (context, state) => AuditPage(
+              initialTeachingPeriodId: _teachingPeriodIdParam(state),
+            ),
           ),
           GoRoute(
             path: RoutePaths.profile,
@@ -215,6 +223,11 @@ class AppRouter {
       ),
     ],
   );
+
+  static int? _teachingPeriodIdParam(GoRouterState state) {
+    final raw = state.uri.queryParameters['teachingPeriodId'];
+    return raw == null ? null : int.tryParse(raw);
+  }
 
   String? _redirect(BuildContext context, GoRouterState state) {
     final status = _authProvider.status;

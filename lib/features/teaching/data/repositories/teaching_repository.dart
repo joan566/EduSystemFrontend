@@ -1,6 +1,7 @@
 import '../../../../core/state/list_state.dart';
 import '../../domain/entities/teaching_assignment_entity.dart';
 import '../../domain/entities/teaching_period_entity.dart';
+import '../../domain/entities/teaching_period_summary_entity.dart';
 import '../datasources/teaching_remote_datasource.dart';
 
 class TeachingRepository {
@@ -49,6 +50,9 @@ class TeachingRepository {
   );
 
   Future<TeachingPeriodEntity> getPeriod(int id) => _remote.getPeriod(id);
+
+  Future<TeachingPeriodSummaryEntity> getPeriodSummary(int id) =>
+      _remote.getPeriodSummary(id);
 
   Future<void> deletePeriod(int id) => _remote.deletePeriod(id);
 }
