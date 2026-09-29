@@ -33,8 +33,11 @@ import 'features/exams/presentation/providers/exams_provider.dart';
 import 'features/exams/presentation/providers/submission_batches_provider.dart';
 import 'features/exams/presentation/providers/submissions_provider.dart';
 import 'features/exports/data/export_datasource.dart';
+import 'features/grades/data/datasources/gradebook_remote_datasource.dart';
 import 'features/grades/data/datasources/grading_remote_datasource.dart';
+import 'features/grades/data/repositories/gradebook_repository.dart';
 import 'features/grades/data/repositories/grading_repository.dart';
+import 'features/grades/presentation/providers/gradebook_provider.dart';
 import 'features/grades/presentation/providers/grading_provider.dart';
 import 'features/imports/data/datasources/import_remote_datasource.dart';
 import 'features/imports/data/repositories/import_repository.dart';
@@ -185,6 +188,13 @@ class EduSistemApp extends StatelessWidget {
           create: (context) => GradingProvider(
             GradingRepository(
               GradingRemoteDataSource(context.read<ApiClient>()),
+            ),
+          ),
+        ),
+        ChangeNotifierProvider<GradebookProvider>(
+          create: (context) => GradebookProvider(
+            GradebookRepository(
+              GradebookRemoteDataSource(context.read<ApiClient>()),
             ),
           ),
         ),

@@ -21,7 +21,10 @@ import '../../features/exams/presentation/pages/exam_builder_page.dart';
 import '../../features/exams/presentation/pages/exam_detail_page.dart';
 import '../../features/exams/presentation/pages/exams_page.dart';
 import '../../features/exams/presentation/pages/submission_detail_page.dart';
+import '../../features/grades/presentation/pages/grade_detail_page.dart';
 import '../../features/grades/presentation/pages/grades_page.dart';
+import '../../features/grades/presentation/pages/grading_settings_page.dart';
+import '../../features/grades/presentation/pages/student_grades_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/scanning/presentation/pages/scanning_page.dart';
 import '../../features/students/presentation/pages/student_detail_page.dart';
@@ -204,6 +207,31 @@ class AppRouter {
           GoRoute(
             path: RoutePaths.grades,
             builder: (context, state) => GradesPage(
+              initialTeachingPeriodId: _teachingPeriodIdParam(state),
+            ),
+            routes: [
+              GoRoute(
+                path: ':tp/students/:sid',
+                builder: (context, state) => StudentGradesPage(
+                  teachingPeriodId: int.parse(state.pathParameters['tp']!),
+                  studentId: int.parse(state.pathParameters['sid']!),
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'evaluations/:eid',
+                    builder: (context, state) => GradeDetailPage(
+                      teachingPeriodId: int.parse(state.pathParameters['tp']!),
+                      studentId: int.parse(state.pathParameters['sid']!),
+                      evaluationId: int.parse(state.pathParameters['eid']!),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RoutePaths.gradingSettings,
+            builder: (context, state) => GradingSettingsPage(
               initialTeachingPeriodId: _teachingPeriodIdParam(state),
             ),
           ),

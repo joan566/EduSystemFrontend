@@ -1,148 +1,321 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
-import '../../../../core/utils/formatters.dart';
-import '../../../../core/widgets/mobile/mobile_card_list.dart';
+import '../../../../core/router/route_paths.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
-import '../../../../core/widgets/mobile/mobile_page_header.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
-import '../../../../core/widgets/shared/app_list_tile.dart';
+import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/shared/teaching_period_selector.dart';
-import '../shared/grading_configuration_cards.dart';
-import '../shared/grading_configuration_controller.dart';
-import '../shared/grading_scale_form.dart';
+import '../../domain/entities/grading_entities.dart';
+import '../providers/grading_provider.dart';
+import '../shared/class_grades.dart';
+import '../shared/grades_navigation.dart';
 import '../shared/period_grades_state_view.dart';
+import 'widgets/class_grades_summary_mobile.dart';
+import 'widgets/class_picker_card.dart';
+import 'widgets/student_grade_card.dart';
 
-class GradesMobileView extends StatelessWidget {
+/// Mobile "Calificaciones": class picker, then Estudiantes (search, status
+/// filter, one card per student with the period grade and status) and
+/// Resumen de la clase.
+class GradesMobileView extends StatefulWidget {
   const GradesMobileView({
     super.key,
     required this.period,
-    required this.config,
     required this.onPeriodChanged,
-    this.preferredPeriodId,
+    required this.tab,
+    required this.onTabChanged,
+    required this.filters,
+    required this.onFiltersChanged,
   });
 
   final TeachingPeriodEntity? period;
-  final GradingConfigurationController? config;
   final ValueChanged<TeachingPeriodEntity?> onPeriodChanged;
-
-  /// Class the selector picks on first load, if present.
-  final int? preferredPeriodId;
+  final int tab;
+  final ValueChanged<int> onTabChanged;
+  final GradesListFilters filters;
+  final ValueChanged<GradesListFilters> onFiltersChanged;
 
   @override
-  Widget build(BuildContext context) {
-    final period = this.period;
-    final config = this.config;
+  State<GradesMobileView> createState() => _GradesMobileViewState();
+}
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        body: Column(
+class _GradesMobileViewState extends State<GradesMobileView>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs =
+      TabController(length: 2, vsync: this, initialIndex: widget.tab)
+        ..addListener(() {
+          if (!_tabs.indexIsChanging && _tabs.index != widget.tab) {
+            widget.onTabChanged(_tabs.index);
+          }
+        });
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openMore() async {
+    final period = widget.period;
+    final choice = await showMobileSheet<int>(
+      context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const MobilePageHeader(title: 'Calificaciones'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TeachingPeriodSelector(
-                preferredId: preferredPeriodId,
-                value: period,
-                onChanged: onPeriodChanged,
-              ),
+            ListTile(
+              leading: const Icon(Icons.tune),
+              title: const Text('Configurar pesos'),
+              subtitle: const Text('Escala, nota mínima y componentes'),
+              onTap: () => Navigator.of(context).pop(0),
             ),
-            const SizedBox(height: 8),
-            if (period == null || config == null)
-              const Expanded(
-                child: AppEmptyState(
-                  title: 'Selecciona una clase',
-                  message:
-                      'Elige una clase arriba para configurar su escala de '
-                      'calificación o consultar sus notas.',
-                  icon: Icons.grade_outlined,
-                ),
-              )
-            else ...[
-              const TabBar(
-                tabs: [
-                  Tab(text: 'Configuración'),
-                  Tab(text: 'Notas'),
-                ],
-              ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _ConfigurationTab(controller: config),
-                    _PeriodGradesTab(teachingPeriodId: period.id),
-                  ],
-                ),
-              ),
-            ],
+            ListTile(
+              leading: const Icon(Icons.refresh),
+              title: const Text('Actualizar notas'),
+              enabled: period != null,
+              onTap: () => Navigator.of(context).pop(1),
+            ),
           ],
         ),
       ),
     );
+    if (!mounted) return;
+    switch (choice) {
+      case 0:
+        await context.push(
+          period == null
+              ? RoutePaths.gradingSettings
+              : RoutePaths.gradingSettingsForClass(period.id),
+        );
+        if (mounted && period != null) {
+          context.read<GradingProvider>().loadPeriodGrades(period.id);
+        }
+      case 1:
+        context.read<GradingProvider>().loadPeriodGrades(period!.id);
+    }
   }
-}
 
-class _ConfigurationTab extends StatelessWidget {
-  const _ConfigurationTab({required this.controller});
-
-  final GradingConfigurationController controller;
-
-  Future<void> _createScale(BuildContext context) async {
-    final data = await showMobileForm<GradingScaleFormResult>(
+  Future<void> _openFilter() async {
+    final filters = widget.filters;
+    final picked = await showMobileSheet<GradesListFilters>(
       context,
-      child: const GradingScaleForm(),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+              child: Text(
+                'Estado',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            for (final status in GradeStatusFilter.values)
+              ListTile(
+                dense: true,
+                title: Text(gradeStatusFilterLabel(status)),
+                trailing: filters.status == status
+                    ? const Icon(Icons.check, color: AppColors.accentBlue)
+                    : null,
+                onTap: () =>
+                    Navigator.of(context).pop(filters.copyWith(status: status)),
+              ),
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+              child: Text(
+                'Ordenar',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            for (final sort in GradeSort.values)
+              ListTile(
+                dense: true,
+                title: Text(gradeSortLabel(sort)),
+                trailing: filters.sort == sort
+                    ? const Icon(Icons.check, color: AppColors.accentBlue)
+                    : null,
+                onTap: () =>
+                    Navigator.of(context).pop(filters.copyWith(sort: sort)),
+              ),
+          ],
+        ),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await controller.createScale(context, data);
+    if (picked != null) widget.onFiltersChanged(picked);
   }
 
   @override
   Widget build(BuildContext context) {
-    return GradingConfigurationStateView(
-      controller: controller,
-      builder: (context) => ListView(
-        padding: const EdgeInsets.all(16),
+    final textTheme = Theme.of(context).textTheme;
+    final period = widget.period;
+
+    return Scaffold(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          GradingScaleCard(
-            controller: controller,
-            onCreateScale: () => _createScale(context),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
+            child: Row(
+              children: [
+                if (Navigator.of(context).canPop())
+                  const BackButton()
+                else
+                  const SizedBox(width: 12),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Calificaciones',
+                    style: textTheme.headlineLarge?.copyWith(fontSize: 26),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Más opciones',
+                  onPressed: _openMore,
+                  icon: const Icon(Icons.more_vert),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          GradingWeightsCard(controller: controller),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+            child: ClassPickerCard(
+              value: period,
+              onChanged: widget.onPeriodChanged,
+            ),
+          ),
+          TabBar(
+            controller: _tabs,
+            labelColor: AppColors.accentBlue,
+            unselectedLabelColor: AppColors.textSecondary,
+            indicatorColor: AppColors.accentBlue,
+            indicatorWeight: 3,
+            dividerColor: Theme.of(context).colorScheme.outline,
+            labelStyle: textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+            unselectedLabelStyle: textTheme.labelLarge,
+            tabs: const [
+              Tab(text: 'Estudiantes'),
+              Tab(text: 'Resumen de la clase'),
+            ],
+          ),
+          Expanded(
+            child: period == null
+                ? const AppEmptyState(
+                    title: 'Selecciona una clase',
+                    message:
+                        'Elige una clase arriba para ver las notas de sus estudiantes.',
+                    icon: Icons.grade_outlined,
+                  )
+                : PeriodGradesStateView(
+                    teachingPeriodId: period.id,
+                    builder: (context, data) => TabBarView(
+                      controller: _tabs,
+                      children: [
+                        _StudentsTab(
+                          data: data,
+                          filters: widget.filters,
+                          onFiltersChanged: widget.onFiltersChanged,
+                          onOpenFilter: _openFilter,
+                        ),
+                        ClassGradesSummaryMobile(data: data),
+                      ],
+                    ),
+                  ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _PeriodGradesTab extends StatelessWidget {
-  const _PeriodGradesTab({required this.teachingPeriodId});
+class _StudentsTab extends StatelessWidget {
+  const _StudentsTab({
+    required this.data,
+    required this.filters,
+    required this.onFiltersChanged,
+    required this.onOpenFilter,
+  });
 
-  final int teachingPeriodId;
+  final PeriodGradesEntity data;
+  final GradesListFilters filters;
+  final ValueChanged<GradesListFilters> onFiltersChanged;
+  final VoidCallback onOpenFilter;
 
   @override
   Widget build(BuildContext context) {
-    return PeriodGradesStateView(
-      teachingPeriodId: teachingPeriodId,
-      builder: (context, data) => MobileCardList(
-        items: data.students,
-        itemBuilder: (context, item) => AppListTile(
-          icon: Icons.grade_outlined,
-          title: item.studentName,
-          subtitle: item.categories
-              .map(
-                (c) =>
-                    '${c.categoryName}: ${c.achievement?.toStringAsFixed(1) ?? '—'}',
-              )
-              .join(' · '),
-          subtitleMaxLines: 2,
-          trailing: Text(
-            item.periodGrade != null
-                ? Formatters.grade(item.periodGrade!, data.scale.maximumValue)
-                : '—',
-            style: Theme.of(context).textTheme.titleMedium,
+    final students = filters.apply(data.students);
+    final filtered =
+        filters.status != GradeStatusFilter.all ||
+        filters.sort != GradeSort.name;
+
+    return RefreshIndicator(
+      onRefresh: () => context.read<GradingProvider>().loadPeriodGrades(
+        data.teachingPeriodId,
+        silent: true,
+      ),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: AppSearchField(
+                  hint: 'Buscar estudiante...',
+                  initialValue: filters.search,
+                  onChanged: (search) =>
+                      onFiltersChanged(filters.copyWith(search: search)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Badge(
+                isLabelVisible: filtered,
+                smallSize: 8,
+                backgroundColor: AppColors.accentBlue,
+                child: IconButton.outlined(
+                  tooltip: 'Filtrar y ordenar',
+                  onPressed: onOpenFilter,
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.tune),
+                ),
+              ),
+            ],
           ),
-        ),
+          const SizedBox(height: 12),
+          if (students.isEmpty)
+            const AppEmptyState(
+              title: 'Sin resultados',
+              message:
+                  'Ningún estudiante coincide con la búsqueda o el filtro.',
+              icon: Icons.search_off,
+            ),
+          for (final student in students)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: StudentGradeCard(
+                student: student,
+                scale: data.scale,
+                onTap: () => openStudentGrades(
+                  context,
+                  data.teachingPeriodId,
+                  student.studentId,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

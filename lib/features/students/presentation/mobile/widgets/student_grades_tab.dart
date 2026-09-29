@@ -8,6 +8,7 @@ import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../../core/widgets/shared/app_loading.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
+import '../../../../grades/presentation/shared/category_visuals.dart';
 import '../../../domain/entities/student_entity.dart';
 import '../../shared/student_grades_controller.dart';
 
@@ -62,7 +63,10 @@ class _StudentGradesTabState extends State<StudentGradesTab> {
               for (final grade in grades)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _ClassGradeCard(grade: grade),
+                  child: _ClassGradeCard(
+                    grade: grade,
+                    studentId: widget.detail.student.id,
+                  ),
                 ),
             ],
           ),
@@ -73,9 +77,10 @@ class _StudentGradesTabState extends State<StudentGradesTab> {
 }
 
 class _ClassGradeCard extends StatelessWidget {
-  const _ClassGradeCard({required this.grade});
+  const _ClassGradeCard({required this.grade, required this.studentId});
 
   final StudentClassGrade grade;
+  final int studentId;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +103,13 @@ class _ClassGradeCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => context.push(RoutePaths.gradesForClass(period.id)),
+        // The student's grade evaluation by evaluation; a class without
+        // weights goes to its grading setup instead.
+        onTap: () => context.push(
+          grade.needsConfiguration
+              ? RoutePaths.gradingSettingsForClass(period.id)
+              : RoutePaths.studentGrades(period.id, studentId),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -190,7 +201,7 @@ class _ClassGradeCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            '${category.categoryName}  ·  '
+                            '${categoryLabel(category.categoryName)}  ·  '
                             '${category.weight.toStringAsFixed(0)}%',
                             style: textTheme.bodySmall,
                           ),

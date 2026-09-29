@@ -13,7 +13,11 @@ class GradingScaleEntity {
 }
 
 class EvaluationCategoryEntity {
-  const EvaluationCategoryEntity({required this.id, required this.name, this.description});
+  const EvaluationCategoryEntity({
+    required this.id,
+    required this.name,
+    this.description,
+  });
 
   final int id;
   final String name;
@@ -21,7 +25,10 @@ class EvaluationCategoryEntity {
 }
 
 class CategoryWeight {
-  const CategoryWeight({required this.evaluationCategoryId, required this.weight});
+  const CategoryWeight({
+    required this.evaluationCategoryId,
+    required this.weight,
+  });
 
   final int evaluationCategoryId;
   final double weight;
@@ -35,6 +42,7 @@ class GradingConfigurationEntity {
     required this.weights,
     required this.totalWeight,
     required this.complete,
+    this.passingGrade,
   });
 
   final int id;
@@ -43,6 +51,9 @@ class GradingConfigurationEntity {
   final List<CategoryWeight> weights;
   final double totalWeight;
   final bool complete;
+
+  /// Minimum period grade to pass; null when the class doesn't define one.
+  final double? passingGrade;
 }
 
 class CategoryGrade {
@@ -70,6 +81,7 @@ class StudentPeriodGrade {
     required this.studentName,
     required this.categories,
     this.periodGrade,
+    this.passing,
   });
 
   final int studentId;
@@ -77,6 +89,9 @@ class StudentPeriodGrade {
   final String studentName;
   final List<CategoryGrade> categories;
   final double? periodGrade;
+
+  /// Against the class's passing grade; null when it has none.
+  final bool? passing;
 }
 
 class PeriodGradesEntity {
@@ -84,9 +99,11 @@ class PeriodGradesEntity {
     required this.teachingPeriodId,
     required this.scale,
     required this.students,
+    this.passingGrade,
   });
 
   final int teachingPeriodId;
   final GradingScaleEntity scale;
   final List<StudentPeriodGrade> students;
+  final double? passingGrade;
 }

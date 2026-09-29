@@ -9,6 +9,7 @@ import '../../../../../core/widgets/desktop/desktop_stat_card.dart';
 import '../../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../../core/widgets/shared/app_loading.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
+import '../../../../grades/presentation/shared/category_visuals.dart';
 import '../../../domain/entities/student_entity.dart';
 import '../../shared/student_grades_controller.dart';
 
@@ -130,6 +131,7 @@ class _StudentGradesPanelState extends State<StudentGradesPanel> {
             Divider(height: 1, color: colors.outline),
             _GradeRow(
               grade: grade,
+              studentId: widget.detail.student.id,
               expanded: _expanded.contains(grade.period.id),
               onToggle: () => setState(() {
                 if (!_expanded.remove(grade.period.id)) {
@@ -212,11 +214,13 @@ class _Kpis extends StatelessWidget {
 class _GradeRow extends StatelessWidget {
   const _GradeRow({
     required this.grade,
+    required this.studentId,
     required this.expanded,
     required this.onToggle,
   });
 
   final StudentClassGrade grade;
+  final int studentId;
   final bool expanded;
   final VoidCallback onToggle;
 
@@ -340,10 +344,15 @@ class _GradeRow extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       IconButton(
-                        tooltip: 'Abrir calificaciones de la clase',
+                        tooltip: grade.needsConfiguration
+                            ? 'Configurar pesos de la clase'
+                            : 'Ver notas evaluación por evaluación',
                         visualDensity: VisualDensity.compact,
-                        onPressed: () =>
-                            context.push(RoutePaths.gradesForClass(period.id)),
+                        onPressed: () => context.push(
+                          grade.needsConfiguration
+                              ? RoutePaths.gradingSettingsForClass(period.id)
+                              : RoutePaths.studentGrades(period.id, studentId),
+                        ),
                         icon: const Icon(Icons.open_in_new, size: 18),
                       ),
                       if (canExpand)
@@ -374,7 +383,7 @@ class _GradeRow extends StatelessWidget {
                         Expanded(
                           flex: 4,
                           child: Text(
-                            c.categoryName,
+                            categoryLabel(c.categoryName),
                             style: textTheme.bodyMedium,
                           ),
                         ),

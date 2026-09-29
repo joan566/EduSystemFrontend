@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
@@ -8,11 +10,11 @@ import '../../../../core/widgets/shared/app_loading.dart';
 import '../../domain/entities/grading_entities.dart';
 import '../providers/grading_provider.dart';
 
-/// Loads the computed period grades (§53, §84) every time the tab is shown
-/// — so they reflect a configuration just saved in the other tab — and
-/// resolves loading/error/empty. [builder] only renders real data; the
-/// backend is the sole source of the official grade.
-class PeriodGradesStateView extends StatefulWidget {
+/// Resolves a class's period grades (loaded by the page when the class
+/// changes): loading, error, a missing or incomplete configuration (with a
+/// way to Configuración de notas) and an empty roster. [builder] only
+/// renders real data; the backend is the sole source of the grades.
+class PeriodGradesStateView extends StatelessWidget {
   const PeriodGradesStateView({
     super.key,
     required this.teachingPeriodId,
@@ -21,21 +23,6 @@ class PeriodGradesStateView extends StatefulWidget {
 
   final int teachingPeriodId;
   final Widget Function(BuildContext context, PeriodGradesEntity data) builder;
-
-  @override
-  State<PeriodGradesStateView> createState() => _PeriodGradesStateViewState();
-}
-
-class _PeriodGradesStateViewState extends State<PeriodGradesStateView> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<GradingProvider>().loadPeriodGrades(
-        widget.teachingPeriodId,
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,30 +34,48 @@ class _PeriodGradesStateViewState extends State<PeriodGradesStateView> {
         return const AppLoading();
       case DetailStatus.error:
         final error = state.error!;
-        if (error.code == 'GRADING_CONFIGURATION_INCOMPLETE') {
-          return const AppEmptyState(
-            title: 'La configuración de calificación está incompleta',
+        final missing = error.code == 'GRADING_CONFIGURATION_REQUIRED';
+        if (missing || error.code == 'GRADING_CONFIGURATION_INCOMPLETE') {
+          return AppEmptyState(
+            title: missing
+                ? 'Esta clase aún no tiene pesos de evaluación'
+                : 'Los pesos de evaluación no suman 100%',
             message:
-                'Ve a la pestaña "Configuración" y asegúrate de que las '
-                'ponderaciones sumen 100%.',
-            icon: Icons.rule_outlined,
+                'Define la escala y cuánto pesa cada componente para calcular '
+                'las notas.',
+            icon: Icons.tune,
+            actionLabel: 'Configurar pesos',
+            onAction: () async {
+              await context.push(
+                RoutePaths.gradingSettingsForClass(teachingPeriodId),
+              );
+              // The weights may have just been set.
+              if (context.mounted) {
+                context.read<GradingProvider>().loadPeriodGrades(
+                  teachingPeriodId,
+                );
+              }
+            },
           );
         }
         return AppErrorState(
           exception: error,
           onRetry: () => context.read<GradingProvider>().loadPeriodGrades(
-            widget.teachingPeriodId,
+            teachingPeriodId,
           ),
         );
       case DetailStatus.success:
         final data = state.data!;
+        if (data.teachingPeriodId != teachingPeriodId) {
+          return const AppLoading();
+        }
         if (data.students.isEmpty) {
           return const AppEmptyState(
             title: 'No hay estudiantes en este curso',
             icon: Icons.people_alt_outlined,
           );
         }
-        return widget.builder(context, data);
+        return builder(context, data);
     }
   }
 }

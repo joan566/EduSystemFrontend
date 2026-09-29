@@ -12,9 +12,14 @@ class GradingRepository {
     required String name,
     required double minimumValue,
     required double maximumValue,
-  }) => _remote.createScale(name: name, minimumValue: minimumValue, maximumValue: maximumValue);
+  }) => _remote.createScale(
+    name: name,
+    minimumValue: minimumValue,
+    maximumValue: maximumValue,
+  );
 
-  Future<List<EvaluationCategoryEntity>> getCategories() => _remote.getCategories();
+  Future<List<EvaluationCategoryEntity>> getCategories() =>
+      _remote.getCategories();
 
   Future<GradingConfigurationEntity?> getConfiguration(int teachingPeriodId) =>
       _remote.getConfiguration(teachingPeriodId);
@@ -23,7 +28,13 @@ class GradingRepository {
     int teachingPeriodId, {
     required int gradingScaleId,
     required List<CategoryWeight> weights,
-  }) => _remote.putConfiguration(teachingPeriodId, gradingScaleId: gradingScaleId, weights: weights);
+    double? passingGrade,
+  }) => _remote.putConfiguration(
+    teachingPeriodId,
+    gradingScaleId: gradingScaleId,
+    weights: weights,
+    passingGrade: passingGrade,
+  );
 
   Future<PeriodGradesEntity> getPeriodGrades(int teachingPeriodId) =>
       _remote.getPeriodGrades(teachingPeriodId);

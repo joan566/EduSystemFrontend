@@ -23,7 +23,11 @@ class GradingRemoteDataSource {
   }) async {
     final response = await _client.post(
       ApiEndpoints.gradingScales,
-      data: {'name': name, 'minimumValue': minimumValue, 'maximumValue': maximumValue},
+      data: {
+        'name': name,
+        'minimumValue': minimumValue,
+        'maximumValue': maximumValue,
+      },
     );
     return GradingScaleModel.fromJson(response.data as Map<String, dynamic>);
   }
@@ -35,10 +39,16 @@ class GradingRemoteDataSource {
         .toList();
   }
 
-  Future<GradingConfigurationEntity?> getConfiguration(int teachingPeriodId) async {
+  Future<GradingConfigurationEntity?> getConfiguration(
+    int teachingPeriodId,
+  ) async {
     try {
-      final response = await _client.get(ApiEndpoints.gradingConfiguration(teachingPeriodId));
-      return GradingConfigurationModel.fromJson(response.data as Map<String, dynamic>);
+      final response = await _client.get(
+        ApiEndpoints.gradingConfiguration(teachingPeriodId),
+      );
+      return GradingConfigurationModel.fromJson(
+        response.data as Map<String, dynamic>,
+      );
     } on AppException catch (e) {
       if (e.isNotFound) return null;
       rethrow;
@@ -49,22 +59,31 @@ class GradingRemoteDataSource {
     int teachingPeriodId, {
     required int gradingScaleId,
     required List<CategoryWeight> weights,
+    double? passingGrade,
   }) async {
     final response = await _client.put(
       ApiEndpoints.gradingConfiguration(teachingPeriodId),
       data: {
         'gradingScaleId': gradingScaleId,
+        'passingGrade': passingGrade,
         'weights': [
           for (final w in weights)
-            {'evaluationCategoryId': w.evaluationCategoryId, 'weight': w.weight},
+            {
+              'evaluationCategoryId': w.evaluationCategoryId,
+              'weight': w.weight,
+            },
         ],
       },
     );
-    return GradingConfigurationModel.fromJson(response.data as Map<String, dynamic>);
+    return GradingConfigurationModel.fromJson(
+      response.data as Map<String, dynamic>,
+    );
   }
 
   Future<PeriodGradesEntity> getPeriodGrades(int teachingPeriodId) async {
-    final response = await _client.get(ApiEndpoints.periodGrades(teachingPeriodId));
+    final response = await _client.get(
+      ApiEndpoints.periodGrades(teachingPeriodId),
+    );
     return PeriodGradesModel.fromJson(response.data as Map<String, dynamic>);
   }
 }

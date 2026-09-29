@@ -18,6 +18,7 @@ String? _currentPageLabel(String currentPath) {
     scheduleNavItem,
     ...secondaryNavItems,
     ...catalogNavItems,
+    ...settingsNavItems,
     ...systemNavItems,
     profileNavItem,
   ]) {
@@ -143,6 +144,13 @@ class _Sidebar extends StatelessWidget {
                     ),
                   _SectionLabel(collapsed: collapsed, label: 'Catálogo'),
                   for (final item in catalogNavItems)
+                    _SidebarTile(
+                      item: item,
+                      collapsed: collapsed,
+                      active: isNavItemActive(currentPath, item),
+                    ),
+                  _SectionLabel(collapsed: collapsed, label: 'Configuración'),
+                  for (final item in settingsNavItems)
                     _SidebarTile(
                       item: item,
                       collapsed: collapsed,

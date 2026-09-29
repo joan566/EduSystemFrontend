@@ -109,6 +109,17 @@ const catalogNavItems = <NavItem>[
   ),
 ];
 
+/// Setup that shapes how the teacher evaluates, edited rarely (grading
+/// weights live here, apart from the day-to-day grades).
+const settingsNavItems = <NavItem>[
+  NavItem(
+    path: RoutePaths.gradingSettings,
+    label: 'Configuración de notas',
+    icon: Icons.tune_outlined,
+    activeIcon: Icons.tune,
+  ),
+];
+
 /// System / data-management utilities.
 const systemNavItems = <NavItem>[
   NavItem(
@@ -137,6 +148,7 @@ List<NavItem> get moreNavItems => [
   scheduleNavItem,
   ...secondaryNavItems,
   ...catalogNavItems,
+  ...settingsNavItems,
   ...systemNavItems,
   profileNavItem,
 ];

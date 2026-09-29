@@ -16,15 +16,21 @@ class GradingProvider extends ChangeNotifier {
   List<EvaluationCategoryEntity> _categories = [];
   List<EvaluationCategoryEntity> get categories => _categories;
 
-  DetailViewState<GradingConfigurationEntity?> _configState = const DetailViewState();
+  DetailViewState<GradingConfigurationEntity?> _configState =
+      const DetailViewState();
   DetailViewState<GradingConfigurationEntity?> get configState => _configState;
 
-  DetailViewState<PeriodGradesEntity> _periodGradesState = const DetailViewState();
-  DetailViewState<PeriodGradesEntity> get periodGradesState => _periodGradesState;
+  DetailViewState<PeriodGradesEntity> _periodGradesState =
+      const DetailViewState();
+  DetailViewState<PeriodGradesEntity> get periodGradesState =>
+      _periodGradesState;
 
   Future<void> loadCatalog() async {
     try {
-      final results = await Future.wait([_repository.getScales(), _repository.getCategories()]);
+      final results = await Future.wait([
+        _repository.getScales(),
+        _repository.getCategories(),
+      ]);
       _scales = results[0] as List<GradingScaleEntity>;
       _categories = results[1] as List<EvaluationCategoryEntity>;
       notifyListeners();
@@ -40,7 +46,11 @@ class GradingProvider extends ChangeNotifier {
     required double maximumValue,
   }) async {
     try {
-      await _repository.createScale(name: name, minimumValue: minimumValue, maximumValue: maximumValue);
+      await _repository.createScale(
+        name: name,
+        minimumValue: minimumValue,
+        maximumValue: maximumValue,
+      );
       await loadCatalog();
       return null;
     } on AppException catch (e) {
@@ -64,12 +74,14 @@ class GradingProvider extends ChangeNotifier {
     int teachingPeriodId, {
     required int gradingScaleId,
     required List<CategoryWeight> weights,
+    double? passingGrade,
   }) async {
     try {
       final config = await _repository.putConfiguration(
         teachingPeriodId,
         gradingScaleId: gradingScaleId,
         weights: weights,
+        passingGrade: passingGrade,
       );
       _configState = DetailViewState.success(config);
       notifyListeners();
@@ -85,13 +97,26 @@ class GradingProvider extends ChangeNotifier {
   Future<PeriodGradesEntity> fetchPeriodGrades(int teachingPeriodId) =>
       _repository.getPeriodGrades(teachingPeriodId);
 
-  Future<void> loadPeriodGrades(int teachingPeriodId) async {
-    _periodGradesState = DetailViewState.loading();
-    notifyListeners();
+  int _periodGradesRequest = 0;
+
+  /// [silent] keeps the current grades on screen while refreshing (e.g.
+  /// back from a student whose grade may have changed).
+  Future<void> loadPeriodGrades(
+    int teachingPeriodId, {
+    bool silent = false,
+  }) async {
+    final request = ++_periodGradesRequest;
+    if (!silent ||
+        _periodGradesState.data?.teachingPeriodId != teachingPeriodId) {
+      _periodGradesState = DetailViewState.loading();
+      notifyListeners();
+    }
     try {
       final grades = await _repository.getPeriodGrades(teachingPeriodId);
+      if (request != _periodGradesRequest) return;
       _periodGradesState = DetailViewState.success(grades);
     } on AppException catch (e) {
+      if (request != _periodGradesRequest) return;
       _periodGradesState = DetailViewState.error(e);
     }
     notifyListeners();

@@ -3,11 +3,14 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/layout/responsive.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../desktop/grades_desktop_view.dart';
 import '../mobile/grades_mobile_view.dart';
 import '../providers/grading_provider.dart';
-import '../shared/grading_configuration_controller.dart';
+import '../shared/class_grades.dart';
 
+/// "Calificaciones": a class's students with their period grade, and the
+/// class summary. Weights live apart, in Configuración de notas.
 class GradesPage extends StatefulWidget {
   const GradesPage({super.key, this.initialTeachingPeriodId});
 
@@ -20,43 +23,55 @@ class GradesPage extends StatefulWidget {
 }
 
 class _GradesPageState extends State<GradesPage> {
-  // Selected class and its editable configuration live here so both
-  // survive a mobile <-> desktop switch.
+  // Live here so they survive a mobile <-> desktop switch.
   TeachingPeriodEntity? _period;
-  GradingConfigurationController? _config;
-
-  void _onPeriodChanged(TeachingPeriodEntity? period) {
-    _config?.dispose();
-    final config = period == null
-        ? null
-        : GradingConfigurationController(period.id);
-    setState(() {
-      _period = period;
-      _config = config;
-    });
-    config?.load(context.read<GradingProvider>());
-  }
+  int _tab = 0;
+  GradesListFilters _filters = const GradesListFilters();
+  int? _selectedStudentId;
 
   @override
-  void dispose() {
-    _config?.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final teaching = context.read<TeachingProvider>();
+      await teaching.ensureAllPeriodsLoaded();
+      if (!mounted || _period != null || teaching.allPeriods.isEmpty) return;
+      final preferred = teaching.allPeriods
+          .where((p) => p.id == widget.initialTeachingPeriodId)
+          .firstOrNull;
+      _onPeriodChanged(preferred ?? teaching.allPeriods.first);
+    });
+  }
+
+  void _onPeriodChanged(TeachingPeriodEntity? period) {
+    if (period == null || period.id == _period?.id) return;
+    setState(() {
+      _period = period;
+      _selectedStudentId = null;
+    });
+    context.read<GradingProvider>().loadPeriodGrades(period.id);
   }
 
   @override
   Widget build(BuildContext context) {
     return ResponsiveBuilder(
       mobile: (_) => GradesMobileView(
-        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
-        config: _config,
         onPeriodChanged: _onPeriodChanged,
+        tab: _tab,
+        onTabChanged: (tab) => setState(() => _tab = tab),
+        filters: _filters,
+        onFiltersChanged: (f) => setState(() => _filters = f),
       ),
       desktop: (_) => GradesDesktopView(
-        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
-        config: _config,
         onPeriodChanged: _onPeriodChanged,
+        tab: _tab,
+        onTabChanged: (tab) => setState(() => _tab = tab),
+        filters: _filters,
+        onFiltersChanged: (f) => setState(() => _filters = f),
+        selectedStudentId: _selectedStudentId,
+        onSelect: (id) => setState(() => _selectedStudentId = id),
       ),
     );
   }

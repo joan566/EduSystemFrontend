@@ -54,6 +54,22 @@ class RoutePaths {
   static String attendanceSessionDetail(int id) => '/app/attendance/$id';
 
   static const grades = '/app/grades';
+
+  /// A student's grades in a class, evaluation by evaluation.
+  static String studentGrades(int teachingPeriodId, int studentId) =>
+      '$grades/$teachingPeriodId/students/$studentId';
+
+  /// A student's grade in one evaluation (rubric, attachment, comment).
+  static String gradeDetail(
+    int teachingPeriodId,
+    int studentId,
+    int evaluationId,
+  ) => '${studentGrades(teachingPeriodId, studentId)}/evaluations/$evaluationId';
+
+  /// Grading setup of a class: scale, passing grade and category weights.
+  static const gradingSettings = '/app/settings/grading';
+  static String gradingSettingsForClass(int teachingPeriodId) =>
+      '$gradingSettings?teachingPeriodId=$teachingPeriodId';
   static String gradesForClass(int teachingPeriodId) =>
       '$grades?teachingPeriodId=$teachingPeriodId';
   static const dataManagement = '/app/data';

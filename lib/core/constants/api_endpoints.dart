@@ -42,6 +42,18 @@ class ApiEndpoints {
       '/teaching-periods/$id/summary';
   static String gradingConfiguration(int teachingPeriodId) =>
       '/teaching-periods/$teachingPeriodId/grading-configuration';
+  static String studentGradeReport(int teachingPeriodId, int studentId) =>
+      '/teaching-periods/$teachingPeriodId/students/$studentId/grade-report';
+  static String studentObservation(int teachingPeriodId, int studentId) =>
+      '/teaching-periods/$teachingPeriodId/students/$studentId/observation';
+  static String gradeDetail(int evaluationId, int studentId) =>
+      '/evaluations/$evaluationId/students/$studentId/grade-detail';
+  static String evaluationRubric(int evaluationId) =>
+      '/evaluations/$evaluationId/rubric';
+  static String rubricScores(int evaluationId, int studentId) =>
+      '/evaluations/$evaluationId/students/$studentId/rubric-scores';
+  static String gradeAttachment(int evaluationId, int studentId) =>
+      '/evaluations/$evaluationId/students/$studentId/attachment';
   static String periodGrades(int teachingPeriodId) =>
       '/teaching-periods/$teachingPeriodId/period-grades';
 
