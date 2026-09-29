@@ -9,10 +9,10 @@ class StudentRemoteDataSource {
 
   final ApiClient _client;
 
-  Future<ApiPage<StudentEntity>> getPage({int page = 0, int? groupId, String? search}) async {
+  Future<ApiPage<StudentEntity>> getPage({int page = 0, int size = 20, int? groupId, String? search}) async {
     final response = await _client.get(
       ApiEndpoints.students,
-      queryParameters: {'page': page, 'size': 20, 'groupId': groupId, 'search': search},
+      queryParameters: {'page': page, 'size': size, 'groupId': groupId, 'search': search},
     );
     return ApiPage.fromJson(response.data as Map<String, dynamic>, StudentModel.fromJson);
   }

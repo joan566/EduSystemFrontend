@@ -63,6 +63,7 @@ class TeachingProvider extends ChangeNotifier {
   List<TeachingPeriodEntity> _allPeriods = [];
   List<TeachingPeriodEntity> get allPeriods => _allPeriods;
   bool _allPeriodsLoaded = false;
+  bool get allPeriodsLoaded => _allPeriodsLoaded;
 
   Future<void> loadAssignments({int page = 0, int? groupId, int? subjectId, bool? active}) async {
     _assignmentsState = ListViewState.loading();

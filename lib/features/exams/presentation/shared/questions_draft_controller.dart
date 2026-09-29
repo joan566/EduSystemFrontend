@@ -36,7 +36,7 @@ class DraftQuestion {
 }
 
 /// Question bank draft for one exam: the edited questions, which one is
-/// selected, and saving. Rendered by `QuestionsEditorMobile` (stepper) or
+/// selected, and saving. Rendered by `QuestionsEditorMobile` (card list) or
 /// `QuestionsEditorDesktop` (list + form); owned by the page entry point so
 /// drafts and the current question survive a mobile <-> desktop switch.
 ///
@@ -56,7 +56,10 @@ class QuestionsDraftController extends ChangeNotifier {
       for (final q in seed) DraftQuestion(uiKey: UniqueKey(), data: q),
     ];
     if (onDraftsChanged != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _reportDrafts());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _reportDrafts();
+        _dirty = false;
+      });
     }
   }
 
@@ -73,12 +76,18 @@ class QuestionsDraftController extends ChangeNotifier {
   bool _saving = false;
   bool get saving => _saving;
 
+  /// Drafts changed since load or the last successful save.
+  bool _dirty = false;
+  bool get dirty => _dirty;
+
   void _notify() {
     if (!_disposed) notifyListeners();
   }
 
-  void _reportDrafts() =>
-      onDraftsChanged?.call([for (final d in _drafts) d.data]);
+  void _reportDrafts() {
+    _dirty = true;
+    onDraftsChanged?.call([for (final d in _drafts) d.data]);
+  }
 
   List<DraftQuestion> _renumber(List<DraftQuestion> drafts) => [
     for (var i = 0; i < drafts.length; i++)
@@ -193,6 +202,7 @@ class QuestionsDraftController extends ChangeNotifier {
       for (final d in _drafts) d.data,
     ]);
     _saving = false;
+    if (error == null) _dirty = false;
     _notify();
     if (!context.mounted) return;
     if (error != null) {

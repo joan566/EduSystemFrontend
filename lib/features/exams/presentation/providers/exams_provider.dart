@@ -96,6 +96,7 @@ class ExamsProvider extends ChangeNotifier {
       );
       _detailState = DetailViewState.success(exam);
       notifyListeners();
+      _reloadListFor(exam.teachingPeriodId);
       return null;
     } on AppException catch (e) {
       return e;
@@ -110,9 +111,18 @@ class ExamsProvider extends ChangeNotifier {
       final exam = await _repository.replaceQuestions(examId, questions);
       _detailState = DetailViewState.success(exam);
       notifyListeners();
+      _reloadListFor(exam.teachingPeriodId);
       return null;
     } on AppException catch (e) {
       return e;
+    }
+  }
+
+  /// Keeps the list (name, date, readiness) in step with detail edits, so
+  /// going back shows the current state.
+  void _reloadListFor(int teachingPeriodId) {
+    if (_teachingPeriodId == teachingPeriodId) {
+      load(teachingPeriodId: teachingPeriodId, page: _state.page);
     }
   }
 

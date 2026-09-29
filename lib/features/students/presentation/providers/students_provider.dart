@@ -53,7 +53,9 @@ class StudentsProvider extends ChangeNotifier {
     _groupRosters[groupId] = ListViewState.loading();
     notifyListeners();
     try {
-      final result = await _repository.getPage(page: 0, groupId: groupId);
+      // A whole class at once (the API's max page), so rosters and
+      // per-student lists aren't cut at the default 20.
+      final result = await _repository.getPage(page: 0, size: 100, groupId: groupId);
       _groupRosters[groupId] = ListViewState.fromPage(
         content: result.content,
         page: result.page,

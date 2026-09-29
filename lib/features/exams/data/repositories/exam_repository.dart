@@ -88,9 +88,8 @@ class ExamRepository {
     onSendProgress: onSendProgress,
   );
 
-  Future<List<SubmissionBatchSummaryEntity>> getSubmissionBatches(
-    int examId,
-  ) => _remote.getSubmissionBatches(examId);
+  Future<List<SubmissionBatchSummaryEntity>> getSubmissionBatches(int examId) =>
+      _remote.getSubmissionBatches(examId);
 
   Future<SubmissionBatchEntity> getSubmissionBatch(int examId, int batchId) =>
       _remote.getSubmissionBatch(examId, batchId);
@@ -98,8 +97,9 @@ class ExamRepository {
   Future<ApiPage<SubmissionSummaryEntity>> getSubmissions(
     int examId, {
     int page = 0,
+    int size = 20,
     String? status,
-  }) => _remote.getSubmissions(examId, page: page, status: status);
+  }) => _remote.getSubmissions(examId, page: page, size: size, status: status);
 
   Future<SubmissionEntity> getSubmission(int examId, int submissionId) =>
       _remote.getSubmission(examId, submissionId);

@@ -46,6 +46,7 @@ class ExamSummaryModel {
             : Formatters.parseApiDateTime(json['evaluationDate'] as String),
         maximumScore: (json['maximumScore'] as num?)?.toDouble(),
         numberOfQuestions: json['numberOfQuestions'] as int,
+        ready: json['ready'] as bool? ?? false,
       );
 }
 

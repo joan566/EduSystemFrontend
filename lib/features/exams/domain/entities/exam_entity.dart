@@ -66,6 +66,7 @@ class ExamSummaryEntity {
     this.evaluationDate,
     this.maximumScore,
     required this.numberOfQuestions,
+    required this.ready,
   });
 
   final int id;
@@ -76,6 +77,9 @@ class ExamSummaryEntity {
   final DateTime? evaluationDate;
   final double? maximumScore;
   final int numberOfQuestions;
+
+  /// Every question is configured, so answer sheets can be generated.
+  final bool ready;
 }
 
 /// Full detail — `GET /exams/{id}`, includes questions and correct answers.
@@ -89,12 +93,11 @@ class ExamEntity extends ExamSummaryEntity {
     super.evaluationDate,
     super.maximumScore,
     required super.numberOfQuestions,
-    required this.ready,
+    required super.ready,
     required this.optionCount,
     required this.questions,
   });
 
-  final bool ready;
   final int optionCount;
   final List<ExamQuestion> questions;
 }

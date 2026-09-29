@@ -19,9 +19,13 @@ class ExamResultsStateView extends StatefulWidget {
     super.key,
     required this.exam,
     required this.builder,
+    this.pageSize = 20,
   });
 
   final ExamEntity exam;
+
+  /// The mobile view shows the whole class at once, without pagination.
+  final int pageSize;
   final Widget Function(
     BuildContext context,
     ListViewState<SubmissionSummaryEntity> state,
@@ -37,7 +41,10 @@ class _ExamResultsStateViewState extends State<ExamResultsStateView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<SubmissionsProvider>().load(widget.exam.id),
+      (_) => context.read<SubmissionsProvider>().load(
+        widget.exam.id,
+        size: widget.pageSize,
+      ),
     );
   }
 
@@ -53,7 +60,10 @@ class _ExamResultsStateViewState extends State<ExamResultsStateView> {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<SubmissionsProvider>().load(exam.id),
+          onRetry: () => context.read<SubmissionsProvider>().load(
+            exam.id,
+            size: widget.pageSize,
+          ),
         );
       case ViewStatus.empty:
         return AppEmptyState(

@@ -29,15 +29,38 @@ class SubmissionsProvider extends ChangeNotifier {
   SubmissionEntity? _lastUploaded;
   SubmissionEntity? get lastUploaded => _lastUploaded;
 
-  Future<void> load(int examId, {int page = 0, String? status}) async {
+  // Remembered so a reload without [size] (e.g. back from batch grading)
+  // keeps the page size the current view asked for.
+  int _pageSize = 20;
+
+  /// Exam the listing [state] belongs to. Views that switch exams quickly
+  /// (the desktop list preview) check it before showing the numbers.
+  int? _examId;
+  int? get examId => _examId;
+
+  // Only the latest request may write [state]; an older response arriving
+  // late would otherwise show another exam's sheets.
+  int _request = 0;
+
+  Future<void> load(
+    int examId, {
+    int page = 0,
+    int? size,
+    String? status,
+  }) async {
+    _pageSize = size ?? _pageSize;
+    _examId = examId;
+    final request = ++_request;
     _state = ListViewState.loading();
     notifyListeners();
     try {
       final result = await _repository.getSubmissions(
         examId,
         page: page,
+        size: _pageSize,
         status: status,
       );
+      if (request != _request) return;
       _state = ListViewState.fromPage(
         content: result.content,
         page: result.page,
@@ -45,6 +68,7 @@ class SubmissionsProvider extends ChangeNotifier {
         totalElements: result.totalElements,
       );
     } on AppException catch (e) {
+      if (request != _request) return;
       _state = ListViewState.error(e);
     }
     notifyListeners();

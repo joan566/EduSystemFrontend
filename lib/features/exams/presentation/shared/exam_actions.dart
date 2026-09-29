@@ -17,8 +17,13 @@ class ExamActions {
     context.push('${RoutePaths.examCreate}?teachingPeriodId=$teachingPeriodId');
   }
 
-  /// Deletes the exam and pops back to the list.
-  static Future<void> delete(BuildContext context, int examId) async {
+  /// Deletes the exam; from the detail screen ([popOnSuccess]) it then pops
+  /// back to the list.
+  static Future<void> delete(
+    BuildContext context,
+    int examId, {
+    bool popOnSuccess = true,
+  }) async {
     final confirmed = await showAppConfirmDialog(
       context,
       title: 'Eliminar examen',
@@ -31,8 +36,46 @@ class ExamActions {
     if (!context.mounted) return;
     if (error != null) {
       context.showApiError(error);
-    } else {
+    } else if (popOnSuccess) {
       Navigator.of(context).pop();
+    } else {
+      context.showSuccess('Examen eliminado.');
+    }
+  }
+
+  /// One PDF with the answer sheets of every active student (§39).
+  static Future<void> downloadAnswerSheets(
+    BuildContext context,
+    int examId,
+  ) async {
+    try {
+      await context.read<ExamsProvider>().downloadAnswerSheets(examId);
+      if (context.mounted) {
+        context.showSuccess('Hojas de respuesta descargadas.');
+      }
+    } catch (_) {
+      if (context.mounted) {
+        context.showError('No se pudieron generar las hojas de respuesta.');
+      }
+    }
+  }
+
+  /// A single student's sheet, e.g. for a reprint (§40).
+  static Future<void> downloadAnswerSheet(
+    BuildContext context,
+    int examId,
+    int studentId,
+  ) async {
+    try {
+      await context.read<ExamsProvider>().downloadAnswerSheet(
+        examId,
+        studentId,
+      );
+      if (context.mounted) context.showSuccess('Hoja de respuesta descargada.');
+    } catch (_) {
+      if (context.mounted) {
+        context.showError('No se pudo generar la hoja de respuesta.');
+      }
     }
   }
 

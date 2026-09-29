@@ -29,10 +29,13 @@ class ExamBuilderDesktopView extends StatelessWidget {
           Expanded(
             child: ExamBuilderSections(
               controller: controller,
-              questionsEditor: (questions) => QuestionsEditorDesktop(
-                controller: questions,
-                embedded: true,
-                onSave: () => controller.jumpTo(2),
+              questionsEditor: (questions) => Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: QuestionsEditorDesktop(
+                  controller: questions,
+                  embedded: true,
+                  onSave: () => controller.jumpTo(2),
+                ),
               ),
             ),
           ),

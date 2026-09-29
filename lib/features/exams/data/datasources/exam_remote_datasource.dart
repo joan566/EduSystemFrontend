@@ -168,11 +168,12 @@ class ExamRemoteDataSource {
   Future<ApiPage<SubmissionSummaryEntity>> getSubmissions(
     int examId, {
     int page = 0,
+    int size = 20,
     String? status,
   }) async {
     final response = await _client.get(
       ApiEndpoints.submissions(examId),
-      queryParameters: {'page': page, 'size': 20, 'status': status},
+      queryParameters: {'page': page, 'size': size, 'status': status},
     );
     return ApiPage.fromJson(
       response.data as Map<String, dynamic>,

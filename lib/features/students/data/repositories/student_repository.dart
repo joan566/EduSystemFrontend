@@ -7,8 +7,8 @@ class StudentRepository {
 
   final StudentRemoteDataSource _remote;
 
-  Future<ApiPage<StudentEntity>> getPage({int page = 0, int? groupId, String? search}) =>
-      _remote.getPage(page: page, groupId: groupId, search: search);
+  Future<ApiPage<StudentEntity>> getPage({int page = 0, int size = 20, int? groupId, String? search}) =>
+      _remote.getPage(page: page, size: size, groupId: groupId, search: search);
 
   Future<StudentDetailEntity> getById(int id) => _remote.getById(id);
 

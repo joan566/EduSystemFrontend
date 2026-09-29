@@ -1,184 +1,206 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/detail_state.dart';
-import '../../../../core/widgets/mobile/mobile_card_list.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
-import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_list_tile.dart';
 import '../../../../core/widgets/shared/app_loading.dart';
-import '../../../../core/widgets/shared/app_status_chip.dart';
+import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/exam_entity.dart';
 import '../providers/exams_provider.dart';
-import '../shared/answer_sheets_tab.dart';
 import '../shared/exam_actions.dart';
 import '../shared/exam_edit_form.dart';
-import '../shared/exam_results.dart';
 import '../shared/questions_draft_controller.dart';
 import 'questions_editor_mobile.dart';
+import 'widgets/exam_answer_sheets_mobile_tab.dart';
+import 'widgets/exam_info_card.dart';
+import 'widgets/exam_results_mobile_tab.dart';
 
-class ExamDetailMobileView extends StatelessWidget {
+/// Mobile exam screen: back + name + edit/more, a class/date/status card,
+/// then Preguntas / Hojas de respuesta / Resultados tabs.
+class ExamDetailMobileView extends StatefulWidget {
   const ExamDetailMobileView({
     super.key,
     required this.examId,
     required this.questions,
+    required this.tab,
+    required this.onTabChanged,
   });
 
   final int examId;
   final QuestionsDraftController? questions;
 
+  /// Selected tab, owned by the page so it survives a layout switch.
+  final int tab;
+  final ValueChanged<int> onTabChanged;
+
+  @override
+  State<ExamDetailMobileView> createState() => _ExamDetailMobileViewState();
+}
+
+class _ExamDetailMobileViewState extends State<ExamDetailMobileView>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs = TabController(
+    length: 3,
+    vsync: this,
+    initialIndex: widget.tab,
+  )..addListener(_onTabChanged);
+
+  void _onTabChanged() {
+    if (!_tabs.indexIsChanging && _tabs.index != widget.tab) {
+      widget.onTabChanged(_tabs.index);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    super.dispose();
+  }
+
+  void _edit(ExamEntity exam) =>
+      showMobileForm<void>(context, child: ExamEditForm(exam: exam));
+
+  Future<void> _openMore(ExamEntity exam) async {
+    final choice = await showMobileSheet<int>(
+      context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Editar datos del examen'),
+              onTap: () => Navigator.of(context).pop(0),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: const Text('Eliminar examen'),
+              onTap: () => Navigator.of(context).pop(1),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 0:
+        _edit(exam);
+      case 1:
+        await ExamActions.delete(context, exam.id);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<ExamsProvider>().detailState;
-    final exam = state.data;
+    final exam = state.data?.id == widget.examId ? state.data : null;
+    final textTheme = Theme.of(context).textTheme;
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(exam?.name ?? 'Examen'),
-          actions: exam == null
-              ? null
-              : [
+    return Scaffold(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+            child: Row(
+              children: [
+                const BackButton(),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    exam?.name ?? 'Examen',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleLarge,
+                  ),
+                ),
+                if (exam != null) ...[
                   IconButton(
+                    tooltip: 'Editar examen',
+                    onPressed: () => _edit(exam),
                     icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => showMobileForm<void>(
-                      context,
-                      child: ExamEditForm(exam: exam),
-                    ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () => ExamActions.delete(context, examId),
+                    tooltip: 'Más opciones',
+                    onPressed: () => _openMore(exam),
+                    icon: const Icon(Icons.more_vert),
                   ),
                 ],
-          bottom: const TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [
-              Tab(text: 'Preguntas'),
-              Tab(text: 'Hojas de respuesta'),
-              Tab(text: 'Resultados'),
-            ],
+              ],
+            ),
           ),
-        ),
-        body: _buildBody(context, state),
+          Expanded(child: _buildBody(context, state, exam)),
+        ],
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, DetailViewState<ExamEntity> state) {
-    switch (state.status) {
-      case DetailStatus.initial:
-      case DetailStatus.loading:
-        return const AppLoading();
-      case DetailStatus.error:
-        return AppErrorState(
-          exception: state.error!,
-          onRetry: () => context.read<ExamsProvider>().loadDetail(examId),
-        );
-      case DetailStatus.success:
-        final exam = state.data!;
-        final questions = this.questions;
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  AppStatusChip(
-                    label: exam.ready ? 'Listo para publicar' : 'Incompleto',
-                    kind: exam.ready
-                        ? AppStatusKind.success
-                        : AppStatusKind.warning,
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  questions == null
-                      ? const AppLoading()
-                      : QuestionsEditorMobile(
-                          controller: questions,
-                          embedded: false,
-                          onSave: () => questions.save(context, examId),
-                        ),
-                  AnswerSheetsTab(exam: exam),
-                  _ResultsTab(exam: exam),
-                ],
-              ),
-            ),
-          ],
-        );
+  Widget _buildBody(
+    BuildContext context,
+    DetailViewState<ExamEntity> state,
+    ExamEntity? exam,
+  ) {
+    if (state.status == DetailStatus.error) {
+      return AppErrorState(
+        exception: state.error!,
+        onRetry: () => context.read<ExamsProvider>().loadDetail(widget.examId),
+      );
     }
-  }
-}
+    if (exam == null) return const AppLoading();
 
-/// Mobile results: both entry points as full-width buttons, then a card
-/// per submission.
-class _ResultsTab extends StatelessWidget {
-  const _ResultsTab({required this.exam});
+    final period = context
+        .watch<TeachingProvider>()
+        .allPeriods
+        .where((p) => p.id == exam.teachingPeriodId)
+        .firstOrNull;
+    final questions = widget.questions;
+    final textTheme = Theme.of(context).textTheme;
 
-  final ExamEntity exam;
-
-  @override
-  Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  label: 'Calificar PDF',
-                  icon: Icons.picture_as_pdf_outlined,
-                  variant: AppButtonVariant.outlined,
-                  onPressed: exam.ready
-                      ? () => ExamActions.openBatches(context, exam.id)
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: AppButton(
-                  label: 'Escanear',
-                  icon: Icons.document_scanner_outlined,
-                  onPressed: exam.ready
-                      ? () => ExamActions.openScanning(context, exam.id)
-                      : null,
-                ),
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: ExamInfoCard(exam: exam, period: period),
+        ),
+        TabBar(
+          controller: _tabs,
+          labelColor: AppColors.accentBlue,
+          unselectedLabelColor: AppColors.textSecondary,
+          indicatorColor: AppColors.accentBlue,
+          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.label,
+          dividerColor: Theme.of(context).colorScheme.outline,
+          labelStyle: textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
+          unselectedLabelStyle: textTheme.labelLarge,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+          tabs: const [
+            Tab(text: 'Preguntas'),
+            Tab(text: 'Hojas de respuesta'),
+            Tab(text: 'Resultados'),
+          ],
         ),
         Expanded(
-          child: ExamResultsStateView(
-            exam: exam,
-            builder: (context, state) => MobileCardList(
-              items: state.items,
-              footer: Center(
-                child: Text(
-                  '${state.totalElements} hojas procesadas',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-              itemBuilder: (context, item) => AppListTile(
-                icon: Icons.fact_check_outlined,
-                title: item.studentName,
-                subtitle: item.finalGrade != null && exam.maximumScore != null
-                    ? submissionGradeLabel(item, exam)
-                    : item.statusDetail ?? '',
-                trailing: submissionStatusChip(item.status),
-                onTap: () =>
-                    context.push(RoutePaths.submissionDetail(exam.id, item.id)),
-              ),
-            ),
+          child: TabBarView(
+            controller: _tabs,
+            children: [
+              questions == null
+                  ? const AppLoading()
+                  : QuestionsEditorMobile(
+                      controller: questions,
+                      embedded: false,
+                      onSave: () => questions.save(context, exam.id),
+                    ),
+              ExamAnswerSheetsMobileTab(exam: exam, period: period),
+              ExamResultsMobileTab(exam: exam, period: period),
+            ],
           ),
         ),
       ],

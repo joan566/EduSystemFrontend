@@ -131,6 +131,9 @@ class AppRouter {
                 path: ':id',
                 builder: (context, state) => ExamDetailPage(
                   examId: int.parse(state.pathParameters['id']!),
+                  initialTab:
+                      int.tryParse(state.uri.queryParameters['tab'] ?? '') ??
+                      0,
                 ),
                 routes: [
                   GoRoute(

@@ -111,10 +111,7 @@ class SubmissionBatchesProvider extends ChangeNotifier {
         return;
       }
     }
-    _pollTimer = Timer(
-      AppConfig.batchPollInterval,
-      () => _poll(generation),
-    );
+    _pollTimer = Timer(AppConfig.batchPollInterval, () => _poll(generation));
   }
 
   void stopWatching() {
