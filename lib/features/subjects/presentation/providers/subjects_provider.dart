@@ -14,6 +14,9 @@ class SubjectsProvider extends ChangeNotifier {
   ListViewState<SubjectEntity> _state = const ListViewState();
   ListViewState<SubjectEntity> get state => _state;
 
+  /// The current name search (null when not searching).
+  String? get searchQuery => _search;
+
   Future<void> load({int page = 0, String? search}) async {
     _search = search ?? _search;
     _state = ListViewState.loading();

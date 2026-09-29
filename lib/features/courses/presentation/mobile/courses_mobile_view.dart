@@ -2,24 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/state/list_state.dart';
-import '../../../../core/widgets/mobile/mobile_card_list.dart';
+import '../../../../core/widgets/mobile/mobile_catalog_card.dart';
+import '../../../../core/widgets/mobile/mobile_catalog_header.dart';
+import '../../../../core/widgets/mobile/mobile_filter_pills.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
-import '../../../../core/widgets/mobile/mobile_page_header.dart';
-import '../../../../core/widgets/shared/app_dropdown.dart';
+import '../../../../core/widgets/mobile/mobile_select_field.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_list_tile.dart';
 import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../academic_levels/domain/entities/academic_level_entity.dart';
 import '../../../academic_levels/presentation/providers/academic_levels_provider.dart';
+import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/course_entity.dart';
 import '../providers/courses_provider.dart';
 import '../shared/course_actions.dart';
+import '../shared/course_badge.dart';
+import '../shared/course_filters.dart';
 import '../shared/course_form.dart';
 
+/// Mobile "Cursos": grade picker and year pills, then one card per course
+/// with the subjects you teach there and its students.
 class CoursesMobileView extends StatelessWidget {
-  const CoursesMobileView({super.key});
+  const CoursesMobileView({
+    super.key,
+    required this.filters,
+    required this.onFiltersChanged,
+  });
+
+  final CourseFilters filters;
+  final ValueChanged<CourseFilters> onFiltersChanged;
 
   Future<void> _openForm(BuildContext context, {CourseEntity? initial}) async {
     final levels = CourseActions.levelsForForm(context);
@@ -36,73 +48,105 @@ class CoursesMobileView extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<CoursesProvider>().state;
     final levels = context.watch<AcademicLevelsProvider>().state.items;
+    final usage = classesByCourse(context.watch<TeachingProvider>().allPeriods);
+    final level = levels.where((l) => l.id == filters.gradeId).firstOrNull;
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(context),
-        child: const Icon(Icons.add),
-      ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const MobilePageHeader(title: 'Cursos'),
-          if (levels.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: AppDropdown<AcademicLevelEntity?>(
-                label: 'Filtrar por grado',
-                value: null,
-                items: [null, ...levels],
-                itemLabel: (level) => level?.name ?? 'Todos los grados',
-                onChanged: (level) =>
-                    CourseActions.filterByLevel(context, level),
+          MobileCatalogHeader(
+            title: 'Cursos',
+            subtitle: state.status == ViewStatus.success
+                ? '${state.totalElements} cursos${level == null ? '' : ' de ${level.name}'}'
+                : 'Los grupos de cada grado',
+            addTooltip: 'Nuevo curso',
+            onAdd: () => _openForm(context),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: MobileSelectField<AcademicLevelEntity?>(
+              icon: Icons.school_outlined,
+              label: 'Grado',
+              value: level,
+              options: [null, ...levels],
+              itemLabel: (l) => l?.name ?? 'Todos los grados',
+              onChanged: (l) => onFiltersChanged(
+                CourseFilters(
+                  gradeId: l?.id,
+                  academicYear: filters.academicYear,
+                ),
               ),
             ),
-          const SizedBox(height: 8),
-          Expanded(child: _buildBody(context, state)),
+          ),
+          MobileFilterPills<int?>(
+            options: [null, ...filterYears()],
+            selected: filters.academicYear,
+            label: (y) => y?.toString() ?? 'Todos los años',
+            onSelected: (y) => onFiltersChanged(
+              CourseFilters(gradeId: filters.gradeId, academicYear: y),
+            ),
+          ),
+          Expanded(
+            child: switch (state.status) {
+              ViewStatus.initial || ViewStatus.loading => const AppLoading(),
+              ViewStatus.error => AppErrorState(
+                exception: state.error!,
+                onRetry: () => context.read<CoursesProvider>().load(),
+              ),
+              ViewStatus.empty => AppEmptyState(
+                title: filters.gradeId == null && filters.academicYear == null
+                    ? 'No hay cursos registrados'
+                    : 'Sin cursos con estos filtros',
+                message:
+                    'Un curso es un grupo de un grado en un año lectivo, como 5° A 2026.',
+                icon: Icons.class_outlined,
+                actionLabel: 'Nuevo curso',
+                onAction: () => _openForm(context),
+              ),
+              ViewStatus.success => ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                children: [
+                  for (final course in state.items)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: MobileCatalogCard(
+                        leading: CourseBadge(course: course),
+                        title: course.displayName,
+                        subtitle: 'Año lectivo ${course.academicYear}',
+                        meta: Text(
+                          () {
+                            final classes = usage[course.id] ?? const [];
+                            if (classes.isEmpty) return 'Sin clases tuyas';
+                            final students = studentsOf(classes);
+                            return [
+                              subjectsOf(classes).join(', '),
+                              if (students != null) '$students estudiantes',
+                            ].join('  ·  ');
+                          }(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        editLabel: 'Editar curso',
+                        deleteLabel: 'Eliminar curso',
+                        onEdit: () => _openForm(context, initial: course),
+                        onDelete: () => CourseActions.delete(context, course),
+                      ),
+                    ),
+                  if (state.totalPages > 1)
+                    AppPagination(
+                      page: state.page,
+                      totalPages: state.totalPages,
+                      totalElements: state.totalElements,
+                      onPageChanged: (page) =>
+                          context.read<CoursesProvider>().load(page: page),
+                    ),
+                ],
+              ),
+            },
+          ),
         ],
       ),
     );
-  }
-
-  Widget _buildBody(BuildContext context, ListViewState<CourseEntity> state) {
-    switch (state.status) {
-      case ViewStatus.initial:
-      case ViewStatus.loading:
-        return const AppLoading();
-      case ViewStatus.error:
-        return AppErrorState(
-          exception: state.error!,
-          onRetry: () => context.read<CoursesProvider>().load(),
-        );
-      case ViewStatus.empty:
-        return AppEmptyState(
-          title: 'No hay cursos registrados',
-          message: 'Crea un curso para empezar a matricular estudiantes.',
-          icon: Icons.class_outlined,
-          actionLabel: 'Nuevo curso',
-          onAction: () => _openForm(context),
-        );
-      case ViewStatus.success:
-        return MobileCardList<CourseEntity>(
-          items: state.items,
-          footer: AppPagination(
-            page: state.page,
-            totalPages: state.totalPages,
-            totalElements: state.totalElements,
-            onPageChanged: (page) =>
-                context.read<CoursesProvider>().load(page: page),
-          ),
-          itemBuilder: (context, item) => AppListTile(
-            icon: Icons.class_outlined,
-            title: item.displayName,
-            subtitle: 'Año académico ${item.academicYear}',
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, size: 20),
-              onPressed: () => CourseActions.delete(context, item),
-            ),
-            onTap: () => _openForm(context, initial: item),
-          ),
-        );
-    }
   }
 }

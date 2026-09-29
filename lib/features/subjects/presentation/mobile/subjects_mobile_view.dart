@@ -2,20 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/state/list_state.dart';
-import '../../../../core/widgets/mobile/mobile_card_list.dart';
+import '../../../../core/theme/subject_visuals.dart';
+import '../../../../core/widgets/mobile/mobile_catalog_card.dart';
+import '../../../../core/widgets/mobile/mobile_catalog_header.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
-import '../../../../core/widgets/mobile/mobile_page_header.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_list_tile.dart';
 import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
+import '../../../../core/widgets/shared/tinted_icon.dart';
+import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/subject_entity.dart';
 import '../providers/subjects_provider.dart';
 import '../shared/subject_actions.dart';
 import '../shared/subject_form.dart';
+import '../shared/subject_usage.dart';
 
+/// Mobile "Materias": title with counts and add, search, then one card per
+/// subject with its icon, description and where you teach it.
 class SubjectsMobileView extends StatelessWidget {
   const SubjectsMobileView({super.key});
 
@@ -30,32 +36,44 @@ class SubjectsMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<SubjectsProvider>().state;
+    final provider = context.watch<SubjectsProvider>();
+    final state = provider.state;
+    final usage = classesBySubject(
+      context.watch<TeachingProvider>().allPeriods,
+    );
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(context),
-        child: const Icon(Icons.add),
-      ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const MobilePageHeader(title: 'Materias'),
+          MobileCatalogHeader(
+            title: 'Materias',
+            subtitle: state.status == ViewStatus.success
+                ? '${state.totalElements} materias  ·  ${usage.length} con clases'
+                : 'Las asignaturas que enseñas',
+            addTooltip: 'Nueva materia',
+            onAdd: () => _openForm(context),
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
             child: AppSearchField(
               hint: 'Buscar materia...',
+              initialValue: provider.searchQuery,
               onChanged: (value) =>
                   context.read<SubjectsProvider>().search(value),
             ),
           ),
-          const SizedBox(height: 8),
-          Expanded(child: _buildBody(context, state)),
+          Expanded(child: _body(context, state, usage)),
         ],
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, ListViewState<SubjectEntity> state) {
+  Widget _body(
+    BuildContext context,
+    ListViewState<SubjectEntity> state,
+    Map<int, List<TeachingPeriodEntity>> usage,
+  ) {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
@@ -67,7 +85,9 @@ class SubjectsMobileView extends StatelessWidget {
         );
       case ViewStatus.empty:
         return AppEmptyState(
-          title: 'No hay materias registradas',
+          title: context.read<SubjectsProvider>().searchQuery == null
+              ? 'No hay materias registradas'
+              : 'Sin resultados',
           message:
               'Crea las asignaturas que impartes para asociarlas a tus cursos.',
           icon: Icons.menu_book_outlined,
@@ -75,25 +95,52 @@ class SubjectsMobileView extends StatelessWidget {
           onAction: () => _openForm(context),
         );
       case ViewStatus.success:
-        return MobileCardList<SubjectEntity>(
-          items: state.items,
-          footer: AppPagination(
-            page: state.page,
-            totalPages: state.totalPages,
-            totalElements: state.totalElements,
-            onPageChanged: (page) =>
-                context.read<SubjectsProvider>().load(page: page),
-          ),
-          itemBuilder: (context, item) => AppListTile(
-            icon: Icons.menu_book_outlined,
-            title: item.name,
-            subtitle: item.description,
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, size: 20),
-              onPressed: () => SubjectActions.delete(context, item),
-            ),
-            onTap: () => _openForm(context, initial: item),
-          ),
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+          children: [
+            for (final subject in state.items)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: MobileCatalogCard(
+                  leading: TintedIcon(
+                    icon: subjectIcon(subject.name),
+                    color: subjectAccent(subject.id),
+                    size: 48,
+                  ),
+                  title: subject.name,
+                  subtitle: subject.description,
+                  meta: Row(
+                    children: [
+                      const Icon(Icons.groups_outlined, size: 13),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          [
+                            classesCountLabel(usage[subject.id]?.length ?? 0),
+                            if (usage[subject.id] != null)
+                              coursesLabel(usage[subject.id]!),
+                          ].join('  ·  '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  editLabel: 'Editar materia',
+                  deleteLabel: 'Eliminar materia',
+                  onEdit: () => _openForm(context, initial: subject),
+                  onDelete: () => SubjectActions.delete(context, subject),
+                ),
+              ),
+            if (state.totalPages > 1)
+              AppPagination(
+                page: state.page,
+                totalPages: state.totalPages,
+                totalElements: state.totalElements,
+                onPageChanged: (page) =>
+                    context.read<SubjectsProvider>().load(page: page),
+              ),
+          ],
         );
     }
   }

@@ -106,7 +106,11 @@ class AppRouter {
           ),
           GoRoute(
             path: RoutePaths.courses,
-            builder: (context, state) => const CoursesPage(),
+            builder: (context, state) => CoursesPage(
+              initialGradeId: int.tryParse(
+                state.uri.queryParameters['gradeId'] ?? '',
+              ),
+            ),
           ),
           GoRoute(
             path: RoutePaths.periods,

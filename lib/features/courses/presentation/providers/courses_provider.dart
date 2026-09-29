@@ -17,6 +17,14 @@ class CoursesProvider extends ChangeNotifier {
   int? get gradeFilter => _gradeFilter;
   int? get yearFilter => _yearFilter;
 
+  /// Sets the level and year filters exactly (null clears each) and loads
+  /// the first page.
+  Future<void> applyFilters({int? gradeId, int? academicYear}) {
+    _gradeFilter = gradeId;
+    _yearFilter = academicYear;
+    return load();
+  }
+
   Future<void> load({int page = 0, int? gradeId, int? academicYear, bool resetFilters = false}) async {
     if (resetFilters) {
       _gradeFilter = null;

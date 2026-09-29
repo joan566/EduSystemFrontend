@@ -22,6 +22,9 @@ class RoutePaths {
       tab == null ? '/app/students/$id' : '/app/students/$id?tab=$tab';
 
   static const subjects = '/app/subjects';
+
+  /// Cursos filtered by a grade level (from Grados académicos).
+  static String coursesForLevel(int gradeId) => '$courses?gradeId=$gradeId';
   static const courses = '/app/courses';
   static const periods = '/app/periods';
   static const academicLevels = '/app/academic-levels';
