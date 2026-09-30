@@ -116,6 +116,19 @@ class ProfileDesktopView extends StatelessWidget {
               onPressed: () => ProfileActions.logout(context),
             ),
           ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: AppButton(
+              label: 'Eliminar cuenta',
+              variant: AppButtonVariant.text,
+              icon: Icons.delete_forever_outlined,
+              onPressed: () => showDesktopDialog<void>(
+                context,
+                child: const DeleteAccountForm(),
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
         ],
       ),

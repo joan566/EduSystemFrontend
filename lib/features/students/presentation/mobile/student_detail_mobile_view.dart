@@ -91,6 +91,18 @@ class _StudentDetailMobileViewState extends State<StudentDetailMobileView>
                 subtitle: const Text('Se conserva su historial'),
                 onTap: () => Navigator.of(context).pop(2),
               ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_forever_outlined,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Eliminar estudiante',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              subtitle: const Text('Borra todos sus datos, sin deshacer'),
+              onTap: () => Navigator.of(context).pop(3),
+            ),
           ],
         ),
       ),
@@ -107,6 +119,8 @@ class _StudentDetailMobileViewState extends State<StudentDetailMobileView>
           studentId: student.id,
           enrollment: current!,
         );
+      case 3:
+        await StudentDetailActions.delete(context, student: student);
     }
   }
 

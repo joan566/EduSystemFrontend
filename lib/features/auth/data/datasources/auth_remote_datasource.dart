@@ -69,6 +69,9 @@ class AuthRemoteDataSource {
     );
   }
 
+  Future<void> deleteAccount(String password) =>
+      _client.delete(ApiEndpoints.account, data: {'password': password});
+
   Future<void> resetPassword({
     required String email,
     required String code,

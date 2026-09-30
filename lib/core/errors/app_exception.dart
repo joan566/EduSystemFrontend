@@ -73,5 +73,15 @@ class AppErrorCode {
   static const String fileTooLarge = 'FILE_TOO_LARGE';
   static const String unsupportedMediaType = 'UNSUPPORTED_MEDIA_TYPE';
   static const String tooManyLoginAttempts = 'TOO_MANY_LOGIN_ATTEMPTS';
+  static const String tooManyRegistrations = 'TOO_MANY_REGISTRATIONS';
+  static const String tooManyPasswordResetRequests =
+      'TOO_MANY_PASSWORD_RESET_REQUESTS';
+  static const String invalidCurrentPassword = 'INVALID_CURRENT_PASSWORD';
+  static const String gradeHasGroups = 'GRADE_HAS_GROUPS';
+  static const String groupHasDependents = 'GROUP_HAS_DEPENDENTS';
+  static const String subjectHasTeachingAssignments =
+      'SUBJECT_HAS_TEACHING_ASSIGNMENTS';
+  static const String academicPeriodInUse = 'ACADEMIC_PERIOD_IN_USE';
+  static const String errorReportNotFound = 'ERROR_REPORT_NOT_FOUND';
   static const String internalError = 'INTERNAL_ERROR';
 }

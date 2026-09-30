@@ -13,6 +13,7 @@ class ApiEndpoints {
   static const forgotPassword = '/auth/forgot-password';
   static const verifyCode = '/auth/verify-code';
   static const resetPassword = '/auth/reset-password';
+  static const account = '/auth/account';
 
   // Users
   static const usersMe = '/users/me';

@@ -133,6 +133,14 @@ class AuthProvider extends ChangeNotifier {
     keepStatus: true,
   );
 
+  /// On success the session is gone, so the router sends the user to
+  /// /login. A wrong password keeps the current session untouched.
+  Future<bool> deleteAccount(String password) => _guard(() async {
+    await _repository.deleteAccount(password);
+    _user = null;
+    _status = AuthStatus.unauthenticated;
+  }, keepStatus: true);
+
   void updateUser(UserEntity user) {
     _user = user;
     notifyListeners();
@@ -156,7 +164,12 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } on AppException catch (e) {
-      _status = keepStatus ? previousStatus : AuthStatus.unauthenticated;
+      // A failed action from inside a session (e.g. wrong current password
+      // on change-password) must not end that session.
+      final wasSignedIn = previousStatus == AuthStatus.authenticated;
+      _status = keepStatus || wasSignedIn
+          ? previousStatus
+          : AuthStatus.unauthenticated;
       _error = e;
       notifyListeners();
       return false;

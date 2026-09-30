@@ -79,4 +79,10 @@ class AuthRepositoryImpl implements AuthRepository {
     required String code,
     required String newPassword,
   }) => _remote.resetPassword(email: email, code: code, newPassword: newPassword);
+
+  @override
+  Future<void> deleteAccount(String password) async {
+    await _remote.deleteAccount(password);
+    await _apiClient.clearSession();
+  }
 }

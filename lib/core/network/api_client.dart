@@ -114,8 +114,8 @@ class ApiClient {
   Future<Response<dynamic>> patch(String path, {Object? data}) =>
       _run(() => _dio.patch(path, data: data));
 
-  Future<Response<dynamic>> delete(String path) =>
-      _run(() => _dio.delete(path));
+  Future<Response<dynamic>> delete(String path, {Object? data}) =>
+      _run(() => _dio.delete(path, data: data));
 
   Future<Response<dynamic>> postMultipart(
     String path, {

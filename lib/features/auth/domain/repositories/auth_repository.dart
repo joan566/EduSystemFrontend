@@ -32,4 +32,8 @@ abstract class AuthRepository {
     required String code,
     required String newPassword,
   });
+
+  /// Permanently deletes the account and all of its data, then clears the
+  /// stored tokens (the backend revokes them immediately).
+  Future<void> deleteAccount(String password);
 }

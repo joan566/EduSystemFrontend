@@ -13,4 +13,7 @@ class StudentRepository {
   Future<StudentDetailEntity> getById(int id) => _remote.getById(id);
 
   Future<void> withdraw(int studentId, int groupId) => _remote.withdraw(studentId, groupId);
+
+  /// Permanent: removes the student and all of their data.
+  Future<void> delete(int id) => _remote.delete(id);
 }

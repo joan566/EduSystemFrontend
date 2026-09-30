@@ -24,4 +24,6 @@ class StudentRemoteDataSource {
 
   Future<void> withdraw(int studentId, int groupId) =>
       _client.post(ApiEndpoints.studentWithdrawal(studentId, groupId));
+
+  Future<void> delete(int id) => _client.delete(ApiEndpoints.studentById(id));
 }

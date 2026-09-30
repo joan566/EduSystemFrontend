@@ -45,10 +45,24 @@ extension AppContext on BuildContext {
       case AppErrorCode.unsupportedMediaType:
         return 'El formato de archivo no es compatible.';
       case AppErrorCode.tooManyLoginAttempts:
-        final wait = e.retryAfterSeconds;
-        return wait != null
-            ? 'Demasiados intentos. Inténtalo en $wait segundos.'
-            : 'Demasiados intentos. Inténtalo más tarde.';
+      case AppErrorCode.tooManyRegistrations:
+      case AppErrorCode.tooManyPasswordResetRequests:
+        return tooManyAttemptsMessage(e.retryAfterSeconds);
+      case AppErrorCode.invalidCurrentPassword:
+        return 'La contraseña actual es incorrecta.';
+      case AppErrorCode.gradeHasGroups:
+        return 'No puedes eliminar este grado porque tiene cursos asociados.';
+      case AppErrorCode.groupHasDependents:
+        return 'No puedes eliminar este curso porque tiene estudiantes o '
+            'clases asociadas.';
+      case AppErrorCode.subjectHasTeachingAssignments:
+        return 'No puedes eliminar esta materia porque tiene clases '
+            'asociadas.';
+      case AppErrorCode.academicPeriodInUse:
+        return 'No puedes eliminar este periodo porque tiene clases '
+            'asociadas.';
+      case AppErrorCode.errorReportNotFound:
+        return 'El informe ya no está disponible.';
       case AppErrorCode.internalError:
         return 'Ocurrió un error en el servidor. Inténtalo más tarde.';
       default:
@@ -92,4 +106,19 @@ void _showNotif(
       ),
     ),
   );
+}
+
+/// Copy for every 429 (login, registro, recuperación de contraseña),
+/// rounded up from `Retry-After` so it never promises too short a wait.
+/// Nothing retries automatically; the user decides when to try again.
+String tooManyAttemptsMessage(int? retryAfterSeconds) {
+  const prefix = 'Demasiados intentos. Vuelve a intentarlo';
+  final seconds = retryAfterSeconds;
+  if (seconds == null || seconds <= 0) return '$prefix más tarde.';
+  final minutes = (seconds / 60).ceil();
+  if (minutes <= 90) {
+    return '$prefix en $minutes ${minutes == 1 ? 'minuto' : 'minutos'}.';
+  }
+  final hours = (minutes / 60).ceil();
+  return '$prefix en $hours horas.';
 }

@@ -165,3 +165,100 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
     );
   }
 }
+
+/// Permanently deletes the account: asks for the current password and for
+/// "ELIMINAR" typed out, so it can't happen by a stray tap. On success the
+/// session is cleared and the router takes the user to /login.
+class DeleteAccountForm extends StatefulWidget {
+  const DeleteAccountForm({super.key});
+
+  static const confirmationWord = 'ELIMINAR';
+
+  @override
+  State<DeleteAccountForm> createState() => _DeleteAccountFormState();
+}
+
+class _DeleteAccountFormState extends State<DeleteAccountForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _deleting = false;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    // Outlives this form and the authenticated screens behind it, so the
+    // confirmation still shows once the router has moved to /login.
+    final rootContext = Navigator.of(context, rootNavigator: true).context;
+    final auth = context.read<AuthProvider>();
+    setState(() => _deleting = true);
+    final ok = await auth.deleteAccount(_passwordController.text);
+    if (mounted) setState(() => _deleting = false);
+    if (!ok) {
+      if (mounted && auth.error != null) context.showApiError(auth.error!);
+      return;
+    }
+    if (mounted) Navigator.of(context).pop();
+    if (rootContext.mounted) {
+      rootContext.showSuccess('Tu cuenta y todos sus datos fueron eliminados.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return AppFormFrame(
+      title: 'Eliminar cuenta',
+      actions: [
+        AppButton(
+          label: 'Eliminar mi cuenta',
+          variant: AppButtonVariant.danger,
+          isLoading: _deleting,
+          onPressed: _submit,
+        ),
+      ],
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Se borrarán definitivamente tu cuenta y todos sus datos: '
+              'estudiantes, notas, asistencia, exámenes y archivos. Esta '
+              'acción no se puede deshacer.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              controller: _passwordController,
+              label: 'Contraseña actual',
+              required: true,
+              obscureText: true,
+              validator: (v) =>
+                  Validators.required(v, field: 'La contraseña actual'),
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              controller: _confirmController,
+              label:
+                  'Escribe ${DeleteAccountForm.confirmationWord} para confirmar',
+              required: true,
+              validator: (v) => v?.trim() == DeleteAccountForm.confirmationWord
+                  ? null
+                  : 'Escribe ${DeleteAccountForm.confirmationWord} en '
+                        'mayúsculas.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

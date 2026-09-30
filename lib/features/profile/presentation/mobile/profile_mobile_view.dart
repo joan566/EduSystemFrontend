@@ -99,6 +99,24 @@ class ProfileMobileView extends StatelessWidget {
                     ),
                     onTap: () => ProfileActions.logout(context),
                   ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: Icon(
+                      Icons.delete_forever_outlined,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    title: Text(
+                      'Eliminar cuenta',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    subtitle: const Text('Borra tu cuenta y todos sus datos'),
+                    onTap: () => showMobileForm<void>(
+                      context,
+                      child: const DeleteAccountForm(),
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -121,4 +121,17 @@ class StudentsProvider extends ChangeNotifier {
       return e;
     }
   }
+
+  /// Deletes the student and all of their data (irreversible), then
+  /// reloads the listing. Unlike [withdraw], nothing is kept.
+  Future<AppException?> delete(int studentId) async {
+    try {
+      await _repository.delete(studentId);
+      final lastOnPage = _state.items.length == 1 && _state.page > 0;
+      await load(page: lastOnPage ? _state.page - 1 : _state.page);
+      return null;
+    } on AppException catch (e) {
+      return e;
+    }
+  }
 }

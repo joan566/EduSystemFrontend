@@ -239,11 +239,20 @@ class _Header extends StatelessWidget {
               'Código',
               student.studentCode,
             ),
+            2 => StudentDetailActions.delete(context, student: student),
             _ => context.read<StudentsProvider>().loadDetail(student.id),
           },
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: 0, child: Text('Copiar código')),
-            PopupMenuItem(value: 1, child: Text('Actualizar datos')),
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: 0, child: Text('Copiar código')),
+            const PopupMenuItem(value: 1, child: Text('Actualizar datos')),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: 2,
+              child: Text(
+                'Eliminar estudiante',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           ],
         ),
       ],
