@@ -1,4 +1,4 @@
-import '../../../../core/state/list_state.dart';
+import '../../../../core/cache/paging.dart';
 import '../../domain/entities/activity_entity.dart';
 import '../datasources/activity_remote_datasource.dart';
 
@@ -23,8 +23,14 @@ class ActivityRepository {
     activityType: activityType,
   );
 
-  Future<ApiPage<ActivityEntity>> getPage({required int teachingPeriodId, int page = 0}) =>
-      _remote.getPage(teachingPeriodId: teachingPeriodId, page: page);
+  /// Every activity of one class (all pages).
+  Future<List<ActivityEntity>> getAll(int teachingPeriodId) => fetchAllPages(
+    (page, size) => _remote.getPage(
+      teachingPeriodId: teachingPeriodId,
+      page: page,
+      size: size,
+    ),
+  );
 
   Future<ActivityEntity> getById(int id) => _remote.getById(id);
 

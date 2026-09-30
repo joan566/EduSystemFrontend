@@ -19,33 +19,50 @@ import 'teaching_forms.dart';
 class TeachingActions {
   TeachingActions._();
 
-  /// Options for an [AssignmentForm], or null (after warning) when there
-  /// isn't at least one subject and one course yet.
-  static ({List<SubjectEntity> subjects, List<CourseEntity> courses})?
-  assignmentFormInputs(BuildContext context) {
-    final subjects = context.read<SubjectsProvider>().state.items;
-    final courses = context.read<CoursesProvider>().state.items;
-    if (subjects.isEmpty || courses.isEmpty) {
+  /// Options for an [AssignmentForm] — the whole subject and course
+  /// catalogs, never a screen's filtered page — or null (after telling the
+  /// user why) when they can't be offered.
+  static Future<({List<SubjectEntity> subjects, List<CourseEntity> courses})?>
+  assignmentFormInputs(BuildContext context) async {
+    final subjects = context.read<SubjectsProvider>();
+    final courses = context.read<CoursesProvider>();
+    // Usually already in memory; read now if this screen didn't need them.
+    await Future.wait([subjects.ensure(), courses.ensure()]);
+    if (!context.mounted) return null;
+    final failure = subjects.state.error ?? courses.state.error;
+    if (failure != null) {
+      context.showApiError(failure);
+      return null;
+    }
+    if (subjects.all.isEmpty || courses.all.isEmpty) {
       context.showWarning('Necesitas al menos una materia y un curso creados.');
       return null;
     }
-    return (subjects: subjects, courses: courses);
+    return (subjects: subjects.all, courses: courses.all);
   }
 
-  /// Options for a [TeachingPeriodForm], or null (after warning) when there
+  /// Options for a [TeachingPeriodForm] (every active assignment and every
+  /// academic period), or null (after telling the user why) when there
   /// isn't an active assignment and an academic period yet.
-  static ({
-    List<TeachingAssignmentEntity> assignments,
-    List<AcademicPeriodEntity> periods,
-  })?
-  periodFormInputs(BuildContext context) {
-    final periods = context.read<AcademicPeriodsProvider>().state.items;
-    final assignments = context
-        .read<TeachingProvider>()
-        .assignmentsState
-        .items
-        .where((a) => a.active)
-        .toList();
+  static Future<
+    ({
+      List<TeachingAssignmentEntity> assignments,
+      List<AcademicPeriodEntity> periods,
+    })?
+  >
+  periodFormInputs(BuildContext context) async {
+    final academicPeriods = context.read<AcademicPeriodsProvider>();
+    final teaching = context.read<TeachingProvider>();
+    await Future.wait([academicPeriods.ensure(), teaching.ensureAssignments()]);
+    if (!context.mounted) return null;
+    final failure =
+        academicPeriods.state.error ?? teaching.assignmentsState.error;
+    if (failure != null) {
+      context.showApiError(failure);
+      return null;
+    }
+    final periods = academicPeriods.all;
+    final assignments = teaching.allAssignments.where((a) => a.active).toList();
     if (assignments.isEmpty || periods.isEmpty) {
       context.showWarning(
         'Necesitas una asignación activa y un periodo académico creados.',

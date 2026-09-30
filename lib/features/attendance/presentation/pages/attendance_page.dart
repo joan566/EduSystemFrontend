@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
-import '../../../../core/state/detail_state.dart';
 import '../../../../core/widgets/shared/app_confirm_dialog.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
@@ -30,7 +30,8 @@ class AttendancePage extends StatefulWidget {
   State<AttendancePage> createState() => _AttendancePageState();
 }
 
-class _AttendancePageState extends State<AttendancePage> {
+class _AttendancePageState extends State<AttendancePage>
+    with SyncedDataState<AttendancePage> {
   // Live here, not in a view, so the class, the date and the marks survive
   // a mobile <-> desktop switch.
   TeachingPeriodEntity? _period;
@@ -44,10 +45,18 @@ class _AttendancePageState extends State<AttendancePage> {
     return DateTime(now.year, now.month, now.day);
   }
 
+  /// Everything shown comes from memory once read: the class's sessions,
+  /// its weekly blocks and each date already opened.
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pickInitialClass());
+  void ensureData() {
+    final period = _period;
+    if (period == null) {
+      _pickInitialClass();
+      return;
+    }
+    context.read<AttendanceProvider>().ensureSessions(period.id);
+    context.read<ScheduleProvider>().ensureClassSchedules(period.id);
+    _loadDay();
   }
 
   @override
@@ -63,7 +72,7 @@ class _AttendancePageState extends State<AttendancePage> {
     final schedule = context.read<ScheduleProvider>();
     await Future.wait([
       teaching.ensureAllPeriodsLoaded(),
-      if (schedule.today.status == DetailStatus.initial) schedule.loadToday(),
+      schedule.ensureToday(),
     ]);
     if (!mounted || _period != null || teaching.allPeriods.isEmpty) return;
     final periods = teaching.allPeriods;
@@ -102,8 +111,8 @@ class _AttendancePageState extends State<AttendancePage> {
       _day.clear();
       return;
     }
-    context.read<AttendanceProvider>().load(teachingPeriodId: period.id);
-    context.read<ScheduleProvider>().loadClassSchedules(period.id);
+    context.read<AttendanceProvider>().ensureSessions(period.id);
+    context.read<ScheduleProvider>().ensureClassSchedules(period.id);
     _loadDay();
   }
 
@@ -120,19 +129,34 @@ class _AttendancePageState extends State<AttendancePage> {
     return date;
   }
 
-  Future<void> _loadDay() async {
+  /// Shows the class's attendance on the selected date: at once when that
+  /// date was already opened, else once read. Marks not saved yet are
+  /// never overwritten by a re-read.
+  Future<void> _loadDay({bool refresh = false}) async {
     final period = _period;
     if (period == null) return;
     final date = _date;
-    _day.clear();
-    final day = await context.read<AttendanceProvider>().loadDay(
-      teachingPeriodId: period.id,
-      date: date,
-    );
-    if (day != null && mounted && _period?.id == period.id && _date == date) {
-      _day.seed(day.students);
+    final attendance = context.read<AttendanceProvider>();
+    final showing = _day.loaded;
+    final sameDay =
+        showing != null &&
+        showing.teachingPeriodId == period.id &&
+        DateUtils.isSameDay(showing.date, date);
+    if (!sameDay) {
+      final cached = attendance.day(period.id, date).data;
+      cached == null ? _day.clear() : _day.seed(cached);
+    }
+    await (refresh
+        ? attendance.refreshDay(period.id, date)
+        : attendance.ensureDay(period.id, date));
+    if (!mounted || _period?.id != period.id || _date != date) return;
+    final day = attendance.day(period.id, date).data;
+    if (day != null && !identical(day, _day.loaded) && !_day.hasPending) {
+      _day.seed(day);
     }
   }
+
+  void _retry() => _loadDay(refresh: true);
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +167,7 @@ class _AttendancePageState extends State<AttendancePage> {
         controller: _day,
         onPeriodChanged: _onPeriodChanged,
         onDateChanged: _onDateChanged,
-        onRetry: _loadDay,
+        onRetry: _retry,
       ),
       desktop: (_) => AttendanceDesktopView(
         period: _period,
@@ -151,7 +175,7 @@ class _AttendancePageState extends State<AttendancePage> {
         controller: _day,
         onPeriodChanged: _onPeriodChanged,
         onDateChanged: _onDateChanged,
-        onRetry: _loadDay,
+        onRetry: _retry,
       ),
     );
   }

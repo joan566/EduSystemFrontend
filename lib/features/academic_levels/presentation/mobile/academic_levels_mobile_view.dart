@@ -74,7 +74,7 @@ class AcademicLevelsMobileView extends StatelessWidget {
               ViewStatus.initial || ViewStatus.loading => const AppLoading(),
               ViewStatus.error => AppErrorState(
                 exception: state.error!,
-                onRetry: () => context.read<AcademicLevelsProvider>().load(),
+                onRetry: () => context.read<AcademicLevelsProvider>().refresh(),
               ),
               ViewStatus.empty => AppEmptyState(
                 title: 'No hay grados académicos',

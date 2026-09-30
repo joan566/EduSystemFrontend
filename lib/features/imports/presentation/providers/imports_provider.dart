@@ -1,6 +1,7 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/cache/cached_value.dart';
+import '../../../../core/cache/session_notifier.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/events/domain_events.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/state/list_state.dart';
 import '../../data/repositories/import_repository.dart';
@@ -8,13 +9,25 @@ import '../../domain/entities/import_batch_entity.dart';
 
 enum UploadStatus { idle, uploading, done, error }
 
-class ImportsProvider extends ChangeNotifier {
-  ImportsProvider(this._repository);
+/// Imports and their history. An import changes data other screens have
+/// cached, so each successful upload announces what it touched:
+/// students ([StudentsChanged]), one class ([ClassDataChanged.all]) or —
+/// the school-setup workbook, which can create anything —
+/// everything ([SessionDataReset]).
+class ImportsProvider extends SessionNotifier {
+  ImportsProvider(this._repository, DomainEvents events) : super(events);
 
   final ImportRepository _repository;
 
-  ListViewState<ImportBatchEntity> _historyState = const ListViewState();
-  ListViewState<ImportBatchEntity> get historyState => _historyState;
+  /// The latest imports (first page).
+  late final _history = cachedValue<ApiPage<ImportBatchEntity>>();
+
+  ListViewState<ImportBatchEntity> get historyState => _history.view;
+
+  Future<void> ensureHistory() => _history.ensure(_repository.getHistory);
+
+  /// Re-reads the history (after an upload adds a batch, or "retry").
+  Future<void> refreshHistory() => _history.refresh(_repository.getHistory);
 
   UploadStatus _uploadStatus = UploadStatus.idle;
   UploadStatus get uploadStatus => _uploadStatus;
@@ -49,23 +62,6 @@ class ImportsProvider extends ChangeNotifier {
   AppException? _schoolSetupUploadError;
   AppException? get schoolSetupUploadError => _schoolSetupUploadError;
 
-  Future<void> loadHistory({int page = 0}) async {
-    _historyState = ListViewState.loading();
-    notifyListeners();
-    try {
-      final result = await _repository.getHistory(page: page);
-      _historyState = ListViewState.fromPage(
-        content: result.content,
-        page: result.page,
-        totalPages: result.totalPages,
-        totalElements: result.totalElements,
-      );
-    } on AppException catch (e) {
-      _historyState = ListViewState.error(e);
-    }
-    notifyListeners();
-  }
-
   Future<BinaryDownload> downloadTemplate() => _repository.downloadTemplate();
 
   Future<BinaryDownload> downloadErrorReport(int importId) =>
@@ -88,7 +84,8 @@ class ImportsProvider extends ChangeNotifier {
         bytes: bytes,
       );
       _uploadStatus = UploadStatus.done;
-      await loadHistory();
+      publish(const StudentsChanged());
+      await refreshHistory();
     } on AppException catch (e) {
       _uploadStatus = UploadStatus.error;
       _uploadError = e;
@@ -119,7 +116,10 @@ class ImportsProvider extends ChangeNotifier {
         bytes: bytes,
       );
       _periodUploadStatus = UploadStatus.done;
-      await loadHistory();
+      // Students, grades and attendance of that class.
+      publish(ClassDataChanged.all(teachingPeriodId));
+      publish(const StudentsChanged());
+      await refreshHistory();
     } on AppException catch (e) {
       _periodUploadStatus = UploadStatus.error;
       _periodUploadError = e;
@@ -151,7 +151,10 @@ class ImportsProvider extends ChangeNotifier {
         bytes: bytes,
       );
       _schoolSetupUploadStatus = UploadStatus.done;
-      await loadHistory();
+      // Periods, levels, subjects, courses, classes, students, grades and
+      // attendance may all have changed.
+      publish(const SessionDataReset());
+      await refreshHistory();
     } on AppException catch (e) {
       _schoolSetupUploadStatus = UploadStatus.error;
       _schoolSetupUploadError = e;

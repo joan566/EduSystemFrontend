@@ -41,8 +41,7 @@ class ClassesCarouselSection extends StatelessWidget {
         ViewStatus.error => Padding(
           padding: const EdgeInsets.only(right: 16),
           child: DashboardErrorNotice(
-            onRetry: () =>
-                context.read<TeachingProvider>().loadPeriods(page: 0),
+            onRetry: () => context.read<TeachingProvider>().refreshPeriods(),
           ),
         ),
         ViewStatus.success => SizedBox(

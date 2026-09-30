@@ -29,8 +29,6 @@ class ExamResultsMobileTab extends StatelessWidget {
   /// The exam's class; null until the classes have loaded.
   final TeachingPeriodEntity? period;
 
-  static const _pageSize = 100;
-
   @override
   Widget build(BuildContext context) {
     final actions = Padding(
@@ -63,7 +61,7 @@ class ExamResultsMobileTab extends StatelessWidget {
 
     // Stats and actions stay visible while the list loads or is empty, so
     // grading can start from here.
-    final state = context.watch<SubmissionsProvider>().state;
+    final state = context.watch<SubmissionsProvider>().results(exam.id);
     return ListView(
       padding: const EdgeInsets.only(top: 16, bottom: 24),
       children: [
@@ -83,7 +81,6 @@ class ExamResultsMobileTab extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: ExamResultsStateView(
             exam: exam,
-            pageSize: _pageSize,
             builder: (context, state) => _ResultsCard(exam: exam, state: state),
           ),
         ),

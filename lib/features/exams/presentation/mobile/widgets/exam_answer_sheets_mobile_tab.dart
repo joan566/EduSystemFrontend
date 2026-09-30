@@ -44,9 +44,7 @@ class _ExamAnswerSheetsMobileTabState extends State<ExamAnswerSheetsMobileTab> {
 
   Future<void> _pickStudent(TeachingPeriodEntity period) async {
     final students = context.read<StudentsProvider>();
-    if (students.groupRoster(period.groupId).status == ViewStatus.initial) {
-      students.loadGroupRoster(period.groupId);
-    }
+    students.ensureGroupRoster(period.groupId);
     final studentId = await showMobileSheet<int>(
       context,
       builder: (_) => _StudentPickerSheet(groupId: period.groupId),
@@ -226,8 +224,9 @@ class _StudentPickerSheet extends StatelessWidget {
               ),
               ViewStatus.error => AppErrorState(
                 exception: state.error!,
-                onRetry: () =>
-                    context.read<StudentsProvider>().loadGroupRoster(groupId),
+                onRetry: () => context
+                    .read<StudentsProvider>()
+                    .refreshGroupRoster(groupId),
               ),
               ViewStatus.empty => const Padding(
                 padding: EdgeInsets.all(24),

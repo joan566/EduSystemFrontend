@@ -128,6 +128,22 @@ class StudentGradeReport {
   final List<CategoryGrade> categories;
   final List<GradebookEntry> evaluations;
   final StudentObservationEntity? observation;
+
+  StudentGradeReport withObservation(StudentObservationEntity? value) =>
+      StudentGradeReport(
+        teachingPeriodId: teachingPeriodId,
+        student: student,
+        totalWeight: totalWeight,
+        configurationComplete: configurationComplete,
+        categories: categories,
+        evaluations: evaluations,
+        scale: scale,
+        passingGrade: passingGrade,
+        periodGrade: periodGrade,
+        score: score,
+        passing: passing,
+        observation: value,
+      );
 }
 
 class RubricCriterionEntity {

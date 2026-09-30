@@ -32,8 +32,9 @@ class BatchUploadController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void loadHistory(BuildContext context) =>
-      context.read<SubmissionBatchesProvider>().loadHistory(examId);
+  /// "Retry" on the history.
+  void refreshHistory(BuildContext context) =>
+      context.read<SubmissionBatchesProvider>().refreshHistory(examId);
 
   void setReplace(bool value) => _update(() => _replace = value);
 
@@ -76,10 +77,10 @@ class BatchUploadController extends ChangeNotifier {
     }
   }
 
-  Future<void> openBatch(BuildContext context, int batchId) async {
-    await context.push(RoutePaths.submissionBatch(examId, batchId));
-    if (context.mounted) loadHistory(context);
-  }
+  /// The batch screen keeps this exam's history row up to date while it
+  /// polls, so nothing is re-read on return.
+  Future<void> openBatch(BuildContext context, int batchId) =>
+      context.push(RoutePaths.submissionBatch(examId, batchId));
 
   @override
   void dispose() {

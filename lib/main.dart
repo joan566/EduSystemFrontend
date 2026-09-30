@@ -1,8 +1,16 @@
+import 'dart:convert';
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:provider/single_child_widget.dart';
 
+import 'core/events/domain_events.dart';
 import 'core/network/api_client.dart';
+import 'core/network/request_metrics.dart';
 import 'core/network/session_expiry_notifier.dart';
+import 'core/session/session_scope.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/academic_levels/data/datasources/academic_level_remote_datasource.dart';
@@ -26,7 +34,6 @@ import 'features/auth/presentation/providers/auth_provider.dart';
 import 'features/courses/data/datasources/course_remote_datasource.dart';
 import 'features/courses/data/repositories/course_repository.dart';
 import 'features/courses/presentation/providers/courses_provider.dart';
-import 'features/dashboard/presentation/providers/dashboard_provider.dart';
 import 'features/exams/data/datasources/exam_remote_datasource.dart';
 import 'features/exams/data/repositories/exam_repository.dart';
 import 'features/exams/presentation/providers/exams_provider.dart';
@@ -57,7 +64,146 @@ import 'features/teaching/data/datasources/teaching_remote_datasource.dart';
 import 'features/teaching/data/repositories/teaching_repository.dart';
 import 'features/teaching/presentation/providers/teaching_provider.dart';
 
+/// Everything private to one signed-in teacher. Built again (empty) for
+/// every session by [SessionScope].
+List<SingleChildWidget> sessionProviders() => [
+  // --- Academic catalog ------------------------------------------
+  ChangeNotifierProvider<AcademicLevelsProvider>(
+    create: (context) => AcademicLevelsProvider(
+      AcademicLevelRepository(
+        AcademicLevelRemoteDataSource(context.read<ApiClient>()),
+      ),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<SubjectsProvider>(
+    create: (context) => SubjectsProvider(
+      SubjectRepository(SubjectRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<AcademicPeriodsProvider>(
+    create: (context) => AcademicPeriodsProvider(
+      AcademicPeriodRepository(
+        AcademicPeriodRemoteDataSource(context.read<ApiClient>()),
+      ),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<CoursesProvider>(
+    create: (context) => CoursesProvider(
+      CourseRepository(CourseRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<TeachingProvider>(
+    create: (context) => TeachingProvider(
+      TeachingRepository(TeachingRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<ScheduleProvider>(
+    create: (context) => ScheduleProvider(
+      ScheduleRepository(ScheduleRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+
+  // --- Students & imports -----------------------------------------
+  ChangeNotifierProvider<StudentsProvider>(
+    create: (context) => StudentsProvider(
+      StudentRepository(StudentRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<ImportsProvider>(
+    create: (context) => ImportsProvider(
+      ImportRepository(
+        ImportRemoteDataSource(context.read<ApiClient>()),
+        AuditRemoteDataSource(context.read<ApiClient>()),
+      ),
+      context.read<DomainEvents>(),
+    ),
+  ),
+
+  // --- Exams, activities, attendance, grading ---------------------
+  ChangeNotifierProvider<ExamsProvider>(
+    create: (context) => ExamsProvider(
+      ExamRepository(ExamRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<SubmissionsProvider>(
+    create: (context) => SubmissionsProvider(
+      ExamRepository(ExamRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<SubmissionBatchesProvider>(
+    create: (context) => SubmissionBatchesProvider(
+      ExamRepository(ExamRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<ActivitiesProvider>(
+    create: (context) => ActivitiesProvider(
+      ActivityRepository(ActivityRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<AttendanceProvider>(
+    create: (context) => AttendanceProvider(
+      AttendanceRepository(
+        AttendanceRemoteDataSource(context.read<ApiClient>()),
+      ),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<GradingProvider>(
+    create: (context) => GradingProvider(
+      GradingRepository(GradingRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  ChangeNotifierProvider<GradebookProvider>(
+    create: (context) => GradebookProvider(
+      GradebookRepository(GradebookRemoteDataSource(context.read<ApiClient>())),
+      context.read<DomainEvents>(),
+    ),
+  ),
+
+  // --- Audit, exports, profile -------------------------------------
+  ChangeNotifierProvider<AuditProvider>(
+    create: (context) => AuditProvider(
+      AuditRemoteDataSource(context.read<ApiClient>()),
+      context.read<DomainEvents>(),
+    ),
+  ),
+  Provider<ExportDataSource>(
+    create: (context) => ExportDataSource(context.read<ApiClient>()),
+  ),
+  ChangeNotifierProvider<ProfileProvider>(
+    create: (context) => ProfileProvider(
+      dataSource: UserProfileDataSource(context.read<ApiClient>()),
+      authProvider: context.read<AuthProvider>(),
+    ),
+  ),
+];
+
 void main() {
+  if (kDebugMode) {
+    // `ext.edusystem.httpReport` (DevTools > service extensions, or
+    // `flutter attach`) prints how many requests each route got so far;
+    // `?reset=true` starts counting again.
+    developer.registerExtension('ext.edusystem.httpReport', (_, params) async {
+      final report = RequestMetrics.instance.report();
+      debugPrint(report);
+      if (params['reset'] == 'true') RequestMetrics.instance.reset();
+      return developer.ServiceExtensionResponse.result(
+        jsonEncode({'report': report}),
+      );
+    });
+  }
   runApp(const EduSistemApp());
 }
 
@@ -94,136 +240,6 @@ class EduSistemApp extends StatelessWidget {
             return authProvider;
           },
         ),
-
-        // --- Academic catalog ------------------------------------------
-        ChangeNotifierProvider<AcademicLevelsProvider>(
-          create: (context) => AcademicLevelsProvider(
-            AcademicLevelRepository(
-              AcademicLevelRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider<SubjectsProvider>(
-          create: (context) => SubjectsProvider(
-            SubjectRepository(
-              SubjectRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider<AcademicPeriodsProvider>(
-          create: (context) => AcademicPeriodsProvider(
-            AcademicPeriodRepository(
-              AcademicPeriodRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider<CoursesProvider>(
-          create: (context) => CoursesProvider(
-            CourseRepository(CourseRemoteDataSource(context.read<ApiClient>())),
-          ),
-        ),
-        ChangeNotifierProvider<TeachingProvider>(
-          create: (context) => TeachingProvider(
-            TeachingRepository(
-              TeachingRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider<ScheduleProvider>(
-          create: (context) => ScheduleProvider(
-            ScheduleRepository(
-              ScheduleRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-
-        // --- Students & imports -----------------------------------------
-        ChangeNotifierProvider<StudentsProvider>(
-          create: (context) => StudentsProvider(
-            StudentRepository(
-              StudentRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider<ImportsProvider>(
-          create: (context) => ImportsProvider(
-            ImportRepository(
-              ImportRemoteDataSource(context.read<ApiClient>()),
-              AuditRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-
-        // --- Exams, activities, attendance, grading ---------------------
-        ChangeNotifierProvider<ExamsProvider>(
-          create: (context) => ExamsProvider(
-            ExamRepository(ExamRemoteDataSource(context.read<ApiClient>())),
-          ),
-        ),
-        ChangeNotifierProvider<SubmissionsProvider>(
-          create: (context) => SubmissionsProvider(
-            ExamRepository(ExamRemoteDataSource(context.read<ApiClient>())),
-          ),
-        ),
-        ChangeNotifierProvider<SubmissionBatchesProvider>(
-          create: (context) => SubmissionBatchesProvider(
-            ExamRepository(ExamRemoteDataSource(context.read<ApiClient>())),
-          ),
-        ),
-        ChangeNotifierProvider<ActivitiesProvider>(
-          create: (context) => ActivitiesProvider(
-            ActivityRepository(
-              ActivityRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider<AttendanceProvider>(
-          create: (context) => AttendanceProvider(
-            AttendanceRepository(
-              AttendanceRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider<GradingProvider>(
-          create: (context) => GradingProvider(
-            GradingRepository(
-              GradingRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-        ChangeNotifierProvider<GradebookProvider>(
-          create: (context) => GradebookProvider(
-            GradebookRepository(
-              GradebookRemoteDataSource(context.read<ApiClient>()),
-            ),
-          ),
-        ),
-
-        // --- Audit, exports, profile -------------------------------------
-        ChangeNotifierProvider<AuditProvider>(
-          create: (context) =>
-              AuditProvider(AuditRemoteDataSource(context.read<ApiClient>())),
-        ),
-        Provider<ExportDataSource>(
-          create: (context) => ExportDataSource(context.read<ApiClient>()),
-        ),
-        ChangeNotifierProvider<ProfileProvider>(
-          create: (context) => ProfileProvider(
-            dataSource: UserProfileDataSource(context.read<ApiClient>()),
-            authProvider: context.read<AuthProvider>(),
-          ),
-        ),
-
-        // --- Dashboard (orchestrates the providers above) ----------------
-        ChangeNotifierProvider<DashboardProvider>(
-          create: (context) => DashboardProvider(
-            students: context.read<StudentsProvider>(),
-            courses: context.read<CoursesProvider>(),
-            teaching: context.read<TeachingProvider>(),
-            audit: context.read<AuditProvider>(),
-            schedule: context.read<ScheduleProvider>(),
-          ),
-        ),
       ],
       child: const _AppRoot(),
     );
@@ -238,10 +254,13 @@ class _AppRoot extends StatefulWidget {
 }
 
 class _AppRootState extends State<_AppRoot> {
-  late final AppRouter _appRouter = AppRouter(context.read<AuthProvider>());
   late final Future<void> _restoreSession = context
       .read<AuthProvider>()
       .restoreSession();
+
+  /// Only the first session's router restores the platform location (a web
+  /// deep link or reload); after a user change navigation starts over.
+  bool _firstSession = true;
 
   @override
   Widget build(BuildContext context) {
@@ -261,13 +280,31 @@ class _AppRootState extends State<_AppRoot> {
             home: const _SplashScreen(),
           );
         }
-        return MaterialApp.router(
-          title: 'EduSistem',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: ThemeMode.light,
-          routerConfig: _appRouter.router,
+        // A different user (or none) gets a brand-new session subtree:
+        // every domain provider, cache and route of the previous one is
+        // disposed with it.
+        return Selector<AuthProvider, int?>(
+          selector: (_, auth) => auth.user?.id,
+          builder: (context, userId, _) {
+            final restoreLocation = _firstSession;
+            _firstSession = false;
+            return SessionScope(
+              key: ValueKey<int?>(userId),
+              providers: sessionProviders,
+              createRouter: () => AppRouter(
+                context.read<AuthProvider>(),
+                restorePlatformLocation: restoreLocation,
+              ).router,
+              builder: (context, router) => MaterialApp.router(
+                title: 'EduSistem',
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.light,
+                darkTheme: AppTheme.dark,
+                themeMode: ThemeMode.light,
+                routerConfig: router,
+              ),
+            );
+          },
         );
       },
     );

@@ -115,12 +115,18 @@ class _PreviewState extends State<_Preview> {
   @override
   void initState() {
     super.initState();
-    // Holding ↑/↓ walks through rows quickly; only fetch results for the
-    // exam the selection settles on.
+    final submissions = context.read<SubmissionsProvider>();
+    // Results already in memory show at once (no request). Otherwise,
+    // holding ↑/↓ walks through rows quickly: only the exam the selection
+    // settles on is read.
+    if (submissions.results(widget.exam.id).status != ViewStatus.initial) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) submissions.ensureResults(widget.exam.id);
+      });
+      return;
+    }
     _debounce = Timer(const Duration(milliseconds: 250), () {
-      if (mounted) {
-        context.read<SubmissionsProvider>().load(widget.exam.id, size: 100);
-      }
+      if (mounted) submissions.ensureResults(widget.exam.id);
     });
   }
 
@@ -137,12 +143,11 @@ class _PreviewState extends State<_Preview> {
     final actions = widget.actions;
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
-    final submissions = context.watch<SubmissionsProvider>();
+    final submissions = context.watch<SubmissionsProvider>().results(exam.id);
     final results =
-        submissions.examId == exam.id &&
-            (submissions.state.status == ViewStatus.success ||
-                submissions.state.status == ViewStatus.empty)
-        ? ExamResultsSummary.from(submissions.state.items, exam)
+        submissions.status == ViewStatus.success ||
+            submissions.status == ViewStatus.empty
+        ? ExamResultsSummary.from(submissions.items, exam)
         : null;
     final date = exam.evaluationDate;
     final description = exam.description?.trim();

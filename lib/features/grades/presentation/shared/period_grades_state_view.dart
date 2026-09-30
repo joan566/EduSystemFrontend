@@ -26,7 +26,9 @@ class PeriodGradesStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<GradingProvider>().periodGradesState;
+    final state = context.watch<GradingProvider>().periodGrades(
+      teachingPeriodId,
+    );
 
     switch (state.status) {
       case DetailStatus.initial:
@@ -45,30 +47,21 @@ class PeriodGradesStateView extends StatelessWidget {
                 'las notas.',
             icon: Icons.tune,
             actionLabel: 'Configurar pesos',
-            onAction: () async {
-              await context.push(
-                RoutePaths.gradingSettingsForClass(teachingPeriodId),
-              );
-              // The weights may have just been set.
-              if (context.mounted) {
-                context.read<GradingProvider>().loadPeriodGrades(
-                  teachingPeriodId,
-                );
-              }
-            },
+            // Saving the weights there makes these grades stale, so they
+            // are re-read on return.
+            onAction: () => context.push(
+              RoutePaths.gradingSettingsForClass(teachingPeriodId),
+            ),
           );
         }
         return AppErrorState(
           exception: error,
-          onRetry: () => context.read<GradingProvider>().loadPeriodGrades(
+          onRetry: () => context.read<GradingProvider>().refreshPeriodGrades(
             teachingPeriodId,
           ),
         );
       case DetailStatus.success:
         final data = state.data!;
-        if (data.teachingPeriodId != teachingPeriodId) {
-          return const AppLoading();
-        }
         if (data.students.isEmpty) {
           return const AppEmptyState(
             title: 'No hay estudiantes en este curso',

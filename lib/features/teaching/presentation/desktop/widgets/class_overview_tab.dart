@@ -191,8 +191,9 @@ class _RecentActivity extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () =>
-                  context.read<AuditProvider>().loadClassLogs(teachingPeriodId),
+              onPressed: () => context.read<AuditProvider>().refreshClassLogs(
+                teachingPeriodId,
+              ),
               child: const Text('Reintentar'),
             ),
           ],

@@ -116,12 +116,11 @@ class GradeDetailMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<GradebookProvider>().detail;
-    final detail =
-        state.data?.evaluation.evaluationId == evaluationId &&
-            state.data?.student.id == studentId
-        ? state.data
-        : null;
+    final state = context.watch<GradebookProvider>().detail(
+      evaluationId,
+      studentId,
+    );
+    final detail = state.data;
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -150,18 +149,16 @@ class GradeDetailMobileView extends StatelessWidget {
             child: switch (state.status) {
               DetailStatus.error => AppErrorState(
                 exception: state.error!,
-                onRetry: () => context.read<GradebookProvider>().loadDetail(
+                onRetry: () => context.read<GradebookProvider>().refreshDetail(
                   evaluationId,
                   studentId,
                 ),
               ),
               _ when detail == null => const AppLoading(),
               _ => RefreshIndicator(
-                onRefresh: () => context.read<GradebookProvider>().loadDetail(
-                  evaluationId,
-                  studentId,
-                  silent: true,
-                ),
+                onRefresh: () => context
+                    .read<GradebookProvider>()
+                    .refreshDetail(evaluationId, studentId),
                 child: _Content(detail: detail),
               ),
             },

@@ -35,7 +35,7 @@ class ClassesGridCard extends StatelessWidget {
       onLink: () => context.go(RoutePaths.teaching),
       child: switch (state.status) {
         ViewStatus.error => DashboardErrorNotice(
-          onRetry: () => context.read<TeachingProvider>().loadPeriods(page: 0),
+          onRetry: () => context.read<TeachingProvider>().refreshPeriods(),
         ),
         ViewStatus.success => LayoutBuilder(
           // Two columns of equal width inside this card.

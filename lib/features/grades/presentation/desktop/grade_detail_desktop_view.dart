@@ -41,18 +41,17 @@ class GradeDetailDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<GradebookProvider>().detail;
-    final detail =
-        state.data?.evaluation.evaluationId == evaluationId &&
-            state.data?.student.id == studentId
-        ? state.data
-        : null;
+    final state = context.watch<GradebookProvider>().detail(
+      evaluationId,
+      studentId,
+    );
+    final detail = state.data;
 
     return Scaffold(
       body: switch (state.status) {
         DetailStatus.error => AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<GradebookProvider>().loadDetail(
+          onRetry: () => context.read<GradebookProvider>().refreshDetail(
             evaluationId,
             studentId,
           ),

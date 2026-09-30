@@ -20,6 +20,10 @@ class AttendanceDayController extends ChangeNotifier {
   List<SessionStudentRecord> _students = const [];
   List<SessionStudentRecord> get students => _students;
 
+  /// The day (class + date) being marked, as the server has it.
+  AttendanceDayEntity? _loaded;
+  AttendanceDayEntity? get loaded => _loaded;
+
   String _query = '';
   String get query => _query;
 
@@ -60,8 +64,13 @@ class AttendanceDayController extends ChangeNotifier {
     }).toList();
   }
 
-  /// Starts over from what the server has for the loaded day.
-  void seed(List<SessionStudentRecord> students) {
+  /// Starts over from what the server has for [day].
+  void seed(AttendanceDayEntity day) {
+    _loaded = day;
+    _reset(day.students);
+  }
+
+  void _reset(List<SessionStudentRecord> students) {
     _students = students;
     _statuses
       ..clear()
@@ -74,6 +83,7 @@ class AttendanceDayController extends ChangeNotifier {
   }
 
   void clear() {
+    _loaded = null;
     _students = const [];
     _statuses.clear();
     _observations.clear();
@@ -92,7 +102,7 @@ class AttendanceDayController extends ChangeNotifier {
   }
 
   /// Drops every unsaved mark, back to what the server has.
-  void discard() => seed(_students);
+  void discard() => _reset(_students);
 
   void mark(int studentId, AttendanceStatus status, {String? observation}) {
     _statuses[studentId] = status;
@@ -133,15 +143,25 @@ class AttendanceDayController extends ChangeNotifier {
       context.showWarning('Marca al menos un estudiante.');
       return false;
     }
+    final loaded = _loaded;
+    if (loaded == null) return false;
     _saving = true;
     notifyListeners();
     final provider = context.read<AttendanceProvider>();
-    final error = await provider.saveDay(records);
+    final error = await provider.saveDay(
+      loaded.teachingPeriodId,
+      loaded.date,
+      records,
+    );
     _saving = false;
     if (error == null) {
       _pending.removeAll(ids);
       // What the server has now is what "discard" goes back to.
-      _students = provider.day.data?.students ?? _students;
+      final saved = provider.day(loaded.teachingPeriodId, loaded.date).data;
+      if (saved != null) {
+        _loaded = saved;
+        _students = saved.students;
+      }
     }
     notifyListeners();
     if (!context.mounted) return error == null;

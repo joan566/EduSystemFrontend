@@ -74,17 +74,15 @@ class _StudentDetailDesktopViewState extends State<StudentDetailDesktopView>
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<StudentsProvider>().detailState;
-    final detail = state.data?.student.id == widget.studentId
-        ? state.data
-        : null;
+    final state = context.watch<StudentsProvider>().detail(widget.studentId);
+    final detail = state.data;
 
     return Scaffold(
       body: switch (state.status) {
         DetailStatus.error => AppErrorState(
           exception: state.error!,
           onRetry: () =>
-              context.read<StudentsProvider>().loadDetail(widget.studentId),
+              context.read<StudentsProvider>().refreshDetail(widget.studentId),
         ),
         _ when detail == null => const AppLoading(),
         _ => _Workspace(detail: detail, tabs: _tabs, grades: widget.grades),
@@ -240,7 +238,7 @@ class _Header extends StatelessWidget {
               student.studentCode,
             ),
             2 => StudentDetailActions.delete(context, student: student),
-            _ => context.read<StudentsProvider>().loadDetail(student.id),
+            _ => context.read<StudentsProvider>().refreshDetail(student.id),
           },
           itemBuilder: (context) => [
             const PopupMenuItem(value: 0, child: Text('Copiar código')),

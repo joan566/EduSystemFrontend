@@ -28,7 +28,19 @@ import '../shared/subject_usage.dart';
 /// it) with edit/delete on hover, and a side column that summarizes the
 /// catalog and how it relates to the others.
 class SubjectsDesktopView extends StatelessWidget {
-  const SubjectsDesktopView({super.key});
+  const SubjectsDesktopView({
+    super.key,
+    required this.search,
+    required this.onSearchChanged,
+    required this.page,
+    required this.onPageChanged,
+  });
+
+  /// The screen's search and page (owned by the page entry point).
+  final String search;
+  final ValueChanged<String> onSearchChanged;
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   static const _sideWidth = 320.0;
   static const _sideBesideMinWidth = 1080.0;
@@ -44,8 +56,10 @@ class SubjectsDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<SubjectsProvider>();
-    final state = provider.state;
+    final state = context.watch<SubjectsProvider>().query(
+      search: search,
+      page: page,
+    );
     final usage = classesBySubject(
       context.watch<TeachingProvider>().allPeriods,
     );
@@ -76,9 +90,8 @@ class SubjectsDesktopView extends StatelessWidget {
                 width: 360,
                 child: AppSearchField(
                   hint: 'Buscar materia...',
-                  initialValue: provider.searchQuery,
-                  onChanged: (value) =>
-                      context.read<SubjectsProvider>().search(value),
+                  initialValue: search,
+                  onChanged: onSearchChanged,
                 ),
               ),
             ),
@@ -134,11 +147,11 @@ class SubjectsDesktopView extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<SubjectsProvider>().load(),
+          onRetry: () => context.read<SubjectsProvider>().refresh(),
         );
       case ViewStatus.empty:
         return AppEmptyState(
-          title: context.read<SubjectsProvider>().searchQuery == null
+          title: search.trim().isEmpty
               ? 'No hay materias registradas'
               : 'Sin resultados',
           message:
@@ -184,8 +197,7 @@ class SubjectsDesktopView extends StatelessWidget {
                     page: state.page,
                     totalPages: state.totalPages,
                     totalElements: state.totalElements,
-                    onPageChanged: (page) =>
-                        context.read<SubjectsProvider>().load(page: page),
+                    onPageChanged: (page) => onPageChanged(page),
                   ),
                 ],
               ],

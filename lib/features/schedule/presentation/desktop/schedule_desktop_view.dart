@@ -36,7 +36,10 @@ class ScheduleDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ScheduleProvider>().calendar;
+    final state = context.watch<ScheduleProvider>().calendar(
+      week.start,
+      week.start.add(const Duration(days: 6)),
+    );
     final range = state.status == DetailStatus.success ? state.data : null;
     final classCount = range?.days.fold(0, (n, d) => n + d.classes.length);
     final selected = range?.days

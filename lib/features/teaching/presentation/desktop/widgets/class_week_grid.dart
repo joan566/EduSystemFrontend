@@ -67,7 +67,7 @@ class ClassWeekGrid extends StatelessWidget {
               exception: state.error!,
               onRetry: () => context
                   .read<ScheduleProvider>()
-                  .loadClassSchedules(period.id),
+                  .refreshClassSchedules(period.id),
             ),
             ViewStatus.empty => const AppEmptyState(
               title: 'Sin horario',

@@ -22,7 +22,13 @@ class AuditDesktopView extends StatelessWidget {
     required this.onClearClassFilter,
     required this.onLoadPage,
     required this.onActionFilterChanged,
+    required this.query,
+    required this.onRetry,
   });
+
+  /// The page and filters on screen.
+  final AuditQuery query;
+  final VoidCallback onRetry;
 
   final AuditAction? actionFilter;
 
@@ -36,7 +42,7 @@ class AuditDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AuditProvider>().state;
+    final state = context.watch<AuditProvider>().feed(query);
 
     return Scaffold(
       body: Column(
@@ -93,10 +99,7 @@ class AuditDesktopView extends StatelessWidget {
       case ViewStatus.loading:
         return const AppLoading();
       case ViewStatus.error:
-        return AppErrorState(
-          exception: state.error!,
-          onRetry: () => onLoadPage(0),
-        );
+        return AppErrorState(exception: state.error!, onRetry: onRetry);
       case ViewStatus.empty:
         return const AppEmptyState(
           title: 'No hay actividad registrada',

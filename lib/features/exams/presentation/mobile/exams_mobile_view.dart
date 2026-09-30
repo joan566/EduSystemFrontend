@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/cached_value.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -29,12 +30,18 @@ class ExamsMobileView extends StatelessWidget {
     required this.onPeriodChanged,
     required this.filters,
     required this.onFiltersChanged,
+    required this.page,
+    required this.onPageChanged,
   });
 
   final TeachingPeriodEntity? period;
   final ValueChanged<TeachingPeriodEntity?> onPeriodChanged;
   final ExamListFilters filters;
   final ValueChanged<ExamListFilters> onFiltersChanged;
+
+  /// Page of the filtered exams (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   Future<void> _openSort(BuildContext context) async {
     final picked = await showMobileSheet<ExamSort>(
@@ -143,7 +150,12 @@ class ExamsMobileView extends StatelessWidget {
           Expanded(
             child: period == null
                 ? const SizedBox.shrink()
-                : _ExamList(period: period, filters: filters),
+                : _ExamList(
+                    period: period,
+                    filters: filters,
+                    page: page,
+                    onPageChanged: onPageChanged,
+                  ),
           ),
         ],
       ),
@@ -343,10 +355,17 @@ class _FilterPill extends StatelessWidget {
 }
 
 class _ExamList extends StatelessWidget {
-  const _ExamList({required this.period, required this.filters});
+  const _ExamList({
+    required this.period,
+    required this.filters,
+    required this.page,
+    required this.onPageChanged,
+  });
 
   final TeachingPeriodEntity period;
   final ExamListFilters filters;
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   Future<void> _openActions(
     BuildContext context,
@@ -397,7 +416,7 @@ class _ExamList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ExamsProvider>().state;
+    final state = context.watch<ExamsProvider>().exams(period.id);
 
     switch (state.status) {
       case ViewStatus.initial:
@@ -406,8 +425,7 @@ class _ExamList extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () =>
-              context.read<ExamsProvider>().load(teachingPeriodId: period.id),
+          onRetry: () => context.read<ExamsProvider>().refreshExams(period.id),
         );
       case ViewStatus.empty:
         return AppEmptyState(
@@ -419,7 +437,9 @@ class _ExamList extends StatelessWidget {
               ExamActions.create(context, teachingPeriodId: period.id),
         );
       case ViewStatus.success:
-        final exams = filters.apply(state.items);
+        // The class's whole exam list, filtered and paged in memory.
+        final visible = localPage(filters.apply(state.items), page: page);
+        final exams = visible.items;
         return ListView(
           // Bottom padding keeps the last card clear of the FAB.
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 96),
@@ -440,15 +460,12 @@ class _ExamList extends StatelessWidget {
                   onMore: () => _openActions(context, exam),
                 ),
               ),
-            if (state.totalPages > 1)
+            if (visible.totalPages > 1)
               AppPagination(
-                page: state.page,
-                totalPages: state.totalPages,
-                totalElements: state.totalElements,
-                onPageChanged: (page) => context.read<ExamsProvider>().load(
-                  teachingPeriodId: period.id,
-                  page: page,
-                ),
+                page: visible.page,
+                totalPages: visible.totalPages,
+                totalElements: visible.totalElements,
+                onPageChanged: onPageChanged,
               ),
           ],
         );

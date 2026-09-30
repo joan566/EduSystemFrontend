@@ -1,3 +1,4 @@
+import '../../../../core/cache/paging.dart';
 import '../../../../core/state/list_state.dart';
 import '../../domain/entities/teaching_assignment_entity.dart';
 import '../../domain/entities/teaching_period_entity.dart';
@@ -21,6 +22,11 @@ class TeachingRepository {
     active: active,
   );
 
+  /// Every assignment of the teacher (all pages).
+  Future<List<TeachingAssignmentEntity>> getAllAssignments() => fetchAllPages(
+    (page, size) => _remote.getAssignments(page: page, size: size),
+  );
+
   Future<TeachingAssignmentEntity> createAssignment({
     required int groupId,
     required int subjectId,
@@ -40,6 +46,10 @@ class TeachingRepository {
     teachingAssignmentId: teachingAssignmentId,
     academicPeriodId: academicPeriodId,
   );
+
+  /// Every class of the teacher (all pages).
+  Future<List<TeachingPeriodEntity>> getAllPeriods() =>
+      fetchAllPages((page, size) => _remote.getPeriods(page: page, size: size));
 
   Future<TeachingPeriodEntity> createPeriod({
     required int teachingAssignmentId,

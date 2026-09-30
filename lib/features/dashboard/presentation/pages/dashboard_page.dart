@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../../core/widgets/shared/app_loading.dart';
 import '../desktop/dashboard_desktop_view.dart';
 import '../mobile/dashboard_mobile_view.dart';
-import '../providers/dashboard_provider.dart';
+import '../shared/dashboard_data.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -14,18 +14,14 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardPageState extends State<DashboardPage>
+    with SyncedDataState<DashboardPage> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<DashboardProvider>().loadAll(),
-    );
-  }
+  void ensureData() => ensureDashboardData(context);
 
   @override
   Widget build(BuildContext context) {
-    if (!context.watch<DashboardProvider>().loaded) {
+    if (!watchDashboardSettled(context)) {
       return const Scaffold(body: AppLoading());
     }
     return ResponsiveBuilder(

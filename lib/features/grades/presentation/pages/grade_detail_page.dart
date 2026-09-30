@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../desktop/grade_detail_desktop_view.dart';
 import '../mobile/grade_detail_mobile_view.dart';
@@ -24,17 +25,13 @@ class GradeDetailPage extends StatefulWidget {
   State<GradeDetailPage> createState() => _GradeDetailPageState();
 }
 
-class _GradeDetailPageState extends State<GradeDetailPage> {
+class _GradeDetailPageState extends State<GradeDetailPage>
+    with SyncedDataState<GradeDetailPage> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<GradebookProvider>().loadDetail(
-        widget.evaluationId,
-        widget.studentId,
-      ),
-    );
-  }
+  void ensureData() => context.read<GradebookProvider>().ensureDetail(
+    widget.evaluationId,
+    widget.studentId,
+  );
 
   @override
   Widget build(BuildContext context) {

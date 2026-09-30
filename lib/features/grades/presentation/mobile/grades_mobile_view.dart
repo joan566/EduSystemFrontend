@@ -85,16 +85,15 @@ class _GradesMobileViewState extends State<GradesMobileView>
     if (!mounted) return;
     switch (choice) {
       case 0:
-        await context.push(
+        // Saving weights there makes these grades stale; they're re-read
+        // on return only then.
+        context.push(
           period == null
               ? RoutePaths.gradingSettings
               : RoutePaths.gradingSettingsForClass(period.id),
         );
-        if (mounted && period != null) {
-          context.read<GradingProvider>().loadPeriodGrades(period.id);
-        }
       case 1:
-        context.read<GradingProvider>().loadPeriodGrades(period!.id);
+        context.read<GradingProvider>().refreshPeriodGrades(period!.id);
     }
   }
 
@@ -255,9 +254,8 @@ class _StudentsTab extends StatelessWidget {
         filters.sort != GradeSort.name;
 
     return RefreshIndicator(
-      onRefresh: () => context.read<GradingProvider>().loadPeriodGrades(
+      onRefresh: () => context.read<GradingProvider>().refreshPeriodGrades(
         data.teachingPeriodId,
-        silent: true,
       ),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),

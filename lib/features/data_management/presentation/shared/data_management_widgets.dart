@@ -209,7 +209,7 @@ class ImportHistoryList extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: AppErrorState(
             exception: state.error!,
-            onRetry: () => context.read<ImportsProvider>().loadHistory(),
+            onRetry: () => context.read<ImportsProvider>().refreshHistory(),
           ),
         );
       case ViewStatus.empty:

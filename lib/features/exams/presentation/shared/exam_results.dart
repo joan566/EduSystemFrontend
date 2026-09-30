@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
@@ -12,20 +13,18 @@ import '../../domain/entities/submission_entity.dart';
 import '../providers/submissions_provider.dart';
 import 'exam_actions.dart';
 
-/// Loads an exam's submissions (§51) and resolves loading/error/empty;
-/// [builder] renders the real listing, differently per platform.
+/// An exam's submissions (§51, the whole class) with loading/error/empty
+/// resolved; [builder] renders the real listing, differently per platform.
+/// Switching tabs or coming back doesn't re-read them unless a sheet was
+/// scanned, graded or corrected meanwhile.
 class ExamResultsStateView extends StatefulWidget {
   const ExamResultsStateView({
     super.key,
     required this.exam,
     required this.builder,
-    this.pageSize = 20,
   });
 
   final ExamEntity exam;
-
-  /// The mobile view shows the whole class at once, without pagination.
-  final int pageSize;
   final Widget Function(
     BuildContext context,
     ListViewState<SubmissionSummaryEntity> state,
@@ -36,22 +35,16 @@ class ExamResultsStateView extends StatefulWidget {
   State<ExamResultsStateView> createState() => _ExamResultsStateViewState();
 }
 
-class _ExamResultsStateViewState extends State<ExamResultsStateView> {
+class _ExamResultsStateViewState extends State<ExamResultsStateView>
+    with SyncedDataState<ExamResultsStateView> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<SubmissionsProvider>().load(
-        widget.exam.id,
-        size: widget.pageSize,
-      ),
-    );
-  }
+  void ensureData() =>
+      context.read<SubmissionsProvider>().ensureResults(widget.exam.id);
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<SubmissionsProvider>().state;
     final exam = widget.exam;
+    final state = context.watch<SubmissionsProvider>().results(exam.id);
 
     switch (state.status) {
       case ViewStatus.initial:
@@ -60,10 +53,8 @@ class _ExamResultsStateViewState extends State<ExamResultsStateView> {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<SubmissionsProvider>().load(
-            exam.id,
-            size: widget.pageSize,
-          ),
+          onRetry: () =>
+              context.read<SubmissionsProvider>().refreshResults(exam.id),
         );
       case ViewStatus.empty:
         return AppEmptyState(

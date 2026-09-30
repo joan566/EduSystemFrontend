@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/errors/app_exception.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../domain/entities/gradebook_entities.dart';
 import '../../domain/entities/grading_entities.dart';
@@ -69,13 +68,20 @@ class GradingConfigurationController extends ChangeNotifier {
     return null;
   }
 
-  Future<void> load(BuildContext context) async {
+  /// Fills the form from the class's configuration. Scales, categories,
+  /// the configuration and the evaluations come from memory when already
+  /// read; [refresh] ("retry") reads them again.
+  Future<void> load(BuildContext context, {bool refresh = false}) async {
     final grading = context.read<GradingProvider>();
     final gradebook = context.read<GradebookProvider>();
-    await grading.loadCatalog();
-    await grading.loadConfiguration(teachingPeriodId);
+    await Future.wait([
+      refresh ? grading.refreshCatalog() : grading.ensureCatalog(),
+      refresh
+          ? grading.refreshConfiguration(teachingPeriodId)
+          : grading.ensureConfiguration(teachingPeriodId),
+    ]);
     if (_disposed) return;
-    final config = grading.configState.data;
+    final config = grading.configuration(teachingPeriodId).data;
     _scaleId = config?.scale.id;
     passingGradeController.text = config?.passingGrade == null
         ? ''
@@ -90,14 +96,16 @@ class GradingConfigurationController extends ChangeNotifier {
     }
     _dirty = false;
     _notify();
-    try {
-      final evaluations = await gradebook.fetchEvaluations(teachingPeriodId);
+    await gradebook.ensureEvaluations(teachingPeriodId);
+    if (_disposed) return;
+    final evaluations = gradebook.evaluations(teachingPeriodId);
+    if (evaluations == null) {
+      _evaluations = null;
+    } else {
       _evaluations = {};
       for (final e in evaluations) {
         (_evaluations![e.categoryId] ??= []).add(e);
       }
-    } on AppException {
-      _evaluations = null;
     }
     _notify();
   }

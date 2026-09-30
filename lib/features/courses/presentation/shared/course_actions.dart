@@ -17,7 +17,7 @@ class CourseActions {
   /// The levels a [CourseForm] can pick from, or null (after warning the
   /// user) when there are none yet — a course can't exist without a grade.
   static List<AcademicLevelEntity>? levelsForForm(BuildContext context) {
-    final levels = context.read<AcademicLevelsProvider>().state.items;
+    final levels = context.read<AcademicLevelsProvider>().all;
     if (levels.isEmpty) {
       context.showWarning('Primero crea al menos un grado académico.');
       return null;
@@ -68,13 +68,5 @@ class CourseActions {
     } else {
       context.showSuccess('Curso eliminado.');
     }
-  }
-
-  static void filterByLevel(BuildContext context, AcademicLevelEntity? level) {
-    context.read<CoursesProvider>().load(
-      page: 0,
-      gradeId: level?.id,
-      resetFilters: level == null,
-    );
   }
 }

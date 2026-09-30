@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../imports/presentation/providers/imports_provider.dart';
+import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../desktop/data_management_desktop_view.dart';
 import '../mobile/data_management_mobile_view.dart';
 import '../shared/data_management_controller.dart';
@@ -17,15 +19,15 @@ class DataManagementPage extends StatefulWidget {
   State<DataManagementPage> createState() => _DataManagementPageState();
 }
 
-class _DataManagementPageState extends State<DataManagementPage> {
+class _DataManagementPageState extends State<DataManagementPage>
+    with SyncedDataState<DataManagementPage> {
   final _controller = DataManagementController();
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<ImportsProvider>().loadHistory(),
-    );
+  void ensureData() {
+    context.read<ImportsProvider>().ensureHistory();
+    // The class import and exports pick from the teacher's classes.
+    context.read<TeachingProvider>().ensureAllPeriodsLoaded();
   }
 
   @override

@@ -10,7 +10,6 @@ import '../../../../../core/widgets/mobile/mobile_section_card.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../activities/presentation/providers/activities_provider.dart';
 import '../../../../exams/presentation/providers/exams_provider.dart';
-import '../../shared/class_scoped_state.dart';
 
 /// "Evaluaciones": the class's exams and activities.
 class ClassEvaluationsTab extends StatelessWidget {
@@ -20,21 +19,10 @@ class ClassEvaluationsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final exams = classScoped(
-      context.watch<ExamsProvider>().state,
-      teachingPeriodId: teachingPeriodId,
-      teachingPeriodOf: (e) => e.teachingPeriodId,
-      reload: () => context.read<ExamsProvider>().load(
-        teachingPeriodId: teachingPeriodId,
-      ),
-    );
-    final activities = classScoped(
-      context.watch<ActivitiesProvider>().state,
-      teachingPeriodId: teachingPeriodId,
-      teachingPeriodOf: (a) => a.teachingPeriodId,
-      reload: () => context.read<ActivitiesProvider>().load(
-        teachingPeriodId: teachingPeriodId,
-      ),
+    // Each class has its own cached lists (read by the class page).
+    final exams = context.watch<ExamsProvider>().exams(teachingPeriodId);
+    final activities = context.watch<ActivitiesProvider>().activities(
+      teachingPeriodId,
     );
 
     return Column(
@@ -57,9 +45,8 @@ class ClassEvaluationsTab extends StatelessWidget {
               if (e.evaluationDate != null) Formatters.date(e.evaluationDate!),
             ].join(' · '),
             onOpen: (e) => context.push(RoutePaths.examDetail(e.id)),
-            onRetry: () => context.read<ExamsProvider>().load(
-              teachingPeriodId: teachingPeriodId,
-            ),
+            onRetry: () =>
+                context.read<ExamsProvider>().refreshExams(teachingPeriodId),
           ),
         ),
         const SizedBox(height: 14),
@@ -80,8 +67,8 @@ class ClassEvaluationsTab extends StatelessWidget {
               'Máx. ${a.maximumScore.toStringAsFixed(1)}',
             ].join(' · '),
             onOpen: (a) => context.push(RoutePaths.activityDetail(a.id)),
-            onRetry: () => context.read<ActivitiesProvider>().load(
-              teachingPeriodId: teachingPeriodId,
+            onRetry: () => context.read<ActivitiesProvider>().refreshActivities(
+              teachingPeriodId,
             ),
           ),
         ),

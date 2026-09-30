@@ -3,11 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../../core/errors/app_exception.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
-import '../../../domain/entities/gradebook_entities.dart';
 import '../../../domain/entities/grading_entities.dart';
 import '../../providers/gradebook_provider.dart';
 import '../../shared/category_visuals.dart';
@@ -37,26 +35,30 @@ class StudentGradePreview extends StatefulWidget {
 
 class _StudentGradePreviewState extends State<StudentGradePreview> {
   Timer? _debounce;
-  StudentGradeReport? _report;
-  AppException? _error;
 
   @override
   void initState() {
     super.initState();
     final student = widget.student;
     if (student == null) return;
-    _debounce = Timer(const Duration(milliseconds: 300), () async {
-      try {
-        final report = await context.read<GradebookProvider>().fetchReport(
-          widget.teachingPeriodId,
-          student.studentId,
-        );
-        if (mounted) setState(() => _report = report);
-      } on AppException catch (e) {
-        if (mounted) setState(() => _error = e);
-      }
+    final gradebook = context.read<GradebookProvider>();
+    // A report already in memory shows at once; otherwise it's read once
+    // the selection settles.
+    if (gradebook.report(widget.teachingPeriodId, student.studentId).data !=
+        null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _ensure(student);
+      });
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) _ensure(student);
     });
   }
+
+  void _ensure(StudentPeriodGrade student) => context
+      .read<GradebookProvider>()
+      .ensureReport(widget.teachingPeriodId, student.studentId);
 
   @override
   void dispose() {
@@ -69,6 +71,14 @@ class _StudentGradePreviewState extends State<StudentGradePreview> {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final student = widget.student;
+    final reportState = student == null
+        ? null
+        : context.watch<GradebookProvider>().report(
+            widget.teachingPeriodId,
+            student.studentId,
+          );
+    final report = reportState?.data;
+    final error = report == null ? reportState?.error : null;
 
     final Widget body;
     if (student == null) {
@@ -98,7 +108,6 @@ class _StudentGradePreviewState extends State<StudentGradePreview> {
       );
     } else {
       final grade = student.periodGrade;
-      final report = _report;
       body = ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -141,7 +150,7 @@ class _StudentGradePreviewState extends State<StudentGradePreview> {
           const SizedBox(height: 12),
           Text('Evaluaciones', style: textTheme.labelLarge),
           const SizedBox(height: 8),
-          if (_error != null)
+          if (error != null)
             Text('No se pudieron cargar.', style: textTheme.bodySmall)
           else if (report == null)
             const LinearProgressIndicator(minHeight: 2)

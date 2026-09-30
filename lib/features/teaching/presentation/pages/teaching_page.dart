@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
-import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../academic_periods/presentation/providers/academic_periods_provider.dart';
+import '../../../courses/presentation/providers/courses_provider.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../subjects/presentation/providers/subjects_provider.dart';
 import '../desktop/teaching_desktop_view.dart';
@@ -21,7 +22,7 @@ class TeachingPage extends StatefulWidget {
 }
 
 class _TeachingPageState extends State<TeachingPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, SyncedDataState<TeachingPage> {
   // Tab, filters, period and search live here so they survive a
   // mobile <-> desktop switch; whichever view is mounted attaches its
   // TabBar to this controller.
@@ -35,36 +36,43 @@ class _TeachingPageState extends State<TeachingPage>
   /// Row selected in the desktop table (its preview shows beside it).
   int? _selectedAssignmentId;
 
+  bool _academicPeriodPicked = false;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this)
       ..addListener(() => setState(() {}));
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
+  @override
+  void ensureData() {
     final teaching = context.read<TeachingProvider>();
-    final schedule = context.read<ScheduleProvider>();
-    final academicPeriods = context.read<AcademicPeriodsProvider>();
-    // Needed for the "Materia" filter and the create-assignment form —
-    // load once up front instead of assuming the user already visited
-    // the Subjects page this session.
-    final subjects = context.read<SubjectsProvider>();
-    if (subjects.state.status == ViewStatus.initial) subjects.load();
-    if (schedule.week.status == DetailStatus.initial) schedule.loadWeek();
-    teaching.loadAssignments();
-    teaching.loadPeriods();
-    teaching.ensureAllPeriodsLoaded(forceReload: true);
+    // Subjects and courses feed the "Materia" filter and the
+    // create-assignment form; academic periods the period picker.
+    context.read<SubjectsProvider>().ensure();
+    context.read<CoursesProvider>().ensure();
+    context.read<ScheduleProvider>().ensureWeek();
+    teaching.ensureAssignments();
+    teaching.ensureAllPeriodsLoaded();
+    _pickDefaultAcademicPeriod();
+  }
 
-    if (academicPeriods.state.status == ViewStatus.initial) {
-      await academicPeriods.load();
+  /// Selects the running academic period once, when periods are known.
+  Future<void> _pickDefaultAcademicPeriod() async {
+    final academicPeriods = context.read<AcademicPeriodsProvider>();
+    await academicPeriods.ensure();
+    if (!mounted ||
+        _academicPeriodPicked ||
+        !const {
+          ViewStatus.success,
+          ViewStatus.empty,
+        }.contains(academicPeriods.state.status)) {
+      return;
     }
-    if (!mounted) return;
+    _academicPeriodPicked = true;
     setState(
-      () => _academicPeriodId = defaultAcademicPeriod(
-        academicPeriods.state.items,
-      )?.id,
+      () => _academicPeriodId = defaultAcademicPeriod(academicPeriods.all)?.id,
     );
   }
 
@@ -74,14 +82,9 @@ class _TeachingPageState extends State<TeachingPage>
     super.dispose();
   }
 
-  void _onFiltersChanged(AssignmentFilters filters) {
-    setState(() => _filters = filters);
-    context.read<TeachingProvider>().loadAssignments(
-      page: 0,
-      subjectId: filters.subjectId,
-      active: filters.active,
-    );
-  }
+  // Filtering happens in memory over the whole assignment catalog.
+  void _onFiltersChanged(AssignmentFilters filters) =>
+      setState(() => _filters = filters);
 
   @override
   Widget build(BuildContext context) {

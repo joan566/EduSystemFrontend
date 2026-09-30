@@ -30,7 +30,7 @@ class ClassStudentsTab extends StatelessWidget {
         return AppErrorState(
           exception: state.error!,
           onRetry: () =>
-              context.read<StudentsProvider>().loadGroupRoster(groupId),
+              context.read<StudentsProvider>().refreshGroupRoster(groupId),
         );
       case ViewStatus.empty:
         return AppEmptyState(

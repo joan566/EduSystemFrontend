@@ -6,6 +6,7 @@ import '../errors/app_exception.dart';
 import '../errors/error_mapper.dart';
 import '../storage/token_storage.dart';
 import 'auth_interceptor.dart';
+import 'request_metrics.dart';
 
 /// A binary download result: raw bytes plus the filename the backend
 /// suggested via `Content-Disposition`.
@@ -29,29 +30,33 @@ class BinaryDownload {
 /// [AuthInterceptor]), timeouts, multipart uploads, binary downloads, and
 /// translating every failure into an [AppException].
 class ApiClient {
-  ApiClient({required Future<void> Function() onSessionExpired})
-    : _tokenStorage = TokenStorage(),
-      _dio = Dio(
-        BaseOptions(
-          baseUrl: AppConfig.apiBaseUrl,
-          connectTimeout: AppConfig.connectTimeout,
-          receiveTimeout: AppConfig.receiveTimeout,
-          headers: const {'Content-Type': 'application/json'},
-        ),
-      ) {
+  ApiClient({
+    required Future<void> Function() onSessionExpired,
+    @visibleForTesting HttpClientAdapter? httpClientAdapter,
+    @visibleForTesting TokenStorage? tokenStorage,
+    @visibleForTesting RequestMetrics? metrics,
+  }) : _tokenStorage = tokenStorage ?? TokenStorage(),
+       _dio = Dio(
+         BaseOptions(
+           baseUrl: AppConfig.apiBaseUrl,
+           connectTimeout: AppConfig.connectTimeout,
+           receiveTimeout: AppConfig.receiveTimeout,
+           headers: const {'Content-Type': 'application/json'},
+         ),
+       ) {
     _authInterceptor = AuthInterceptor(
       tokenStorage: _tokenStorage,
       onSessionExpired: onSessionExpired,
+      httpClientAdapter: httpClientAdapter,
     );
+    if (httpClientAdapter != null) _dio.httpClientAdapter = httpClientAdapter;
     _authInterceptor.attachDio(_dio);
     _dio.interceptors.add(_authInterceptor);
-    if (kDebugMode) {
+    // Debug only: per-route request counts and timings, to measure how many
+    // calls a navigation makes (never query strings, bodies or headers).
+    if (kDebugMode || metrics != null) {
       _dio.interceptors.add(
-        LogInterceptor(
-          requestBody: false,
-          responseBody: false,
-          logPrint: (obj) => debugPrint('[HTTP] $obj'),
-        ),
+        RequestMetricsInterceptor(metrics: metrics, log: metrics == null),
       );
     }
   }
@@ -101,9 +106,7 @@ class ApiClient {
   Future<Response<dynamic>> get(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) => _run(
-    () => _dio.get(path, queryParameters: _clean(queryParameters)),
-  );
+  }) => _run(() => _dio.get(path, queryParameters: _clean(queryParameters)));
 
   Future<Response<dynamic>> post(String path, {Object? data}) =>
       _run(() => _dio.post(path, data: data));

@@ -1,41 +1,101 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/cache/cached_value.dart';
+import '../../../../core/cache/keyed_cache.dart';
+import '../../../../core/cache/session_notifier.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/events/domain_events.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
 import '../../data/repositories/activity_repository.dart';
 import '../../domain/entities/activity_entity.dart';
 
-class ActivitiesProvider extends ChangeNotifier {
-  ActivitiesProvider(this._repository);
+/// Activities per class (`teachingPeriodId → its activities`, every page),
+/// each activity (read from its class's list when already there) and each
+/// activity's grades.
+class ActivitiesProvider extends SessionNotifier {
+  ActivitiesProvider(this._repository, DomainEvents events) : super(events);
 
   final ActivityRepository _repository;
 
-  ListViewState<ActivityEntity> _state = const ListViewState();
-  ListViewState<ActivityEntity> get state => _state;
+  late final _activities = keyedCache<int, List<ActivityEntity>>();
 
-  DetailViewState<ActivityEntity> _detailState = const DetailViewState();
-  DetailViewState<ActivityEntity> get detailState => _detailState;
+  /// Activities read one by one (opened before their class's list).
+  late final _details = keyedCache<int, ActivityEntity>(maxEntries: 30);
 
-  ListViewState<StudentGradeEntity> _gradesState = const ListViewState();
-  ListViewState<StudentGradeEntity> get gradesState => _gradesState;
+  late final _grades = keyedCache<int, List<StudentGradeEntity>>(
+    maxEntries: 30,
+  );
 
-  Future<void> load({required int teachingPeriodId, int page = 0}) async {
-    _state = ListViewState.loading();
-    notifyListeners();
-    try {
-      final result = await _repository.getPage(teachingPeriodId: teachingPeriodId, page: page);
-      _state = ListViewState.fromPage(
-        content: result.content,
-        page: result.page,
-        totalPages: result.totalPages,
-        totalElements: result.totalElements,
-      );
-    } on AppException catch (e) {
-      _state = ListViewState.error(e);
+  // --- Lists per class -----------------------------------------------------
+
+  ListViewState<ActivityEntity> activities(int teachingPeriodId) =>
+      _activities.view(teachingPeriodId);
+
+  ListViewState<ActivityEntity> activitiesPage(
+    int teachingPeriodId, {
+    int page = 0,
+  }) => _activities.listView(
+    teachingPeriodId,
+    (all) => localPage(all, page: page),
+  );
+
+  Future<void> ensureActivities(int teachingPeriodId) => _activities.ensure(
+    teachingPeriodId,
+    () => _repository.getAll(teachingPeriodId),
+  );
+
+  Future<void> refreshActivities(int teachingPeriodId) => _activities.refresh(
+    teachingPeriodId,
+    () => _repository.getAll(teachingPeriodId),
+  );
+
+  // --- One activity and its grades ----------------------------------------
+
+  ActivityEntity? _fromLists(int id) {
+    for (final tp in _activities.keys) {
+      for (final a in _activities.dataOf(tp) ?? const <ActivityEntity>[]) {
+        if (a.id == id) return a;
+      }
     }
-    notifyListeners();
+    return null;
   }
+
+  DetailViewState<ActivityEntity> detail(int id) {
+    final listed = _fromLists(id);
+    return listed != null
+        ? DetailViewState.success(listed)
+        : _details.detailView(id);
+  }
+
+  /// No request when the activity is already in its class's list.
+  Future<void> ensureDetail(int id) async {
+    if (_fromLists(id) != null) return;
+    await _details.ensure(id, () => _repository.getById(id));
+  }
+
+  Future<void> refreshDetail(int id) async {
+    await _details.refresh(id, () => _repository.getById(id));
+    final fresh = _details.dataOf(id);
+    if (fresh != null) {
+      _activities.update(
+        fresh.teachingPeriodId,
+        (list) => _upsert(list, fresh),
+      );
+    }
+  }
+
+  ListViewState<StudentGradeEntity> grades(int activityId) =>
+      _grades.view(activityId);
+
+  Future<void> ensureGrades(int activityId) =>
+      _grades.ensure(activityId, () => _repository.getGrades(activityId));
+
+  Future<void> refreshGrades(int activityId) =>
+      _grades.refresh(activityId, () => _repository.getGrades(activityId));
+
+  // --- Mutations -----------------------------------------------------------
+
+  AppException? _lastError;
+  AppException? get lastError => _lastError;
 
   Future<ActivityEntity?> create({
     required int teachingPeriodId,
@@ -54,7 +114,12 @@ class ActivitiesProvider extends ChangeNotifier {
         maximumScore: maximumScore,
         activityType: activityType,
       );
-      await load(teachingPeriodId: teachingPeriodId);
+      _announce(activity.teachingPeriodId, ClassAspect.activities);
+      _details.set(activity.id, activity);
+      _activities.update(
+        activity.teachingPeriodId,
+        (list) => _upsert(list, activity),
+      );
       return activity;
     } on AppException catch (e) {
       _lastError = e;
@@ -62,45 +127,20 @@ class ActivitiesProvider extends ChangeNotifier {
     }
   }
 
-  AppException? _lastError;
-  AppException? get lastError => _lastError;
-
-  Future<void> loadDetail(int id) async {
-    _detailState = DetailViewState.loading();
-    notifyListeners();
-    try {
-      final activity = await _repository.getById(id);
-      _detailState = DetailViewState.success(activity);
-      await loadGrades(id);
-    } on AppException catch (e) {
-      _detailState = DetailViewState.error(e);
-      notifyListeners();
-    }
-  }
-
-  Future<void> loadGrades(int activityId) async {
-    _gradesState = ListViewState.loading();
-    notifyListeners();
-    try {
-      final grades = await _repository.getGrades(activityId);
-      _gradesState = ListViewState.list(grades);
-    } on AppException catch (e) {
-      _gradesState = ListViewState.error(e);
-    }
-    notifyListeners();
-  }
-
   /// Saves every edited grade in a single request (§99: batch save,
   /// mirroring the attendance roster pattern — not one round trip per
-  /// student).
+  /// student). The API answers with the activity's grades.
   Future<AppException?> saveGrades(
     int activityId,
     List<({int studentId, double grade, String? comment})> grades,
   ) async {
     try {
       final result = await _repository.putGrades(activityId, grades);
-      _gradesState = ListViewState.list(result);
-      notifyListeners();
+      final teachingPeriodId = detail(activityId).data?.teachingPeriodId;
+      if (teachingPeriodId != null) {
+        _announce(teachingPeriodId, ClassAspect.grades);
+      }
+      _grades.set(activityId, result);
       return null;
     } on AppException catch (e) {
       return e;
@@ -110,10 +150,65 @@ class ActivitiesProvider extends ChangeNotifier {
   Future<AppException?> delete(int id, {required int teachingPeriodId}) async {
     try {
       await _repository.delete(id);
-      await load(teachingPeriodId: teachingPeriodId);
-      return null;
     } on AppException catch (e) {
       return e;
+    }
+    _announce(teachingPeriodId, ClassAspect.activities);
+    _activities.update(
+      teachingPeriodId,
+      (list) => list.where((a) => a.id != id).toList(),
+    );
+    _details.remove(id);
+    _grades.remove(id);
+    return null;
+  }
+
+  // --- Helpers -------------------------------------------------------------
+
+  void _announce(int teachingPeriodId, ClassAspect aspect) =>
+      publish(ClassDataChanged(teachingPeriodId, {aspect}));
+
+  /// Keeps the API's order: newest date first, undated last, then newest.
+  static List<ActivityEntity> _upsert(
+    List<ActivityEntity> list,
+    ActivityEntity activity,
+  ) => [
+    for (final a in list)
+      if (a.id != activity.id) a,
+    activity,
+  ]..sort(_apiOrder);
+
+  static int _apiOrder(ActivityEntity a, ActivityEntity b) {
+    final da = a.evaluationDate;
+    final db = b.evaluationDate;
+    if (da != null && db != null && da != db) return db.compareTo(da);
+    if ((da == null) != (db == null)) return da == null ? 1 : -1;
+    return b.id.compareTo(a.id);
+  }
+
+  @override
+  void onDomainEvent(DomainEvent event) {
+    switch (event) {
+      case ClassDataChanged(:final teachingPeriodId)
+          when event.affects(const {ClassAspect.grades, ClassAspect.roster}):
+        // A grade entered elsewhere (a student's grade detail) or a roster
+        // change shows in this class's activity grade sheets.
+        final ids = {
+          for (final a in _activities.dataOf(teachingPeriodId) ?? const [])
+            a.id,
+        };
+        _grades.invalidateWhere(
+          (activityId, _) =>
+              ids.contains(activityId) ||
+              detail(activityId).data?.teachingPeriodId == teachingPeriodId,
+        );
+      case StudentsChanged():
+        _grades.invalidateAll();
+      case CatalogChanged(resource: CatalogResource.teachingPeriods)
+          when event.change == CatalogChange.deleted:
+        _activities.invalidateAll();
+      default:
+        break;
     }
   }
 }

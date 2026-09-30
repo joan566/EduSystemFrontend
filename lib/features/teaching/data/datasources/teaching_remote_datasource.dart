@@ -13,6 +13,7 @@ class TeachingRemoteDataSource {
 
   Future<ApiPage<TeachingAssignmentEntity>> getAssignments({
     int page = 0,
+    int size = 20,
     int? groupId,
     int? subjectId,
     bool? active,
@@ -21,7 +22,7 @@ class TeachingRemoteDataSource {
       ApiEndpoints.teachingAssignments,
       queryParameters: {
         'page': page,
-        'size': 20,
+        'size': size,
         'groupId': groupId,
         'subjectId': subjectId,
         'active': active,
@@ -56,6 +57,7 @@ class TeachingRemoteDataSource {
 
   Future<ApiPage<TeachingPeriodEntity>> getPeriods({
     int page = 0,
+    int size = 20,
     int? teachingAssignmentId,
     int? academicPeriodId,
   }) async {
@@ -63,7 +65,7 @@ class TeachingRemoteDataSource {
       ApiEndpoints.teachingPeriods,
       queryParameters: {
         'page': page,
-        'size': 20,
+        'size': size,
         'teachingAssignmentId': teachingAssignmentId,
         'academicPeriodId': academicPeriodId,
       },

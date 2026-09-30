@@ -1,4 +1,4 @@
-import '../../../../core/state/list_state.dart';
+import '../../../../core/cache/paging.dart';
 import '../../domain/entities/academic_period_entity.dart';
 import '../datasources/academic_period_remote_datasource.dart';
 
@@ -7,7 +7,9 @@ class AcademicPeriodRepository {
 
   final AcademicPeriodRemoteDataSource _remote;
 
-  Future<ApiPage<AcademicPeriodEntity>> getPage({int page = 0}) => _remote.getPage(page: page);
+  /// Every academic period of the teacher (all pages).
+  Future<List<AcademicPeriodEntity>> getAll() =>
+      fetchAllPages((page, size) => _remote.getPage(page: page, size: size));
 
   Future<AcademicPeriodEntity> create({
     required String name,

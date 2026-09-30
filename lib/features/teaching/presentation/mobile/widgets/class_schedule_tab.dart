@@ -50,7 +50,7 @@ class ClassScheduleTab extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<ScheduleProvider>().loadClassSchedules(
+          onRetry: () => context.read<ScheduleProvider>().refreshClassSchedules(
             teachingPeriodId,
           ),
         );

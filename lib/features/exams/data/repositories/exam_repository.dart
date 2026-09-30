@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../../core/cache/paging.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/state/list_state.dart';
 import '../../domain/entities/exam_entity.dart';
@@ -28,10 +29,14 @@ class ExamRepository {
     numberOfQuestions: numberOfQuestions,
   );
 
-  Future<ApiPage<ExamSummaryEntity>> getPage({
-    required int teachingPeriodId,
-    int page = 0,
-  }) => _remote.getPage(teachingPeriodId: teachingPeriodId, page: page);
+  /// Every exam of one class (all pages).
+  Future<List<ExamSummaryEntity>> getAll(int teachingPeriodId) => fetchAllPages(
+    (page, size) => _remote.getPage(
+      teachingPeriodId: teachingPeriodId,
+      page: page,
+      size: size,
+    ),
+  );
 
   Future<ExamEntity> getById(int examId) => _remote.getById(examId);
 
@@ -100,6 +105,12 @@ class ExamRepository {
     int size = 20,
     String? status,
   }) => _remote.getSubmissions(examId, page: page, size: size, status: status);
+
+  /// Every submission of an exam (all pages; a class fits in one).
+  Future<List<SubmissionSummaryEntity>> getAllSubmissions(int examId) =>
+      fetchAllPages(
+        (page, size) => _remote.getSubmissions(examId, page: page, size: size),
+      );
 
   Future<SubmissionEntity> getSubmission(int examId, int submissionId) =>
       _remote.getSubmission(examId, submissionId);

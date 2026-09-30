@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../desktop/academic_levels_desktop_view.dart';
@@ -14,18 +15,16 @@ class AcademicLevelsPage extends StatefulWidget {
   State<AcademicLevelsPage> createState() => _AcademicLevelsPageState();
 }
 
-class _AcademicLevelsPageState extends State<AcademicLevelsPage> {
+class _AcademicLevelsPageState extends State<AcademicLevelsPage>
+    with SyncedDataState<AcademicLevelsPage> {
   // Lives here so the search survives a mobile <-> desktop switch.
   String _search = '';
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AcademicLevelsProvider>().load();
-      // Your courses and classes in each level.
-      context.read<TeachingProvider>().ensureAllPeriodsLoaded();
-    });
+  void ensureData() {
+    context.read<AcademicLevelsProvider>().ensure();
+    // Your courses and classes in each level.
+    context.read<TeachingProvider>().ensureAllPeriodsLoaded();
   }
 
   @override

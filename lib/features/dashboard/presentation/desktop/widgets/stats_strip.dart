@@ -15,9 +15,13 @@ class StatsStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final students = context.watch<StudentsProvider>().state;
+    // Counts come from the same caches the rest of the app uses: the
+    // student total from a one-row page, the others from the catalogs.
+    final students = context.watch<StudentsProvider>().totalState;
     final courses = context.watch<CoursesProvider>().state;
-    final assignments = context.watch<TeachingProvider>().assignmentsState;
+    final assignments = context.watch<TeachingProvider>().assignments(
+      active: true,
+    );
     final colors = Theme.of(context).colorScheme;
 
     final items = [

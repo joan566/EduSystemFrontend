@@ -34,6 +34,8 @@ class StudentsDesktopView extends StatelessWidget {
     required this.onFiltersChanged,
     required this.selectedStudentId,
     required this.onSelect,
+    required this.page,
+    required this.onPageChanged,
   });
 
   final StudentListFilters filters;
@@ -41,12 +43,22 @@ class StudentsDesktopView extends StatelessWidget {
   final int? selectedStudentId;
   final ValueChanged<int?> onSelect;
 
+  /// Page of the server listing (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
+
   static const _previewMinWidth = 1100.0;
   static const _previewWidth = 360.0;
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<StudentsProvider>().state;
+    final state = context.watch<StudentsProvider>().query(
+      StudentsProvider.queryOf(
+        page: page,
+        groupId: filters.groupId,
+        search: filters.search,
+      ),
+    );
     final courses = teacherCourses(
       context.watch<TeachingProvider>().allPeriods,
     );
@@ -129,7 +141,13 @@ class StudentsDesktopView extends StatelessWidget {
       ViewStatus.initial || ViewStatus.loading => const AppLoading(),
       ViewStatus.error => AppErrorState(
         exception: state.error!,
-        onRetry: () => context.read<StudentsProvider>().load(),
+        onRetry: () => context.read<StudentsProvider>().refreshQuery(
+          StudentsProvider.queryOf(
+            page: page,
+            groupId: filters.groupId,
+            search: filters.search,
+          ),
+        ),
       ),
       ViewStatus.empty when unfiltered => AppEmptyState(
         title: 'No tienes estudiantes registrados',
@@ -158,8 +176,7 @@ class StudentsDesktopView extends StatelessWidget {
                 page: state.page,
                 totalPages: state.totalPages,
                 totalElements: state.totalElements,
-                onPageChanged: (page) =>
-                    context.read<StudentsProvider>().load(page: page),
+                onPageChanged: onPageChanged,
               )
             : null,
       ),

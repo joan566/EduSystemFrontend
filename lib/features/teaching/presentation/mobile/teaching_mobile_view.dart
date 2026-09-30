@@ -53,8 +53,8 @@ class TeachingMobileView extends StatelessWidget {
   final ValueChanged<String> onSearchChanged;
 
   Future<void> _createAssignment(BuildContext context) async {
-    final inputs = TeachingActions.assignmentFormInputs(context);
-    if (inputs == null) return;
+    final inputs = await TeachingActions.assignmentFormInputs(context);
+    if (inputs == null || !context.mounted) return;
     final data = await showMobileForm<AssignmentFormResult>(
       context,
       child: AssignmentForm(subjects: inputs.subjects, courses: inputs.courses),
@@ -64,8 +64,8 @@ class TeachingMobileView extends StatelessWidget {
   }
 
   Future<void> _createPeriod(BuildContext context) async {
-    final inputs = TeachingActions.periodFormInputs(context);
-    if (inputs == null) return;
+    final inputs = await TeachingActions.periodFormInputs(context);
+    if (inputs == null || !context.mounted) return;
     final data = await showMobileForm<TeachingPeriodFormResult>(
       context,
       child: TeachingPeriodForm(
@@ -175,7 +175,7 @@ class TeachingMobileView extends StatelessWidget {
                         style: textTheme.headlineLarge?.copyWith(fontSize: 26),
                       ),
                       Text(
-                        '${teaching.assignmentsState.totalElements} asignaciones'
+                        '${teaching.assignments(subjectId: filters.subjectId, active: filters.active).totalElements} asignaciones'
                         '  ·  ${classes.length} clases por periodo',
                         style: textTheme.bodyMedium?.copyWith(
                           color: AppColors.textSecondary,
@@ -406,7 +406,10 @@ class _AssignmentsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<TeachingProvider>().assignmentsState;
+    final state = context.watch<TeachingProvider>().assignments(
+      subjectId: filters.subjectId,
+      active: filters.active,
+    );
     final weekly = context
         .watch<ScheduleProvider>()
         .week
@@ -420,10 +423,7 @@ class _AssignmentsTab extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<TeachingProvider>().loadAssignments(
-            subjectId: filters.subjectId,
-            active: filters.active,
-          ),
+          onRetry: () => context.read<TeachingProvider>().refreshAssignments(),
         );
       case ViewStatus.empty:
         return AppEmptyState(

@@ -51,8 +51,9 @@ class _ClassRosterTableState extends State<ClassRosterTable> {
       child: switch (state.status) {
         ViewStatus.error => AppErrorState(
           exception: state.error!,
-          onRetry: () =>
-              context.read<StudentsProvider>().loadGroupRoster(widget.groupId),
+          onRetry: () => context.read<StudentsProvider>().refreshGroupRoster(
+            widget.groupId,
+          ),
         ),
         ViewStatus.empty => AppEmptyState(
           title: 'Sin estudiantes',

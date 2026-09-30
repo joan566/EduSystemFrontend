@@ -21,7 +21,7 @@ class ActivityRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AuditProvider>().state;
+    final state = context.watch<AuditProvider>().recent;
 
     return DesktopSectionCard(
       icon: Icons.history_rounded,
@@ -30,7 +30,9 @@ class ActivityRail extends StatelessWidget {
       onLink: () => context.go(RoutePaths.audit),
       child: switch (state.status) {
         ViewStatus.error => DashboardErrorNotice(
-          onRetry: () => context.read<AuditProvider>().load(page: 0),
+          onRetry: () => context.read<AuditProvider>().refreshFeed(
+            AuditProvider.recentQuery,
+          ),
         ),
         ViewStatus.success => Column(
           children: [

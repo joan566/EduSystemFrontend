@@ -1,88 +1,100 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/cache/session_notifier.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/events/domain_events.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../data/repositories/gradebook_repository.dart';
 import '../../domain/entities/gradebook_entities.dart';
 
-/// A student's report in one class and the grade detail being viewed.
-/// Every mutation re-reads what it changes, so the report, the detail and
-/// the class's period grades never disagree with the backend.
-class GradebookProvider extends ChangeNotifier {
-  GradebookProvider(this._repository);
+/// Students' grade reports per class, grade details per evaluation and a
+/// class's evaluations — each cached by its own key, so moving between
+/// students (or back to one) never shows another's data and never re-reads
+/// what is still valid.
+///
+/// Mutations write the backend's answer when it carries the new state and
+/// otherwise re-read only what they changed; everything derived (reports,
+/// period grades, the class summary) goes stale through [ClassDataChanged].
+class GradebookProvider extends SessionNotifier {
+  GradebookProvider(this._repository, DomainEvents events) : super(events);
 
   final GradebookRepository _repository;
 
-  DetailViewState<StudentGradeReport> _report = const DetailViewState();
-  DetailViewState<StudentGradeReport> get report => _report;
+  /// (teachingPeriodId, studentId) → report. Bounded: one per student
+  /// visited.
+  late final _reports = keyedCache<(int, int), StudentGradeReport>(
+    maxEntries: 60,
+  );
 
-  DetailViewState<GradeDetailEntity> _detail = const DetailViewState();
-  DetailViewState<GradeDetailEntity> get detail => _detail;
+  /// (evaluationId, studentId) → detail.
+  late final _details = keyedCache<(int, int), GradeDetailEntity>(
+    maxEntries: 60,
+  );
 
-  // Only the latest request may write each state (a quick switch between
-  // students must not show the previous one's grades).
-  int _reportRequest = 0;
-  int _detailRequest = 0;
+  late final _evaluations = keyedCache<int, List<EvaluationSummaryEntity>>();
 
-  Future<void> loadReport(
+  // --- Reads ---------------------------------------------------------------
+
+  DetailViewState<StudentGradeReport> report(
     int teachingPeriodId,
-    int studentId, {
-    bool silent = false,
-  }) async {
-    final request = ++_reportRequest;
-    if (!silent) {
-      _report = DetailViewState.loading();
-      notifyListeners();
-    }
-    try {
-      final report = await _repository.getReport(teachingPeriodId, studentId);
-      if (request != _reportRequest) return;
-      _report = DetailViewState.success(report);
-    } on AppException catch (e) {
-      if (request != _reportRequest) return;
-      _report = DetailViewState.error(e);
-    }
-    notifyListeners();
-  }
+    int studentId,
+  ) => _reports.detailView((teachingPeriodId, studentId));
 
-  Future<void> loadDetail(
-    int evaluationId,
-    int studentId, {
-    bool silent = false,
-  }) async {
-    final request = ++_detailRequest;
-    if (!silent) {
-      _detail = DetailViewState.loading();
-      notifyListeners();
-    }
-    try {
-      final detail = await _repository.getDetail(evaluationId, studentId);
-      if (request != _detailRequest) return;
-      _detail = DetailViewState.success(detail);
-    } on AppException catch (e) {
-      if (request != _detailRequest) return;
-      _detail = DetailViewState.error(e);
-    }
-    notifyListeners();
-  }
+  Future<void> ensureReport(int teachingPeriodId, int studentId) =>
+      _reports.ensure((
+        teachingPeriodId,
+        studentId,
+      ), () => _repository.getReport(teachingPeriodId, studentId));
 
-  /// Fetches a report without touching [report] (e.g. a list preview).
-  /// Throws [AppException].
-  Future<StudentGradeReport> fetchReport(int teachingPeriodId, int studentId) =>
-      _repository.getReport(teachingPeriodId, studentId);
+  Future<void> refreshReport(int teachingPeriodId, int studentId) =>
+      _reports.refresh((
+        teachingPeriodId,
+        studentId,
+      ), () => _repository.getReport(teachingPeriodId, studentId));
 
-  Future<List<EvaluationSummaryEntity>> fetchEvaluations(
-    int teachingPeriodId,
-  ) => _repository.getEvaluations(teachingPeriodId);
+  DetailViewState<GradeDetailEntity> detail(int evaluationId, int studentId) =>
+      _details.detailView((evaluationId, studentId));
 
+  Future<void> ensureDetail(int evaluationId, int studentId) => _details.ensure(
+    (evaluationId, studentId),
+    () => _repository.getDetail(evaluationId, studentId),
+  );
+
+  Future<void> refreshDetail(int evaluationId, int studentId) =>
+      _details.refresh((
+        evaluationId,
+        studentId,
+      ), () => _repository.getDetail(evaluationId, studentId));
+
+  /// A class's evaluations (null until read, or if they couldn't be).
+  List<EvaluationSummaryEntity>? evaluations(int teachingPeriodId) =>
+      _evaluations.dataOf(teachingPeriodId);
+
+  Future<void> ensureEvaluations(int teachingPeriodId) => _evaluations.ensure(
+    teachingPeriodId,
+    () => _repository.getEvaluations(teachingPeriodId),
+  );
+
+  // --- Mutations -----------------------------------------------------------
+  // Each one announces what it changed *before* writing its own result, so
+  // the fresh value it writes is not marked stale by its own event.
+
+  /// The API answers with the observation, which is patched into the
+  /// report.
   Future<AppException?> saveObservation(
     int teachingPeriodId,
     int studentId,
     String text,
   ) => _guard(() async {
-    await _repository.saveObservation(teachingPeriodId, studentId, text);
-    await loadReport(teachingPeriodId, studentId, silent: true);
+    final observation = await _repository.saveObservation(
+      teachingPeriodId,
+      studentId,
+      text,
+    );
+    _announce(teachingPeriodId, ClassAspect.annotations);
+    _reports.update((
+      teachingPeriodId,
+      studentId,
+    ), (report) => report.withObservation(observation));
   });
 
   Future<AppException?> saveRubric(
@@ -90,30 +102,31 @@ class GradebookProvider extends ChangeNotifier {
     List<RubricCriterionInput> criteria,
   ) => _guard(() async {
     await _repository.saveRubric(detail.evaluation.evaluationId, criteria);
-    await _refresh(detail);
+    _announce(detail.teachingPeriodId, ClassAspect.grades);
+    await _rereadDetail(detail);
   });
 
   Future<AppException?> deleteRubric(GradeDetailEntity detail) =>
       _guard(() async {
         await _repository.deleteRubric(detail.evaluation.evaluationId);
-        await _refresh(detail);
+        _announce(detail.teachingPeriodId, ClassAspect.grades);
+        await _rereadDetail(detail);
       });
 
+  /// The API answers with the updated detail.
   Future<AppException?> scoreWithRubric(
     GradeDetailEntity detail, {
     required Map<int, double> scores,
     String? comment,
   }) => _guard(() async {
-    _detail = DetailViewState.success(
-      await _repository.scoreWithRubric(
-        detail.evaluation.evaluationId,
-        detail.student.id,
-        scores: scores,
-        comment: comment,
-      ),
+    final updated = await _repository.scoreWithRubric(
+      detail.evaluation.evaluationId,
+      detail.student.id,
+      scores: scores,
+      comment: comment,
     );
-    notifyListeners();
-    await _refreshReport(detail);
+    _announce(detail.teachingPeriodId, ClassAspect.grades);
+    _details.set(_keyOf(detail), updated);
   });
 
   Future<AppException?> saveActivityGrade(
@@ -127,7 +140,8 @@ class GradebookProvider extends ChangeNotifier {
       grade: grade,
       comment: comment,
     );
-    await _refresh(detail);
+    _announce(detail.teachingPeriodId, ClassAspect.grades);
+    await _rereadDetail(detail);
   });
 
   Future<AppException?> uploadAttachment(
@@ -141,7 +155,8 @@ class GradebookProvider extends ChangeNotifier {
       bytes: bytes,
       fileName: fileName,
     );
-    await _refresh(detail);
+    _announce(detail.teachingPeriodId, ClassAspect.annotations);
+    await _rereadDetail(detail);
   });
 
   Future<BinaryDownload> downloadAttachment(GradeDetailEntity detail) =>
@@ -156,29 +171,59 @@ class GradebookProvider extends ChangeNotifier {
           detail.evaluation.evaluationId,
           detail.student.id,
         );
-        await _refresh(detail);
+        _announce(detail.teachingPeriodId, ClassAspect.annotations);
+        await _rereadDetail(detail);
       });
 
-  Future<void> _refresh(GradeDetailEntity detail) async {
-    await loadDetail(
-      detail.evaluation.evaluationId,
-      detail.student.id,
-      silent: true,
-    );
-    await _refreshReport(detail);
-  }
+  static (int, int) _keyOf(GradeDetailEntity detail) =>
+      (detail.evaluation.evaluationId, detail.student.id);
 
-  /// The open report, if it's this student's in this class.
-  Future<void> _refreshReport(GradeDetailEntity detail) async {
-    final report = _report.data;
-    if (report != null &&
-        report.teachingPeriodId == detail.teachingPeriodId &&
-        report.student.id == detail.student.id) {
-      await loadReport(
-        detail.teachingPeriodId,
-        detail.student.id,
-        silent: true,
-      );
+  /// The endpoint answered without the new state: re-read just this one.
+  Future<void> _rereadDetail(GradeDetailEntity detail) =>
+      refreshDetail(detail.evaluation.evaluationId, detail.student.id);
+
+  void _announce(int teachingPeriodId, ClassAspect aspect) =>
+      publish(ClassDataChanged(teachingPeriodId, {aspect}));
+
+  // --- Invalidation -------------------------------------------------------
+
+  @override
+  void onDomainEvent(DomainEvent event) {
+    switch (event) {
+      case ClassDataChanged(:final teachingPeriodId, :final aspects):
+        if (aspects.contains(ClassAspect.schedule) && aspects.length == 1) {
+          return; // the timetable doesn't show in grades
+        }
+        // Reports show every evaluation, grade, weight and note of the
+        // class.
+        _reports.invalidateWhere((key, _) => key.$1 == teachingPeriodId);
+        if (event.affects(const {
+          ClassAspect.grades,
+          ClassAspect.exams,
+          ClassAspect.activities,
+          ClassAspect.configuration,
+          ClassAspect.annotations,
+        })) {
+          _details.invalidateWhere(
+            (_, detail) => detail?.teachingPeriodId == teachingPeriodId,
+          );
+        }
+        if (event.affects(const {ClassAspect.exams, ClassAspect.activities})) {
+          _evaluations.invalidate(teachingPeriodId);
+        }
+      case ExamResultsChanged(teachingPeriodId: null):
+        // The exam's class isn't known here: any class may have changed.
+        _reports.invalidateAll();
+        _details.invalidateAll();
+      case StudentsChanged(:final studentId):
+        _reports.invalidateWhere(
+          (key, _) => studentId == null || key.$2 == studentId,
+        );
+        _details.invalidateWhere(
+          (key, _) => studentId == null || key.$2 == studentId,
+        );
+      default:
+        break;
     }
   }
 

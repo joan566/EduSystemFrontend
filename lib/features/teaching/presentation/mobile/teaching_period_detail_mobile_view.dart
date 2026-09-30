@@ -100,8 +100,10 @@ class TeachingPeriodDetailMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<TeachingProvider>().periodDetail;
-    final period = state.data?.id == teachingPeriodId ? state.data : null;
+    final state = context.watch<TeachingProvider>().periodDetail(
+      teachingPeriodId,
+    );
+    final period = state.data;
 
     return Scaffold(
       body: switch (state.status) {
@@ -113,7 +115,7 @@ class TeachingPeriodDetailMobileView extends StatelessWidget {
                 exception: state.error!,
                 onRetry: () => context
                     .read<TeachingProvider>()
-                    .loadPeriodDetail(teachingPeriodId),
+                    .refreshPeriodDetail(teachingPeriodId),
               ),
             ),
           ],

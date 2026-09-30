@@ -28,10 +28,16 @@ class CoursesMobileView extends StatelessWidget {
     super.key,
     required this.filters,
     required this.onFiltersChanged,
+    required this.page,
+    required this.onPageChanged,
   });
 
   final CourseFilters filters;
   final ValueChanged<CourseFilters> onFiltersChanged;
+
+  /// Page of the filtered courses (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   Future<void> _openForm(BuildContext context, {CourseEntity? initial}) async {
     final levels = CourseActions.levelsForForm(context);
@@ -46,8 +52,13 @@ class CoursesMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<CoursesProvider>().state;
-    final levels = context.watch<AcademicLevelsProvider>().state.items;
+    final courses = context.watch<CoursesProvider>();
+    final state = courses.query(
+      gradeId: filters.gradeId,
+      academicYear: filters.academicYear,
+      page: page,
+    );
+    final levels = context.watch<AcademicLevelsProvider>().all;
     final usage = classesByCourse(context.watch<TeachingProvider>().allPeriods);
     final level = levels.where((l) => l.id == filters.gradeId).firstOrNull;
 
@@ -92,7 +103,7 @@ class CoursesMobileView extends StatelessWidget {
               ViewStatus.initial || ViewStatus.loading => const AppLoading(),
               ViewStatus.error => AppErrorState(
                 exception: state.error!,
-                onRetry: () => context.read<CoursesProvider>().load(),
+                onRetry: () => context.read<CoursesProvider>().refresh(),
               ),
               ViewStatus.empty => AppEmptyState(
                 title: filters.gradeId == null && filters.academicYear == null
@@ -138,8 +149,7 @@ class CoursesMobileView extends StatelessWidget {
                       page: state.page,
                       totalPages: state.totalPages,
                       totalElements: state.totalElements,
-                      onPageChanged: (page) =>
-                          context.read<CoursesProvider>().load(page: page),
+                      onPageChanged: onPageChanged,
                     ),
                 ],
               ),

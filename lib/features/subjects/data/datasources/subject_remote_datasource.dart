@@ -9,15 +9,25 @@ class SubjectRemoteDataSource {
 
   final ApiClient _client;
 
-  Future<ApiPage<SubjectEntity>> getPage({int page = 0, String? name}) async {
+  Future<ApiPage<SubjectEntity>> getPage({
+    int page = 0,
+    int size = 20,
+    String? name,
+  }) async {
     final response = await _client.get(
       ApiEndpoints.subjects,
-      queryParameters: {'page': page, 'size': 20, 'name': name},
+      queryParameters: {'page': page, 'size': size, 'name': name},
     );
-    return ApiPage.fromJson(response.data as Map<String, dynamic>, SubjectModel.fromJson);
+    return ApiPage.fromJson(
+      response.data as Map<String, dynamic>,
+      SubjectModel.fromJson,
+    );
   }
 
-  Future<SubjectEntity> create({required String name, String? description}) async {
+  Future<SubjectEntity> create({
+    required String name,
+    String? description,
+  }) async {
     final response = await _client.post(
       ApiEndpoints.subjects,
       data: SubjectModel.toRequest(name: name, description: description),
@@ -25,7 +35,11 @@ class SubjectRemoteDataSource {
     return SubjectModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<SubjectEntity> update(int id, {required String name, String? description}) async {
+  Future<SubjectEntity> update(
+    int id, {
+    required String name,
+    String? description,
+  }) async {
     final response = await _client.put(
       ApiEndpoints.subjectById(id),
       data: SubjectModel.toRequest(name: name, description: description),

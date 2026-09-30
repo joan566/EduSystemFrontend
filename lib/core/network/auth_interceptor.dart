@@ -28,6 +28,7 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor({
     required TokenStorage tokenStorage,
     required Future<void> Function() onSessionExpired,
+    HttpClientAdapter? httpClientAdapter,
   }) : _tokenStorage = tokenStorage,
        _onSessionExpired = onSessionExpired,
        _refreshDio = Dio(
@@ -37,7 +38,11 @@ class AuthInterceptor extends Interceptor {
            receiveTimeout: AppConfig.receiveTimeout,
            headers: const {'Content-Type': 'application/json'},
          ),
-       );
+       ) {
+    if (httpClientAdapter != null) {
+      _refreshDio.httpClientAdapter = httpClientAdapter;
+    }
+  }
 
   final TokenStorage _tokenStorage;
   final Future<void> Function() _onSessionExpired;
@@ -54,14 +59,10 @@ class AuthInterceptor extends Interceptor {
   void setTokens(AuthTokens? tokens) => _tokens = tokens;
   AuthTokens? get currentTokens => _tokens;
 
-  bool _isPublic(String path) =>
-      _publicPaths.any((p) => path.contains(p));
+  bool _isPublic(String path) => _publicPaths.any((p) => path.contains(p));
 
   @override
-  void onRequest(
-    RequestOptions options,
-    RequestInterceptorHandler handler,
-  ) {
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     if (!_isPublic(options.path) && _tokens != null) {
       options.headers['Authorization'] = 'Bearer ${_tokens!.accessToken}';
     }
@@ -84,8 +85,16 @@ class AuthInterceptor extends Interceptor {
       return;
     }
 
+    // The session this request was sent with. If it's no longer the
+    // current one when the refresh settles (logout, another teacher signed
+    // in), the request is not retried with someone else's token.
+    final sessionAtFailure = _tokens;
     final refreshed = await _refresh();
-    if (!refreshed || _dio == null) {
+    final current = _tokens;
+    if (!refreshed ||
+        _dio == null ||
+        current == null ||
+        !_sameSession(sessionAtFailure, current)) {
       handler.next(err);
       return;
     }
@@ -94,13 +103,24 @@ class AuthInterceptor extends Interceptor {
       final retryOptions = request.copyWith(
         extra: {...request.extra, 'retried': true},
       );
-      retryOptions.headers['Authorization'] = 'Bearer ${_tokens!.accessToken}';
+      retryOptions.headers['Authorization'] = 'Bearer ${current.accessToken}';
       final response = await _dio!.fetch(retryOptions);
       handler.resolve(response);
     } on DioException catch (retryError) {
       handler.next(retryError);
     }
   }
+
+  /// Whether [after] is [before] or the pair a refresh of [before] produced.
+  bool _sameSession(AuthTokens? before, AuthTokens after) =>
+      before != null &&
+      (identical(before, after) ||
+          before.refreshToken == after.refreshToken ||
+          _refreshedFrom[after] == before.refreshToken);
+
+  /// Which refresh token each refreshed pair came from, so a request that
+  /// failed just before a refresh can still be retried.
+  final Expando<String> _refreshedFrom = Expando<String>();
 
   /// Ensures only one refresh call is in flight at a time; concurrent
   /// callers await the same result.
@@ -110,14 +130,18 @@ class AuthInterceptor extends Interceptor {
 
     final completer = Completer<bool>();
     _refreshCompleter = completer;
-    _doRefresh().then(completer.complete).catchError((_) {
-      completer.complete(false);
-    }).whenComplete(() => _refreshCompleter = null);
+    _doRefresh()
+        .then(completer.complete)
+        .catchError((_) {
+          completer.complete(false);
+        })
+        .whenComplete(() => _refreshCompleter = null);
     return completer.future;
   }
 
   Future<bool> _doRefresh() async {
-    final refreshToken = _tokens?.refreshToken;
+    final session = _tokens;
+    final refreshToken = session?.refreshToken;
     if (refreshToken == null) return false;
 
     try {
@@ -125,6 +149,9 @@ class AuthInterceptor extends Interceptor {
         '/auth/refresh',
         data: {'refreshToken': refreshToken},
       );
+      // Logged out or another teacher signed in meanwhile: this pair
+      // belongs to a session that no longer exists, so it's discarded.
+      if (!identical(_tokens, session)) return false;
       final data = response.data!;
       final expiresIn = data['expiresIn'] as int? ?? 3600;
       final newTokens = AuthTokens(
@@ -132,10 +159,14 @@ class AuthInterceptor extends Interceptor {
         refreshToken: data['refreshToken'] as String,
         expiresAt: DateTime.now().add(Duration(seconds: expiresIn)),
       );
+      _refreshedFrom[newTokens] = refreshToken;
       _tokens = newTokens;
       await _tokenStorage.save(newTokens);
       return true;
     } catch (_) {
+      // Only the session that failed to refresh is ended; a newer one
+      // (signed in while this refresh was in flight) is left alone.
+      if (!identical(_tokens, session)) return false;
       _tokens = null;
       await _tokenStorage.clear();
       await _onSessionExpired();

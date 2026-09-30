@@ -41,13 +41,14 @@ class ExamRemoteDataSource {
   Future<ApiPage<ExamSummaryEntity>> getPage({
     required int teachingPeriodId,
     int page = 0,
+    int size = 20,
   }) async {
     final response = await _client.get(
       ApiEndpoints.exams,
       queryParameters: {
         'teachingPeriodId': teachingPeriodId,
         'page': page,
-        'size': 20,
+        'size': size,
       },
     );
     return ApiPage.fromJson(

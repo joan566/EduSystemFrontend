@@ -25,11 +25,17 @@ class ActivitiesDesktopView extends StatelessWidget {
     super.key,
     required this.period,
     required this.onPeriodChanged,
+    required this.page,
+    required this.onPageChanged,
     this.preferredPeriodId,
   });
 
   final TeachingPeriodEntity? period;
   final ValueChanged<TeachingPeriodEntity?> onPeriodChanged;
+
+  /// Page of the class's activities (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   /// Class the selector picks on first load, if present.
   final int? preferredPeriodId;
@@ -51,8 +57,13 @@ class ActivitiesDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ActivitiesProvider>().state;
     final period = this.period;
+    final state = period == null
+        ? const ListViewState<ActivityEntity>()
+        : context.watch<ActivitiesProvider>().activitiesPage(
+            period.id,
+            page: page,
+          );
 
     return Scaffold(
       body: Column(
@@ -92,10 +103,7 @@ class ActivitiesDesktopView extends StatelessWidget {
               page: state.page,
               totalPages: state.totalPages,
               totalElements: state.totalElements,
-              onPageChanged: (page) => context.read<ActivitiesProvider>().load(
-                teachingPeriodId: period.id,
-                page: page,
-              ),
+              onPageChanged: onPageChanged,
             ),
         ],
       ),
@@ -114,9 +122,8 @@ class ActivitiesDesktopView extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<ActivitiesProvider>().load(
-            teachingPeriodId: period.id,
-          ),
+          onRetry: () =>
+              context.read<ActivitiesProvider>().refreshActivities(period.id),
         );
       case ViewStatus.empty:
         return AppEmptyState(

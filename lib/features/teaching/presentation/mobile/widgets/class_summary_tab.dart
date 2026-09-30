@@ -81,7 +81,7 @@ class _ProgressCard extends StatelessWidget {
             TextButton(
               onPressed: () => context
                   .read<TeachingProvider>()
-                  .loadPeriodSummary(teachingPeriodId),
+                  .refreshPeriodSummary(teachingPeriodId),
               child: const Text('Reintentar'),
             ),
           ],
@@ -352,8 +352,9 @@ class _ClassActivityCard extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () =>
-                  context.read<AuditProvider>().loadClassLogs(teachingPeriodId),
+              onPressed: () => context.read<AuditProvider>().refreshClassLogs(
+                teachingPeriodId,
+              ),
               child: const Text('Reintentar'),
             ),
           ],

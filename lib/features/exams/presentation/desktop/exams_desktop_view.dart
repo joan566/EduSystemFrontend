@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/cached_value.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -37,6 +38,8 @@ class ExamsDesktopView extends StatelessWidget {
     required this.onFiltersChanged,
     required this.selectedExamId,
     required this.onSelect,
+    required this.page,
+    required this.onPageChanged,
   });
 
   final TeachingPeriodEntity? period;
@@ -46,17 +49,26 @@ class ExamsDesktopView extends StatelessWidget {
   final int? selectedExamId;
   final ValueChanged<int?> onSelect;
 
+  /// Page of the filtered exams (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
+
   static const _previewMinWidth = 1100.0;
   static const _previewWidth = 360.0;
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ExamsProvider>().state;
+    final period = this.period;
+    // The class's whole exam list, filtered and paged in memory.
+    final state = period == null
+        ? const ListViewState<ExamSummaryEntity>()
+        : context.watch<ExamsProvider>().exams(period.id);
     final teaching = context.watch<TeachingProvider>();
     final classes = teaching.allPeriods;
-    final period = this.period;
-    final exams = filters.apply(state.items);
-    final selected = exams.where((e) => e.id == selectedExamId).firstOrNull;
+    final filtered = filters.apply(state.items);
+    final visible = localPage(filtered, page: page);
+    final exams = visible.items;
+    final selected = filtered.where((e) => e.id == selectedExamId).firstOrNull;
 
     final actions = ExamRowActions(
       onSelect: (exam) => onSelect(exam.id),
@@ -100,6 +112,7 @@ class ExamsDesktopView extends StatelessWidget {
                   final table = _body(
                     context,
                     state: state,
+                    visible: visible,
                     exams: exams,
                     noClasses: teaching.allPeriodsLoaded && classes.isEmpty,
                     actions: actions,
@@ -133,6 +146,7 @@ class ExamsDesktopView extends StatelessWidget {
   Widget _body(
     BuildContext context, {
     required ListViewState<ExamSummaryEntity> state,
+    required ListViewState<ExamSummaryEntity> visible,
     required List<ExamSummaryEntity> exams,
     required bool noClasses,
     required ExamRowActions actions,
@@ -154,8 +168,7 @@ class ExamsDesktopView extends StatelessWidget {
       ViewStatus.initial || ViewStatus.loading => const AppLoading(),
       ViewStatus.error => AppErrorState(
         exception: state.error!,
-        onRetry: () =>
-            context.read<ExamsProvider>().load(teachingPeriodId: period.id),
+        onRetry: () => context.read<ExamsProvider>().refreshExams(period.id),
       ),
       ViewStatus.empty => AppEmptyState(
         title: 'No hay exámenes en esta clase',
@@ -175,15 +188,12 @@ class ExamsDesktopView extends StatelessWidget {
         selectedExamId: selectedExamId,
         actions: actions,
         clickOpens: clickOpens,
-        footer: state.totalPages > 1
+        footer: visible.totalPages > 1
             ? AppPagination(
-                page: state.page,
-                totalPages: state.totalPages,
-                totalElements: state.totalElements,
-                onPageChanged: (page) => context.read<ExamsProvider>().load(
-                  teachingPeriodId: period.id,
-                  page: page,
-                ),
+                page: visible.page,
+                totalPages: visible.totalPages,
+                totalElements: visible.totalElements,
+                onPageChanged: onPageChanged,
               )
             : null,
       ),

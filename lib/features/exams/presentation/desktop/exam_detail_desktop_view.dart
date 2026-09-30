@@ -75,15 +75,15 @@ class _ExamDetailDesktopViewState extends State<ExamDetailDesktopView>
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ExamsProvider>().detailState;
-    final exam = state.data?.id == widget.examId ? state.data : null;
+    final state = context.watch<ExamsProvider>().detail(widget.examId);
+    final exam = state.data;
 
     return Scaffold(
       body: switch (state.status) {
         DetailStatus.error => AppErrorState(
           exception: state.error!,
           onRetry: () =>
-              context.read<ExamsProvider>().loadDetail(widget.examId),
+              context.read<ExamsProvider>().refreshDetail(widget.examId),
         ),
         _ when exam == null => const AppLoading(),
         _ => _Workspace(
@@ -194,7 +194,7 @@ class _Header extends StatelessWidget {
           0 => context.push(
             RoutePaths.teachingPeriodDetail(exam.teachingPeriodId),
           ),
-          1 => context.read<ExamsProvider>().loadDetail(exam.id),
+          1 => context.read<ExamsProvider>().refreshDetail(exam.id),
           _ => ExamActions.delete(context, exam.id),
         },
         itemBuilder: (context) => const [

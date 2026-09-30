@@ -10,7 +10,7 @@ import '../../../teaching/presentation/providers/teaching_provider.dart';
 /// empty — not merely unloaded/erroring — so a transient failure never gets
 /// mistaken for "you have nothing yet".
 bool watchIsBrandNewTeacher(BuildContext context) {
-  final students = context.watch<StudentsProvider>().state;
+  final students = context.watch<StudentsProvider>().totalState;
   final courses = context.watch<CoursesProvider>().state;
   final assignments = context.watch<TeachingProvider>().assignmentsState;
   return students.status == ViewStatus.empty &&

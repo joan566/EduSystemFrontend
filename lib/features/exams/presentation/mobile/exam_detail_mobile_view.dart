@@ -97,8 +97,8 @@ class _ExamDetailMobileViewState extends State<ExamDetailMobileView>
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ExamsProvider>().detailState;
-    final exam = state.data?.id == widget.examId ? state.data : null;
+    final state = context.watch<ExamsProvider>().detail(widget.examId);
+    final exam = state.data;
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -148,7 +148,8 @@ class _ExamDetailMobileViewState extends State<ExamDetailMobileView>
     if (state.status == DetailStatus.error) {
       return AppErrorState(
         exception: state.error!,
-        onRetry: () => context.read<ExamsProvider>().loadDetail(widget.examId),
+        onRetry: () =>
+            context.read<ExamsProvider>().refreshDetail(widget.examId),
       );
     }
     if (exam == null) return const AppLoading();

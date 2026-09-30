@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../desktop/activity_detail_desktop_view.dart';
 import '../mobile/activity_detail_mobile_view.dart';
@@ -17,15 +18,17 @@ class ActivityDetailPage extends StatefulWidget {
   State<ActivityDetailPage> createState() => _ActivityDetailPageState();
 }
 
-class _ActivityDetailPageState extends State<ActivityDetailPage> {
+class _ActivityDetailPageState extends State<ActivityDetailPage>
+    with SyncedDataState<ActivityDetailPage> {
   late final _controller = ActivityGradesController(widget.activityId);
 
+  /// The activity usually comes from its class's list; its grades are read
+  /// once and kept until a grade of the class changes elsewhere.
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<ActivitiesProvider>().loadDetail(widget.activityId),
-    );
+  void ensureData() {
+    final activities = context.read<ActivitiesProvider>();
+    activities.ensureDetail(widget.activityId);
+    activities.ensureGrades(widget.activityId);
   }
 
   @override

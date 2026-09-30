@@ -69,27 +69,25 @@ class _GradesDesktopViewState extends State<GradesDesktopView>
     super.dispose();
   }
 
-  Future<void> _configure() async {
+  /// Saving weights there makes these grades stale; they're re-read on
+  /// return only then.
+  void _configure() {
     final period = widget.period;
-    await context.push(
+    context.push(
       period == null
           ? RoutePaths.gradingSettings
           : RoutePaths.gradingSettingsForClass(period.id),
     );
-    if (mounted && period != null) {
-      context.read<GradingProvider>().loadPeriodGrades(period.id);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final period = widget.period;
     final classes = context.watch<TeachingProvider>().allPeriods;
-    final data = context.watch<GradingProvider>().periodGradesState.data;
     final textTheme = Theme.of(context).textTheme;
-    final current = data != null && data.teachingPeriodId == period?.id
-        ? data
-        : null;
+    final current = period == null
+        ? null
+        : context.watch<GradingProvider>().periodGrades(period.id).data;
 
     return Scaffold(
       body: Padding(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../grades/presentation/providers/grading_provider.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
@@ -23,7 +24,8 @@ class StudentDetailPage extends StatefulWidget {
   State<StudentDetailPage> createState() => _StudentDetailPageState();
 }
 
-class _StudentDetailPageState extends State<StudentDetailPage> {
+class _StudentDetailPageState extends State<StudentDetailPage>
+    with SyncedDataState<StudentDetailPage> {
   // Live here so the tab and the loaded grades survive a layout switch.
   late int _tab = widget.initialTab.clamp(0, 2);
   late final StudentGradesController _grades = StudentGradesController(
@@ -32,12 +34,8 @@ class _StudentDetailPageState extends State<StudentDetailPage> {
   );
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => context.read<StudentsProvider>().loadDetail(widget.studentId),
-    );
-  }
+  void ensureData() =>
+      context.read<StudentsProvider>().ensureDetail(widget.studentId);
 
   @override
   void dispose() {

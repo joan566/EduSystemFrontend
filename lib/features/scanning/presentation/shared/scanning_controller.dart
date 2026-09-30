@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/widgets/shared/app_confirm_dialog.dart';
+import '../../../exams/presentation/providers/exams_provider.dart';
 import '../../../exams/presentation/providers/submissions_provider.dart';
 
 /// Answer-sheet capture state (§42-45): the captured/picked image and its
@@ -46,6 +47,13 @@ class ScanningController extends ChangeNotifier {
       imageBytes: bytes,
       fileName: _fileName,
       replace: replace,
+      // The exam is in memory (scanning opens from it): the new result
+      // changes that class's grades.
+      teachingPeriodId: context
+          .read<ExamsProvider>()
+          .detail(examId)
+          .data
+          ?.teachingPeriodId,
     );
     if (!context.mounted) return;
 

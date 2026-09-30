@@ -45,14 +45,16 @@ class TeachingPeriodDetailDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<TeachingProvider>().periodDetail;
-    final period = state.data?.id == teachingPeriodId ? state.data : null;
+    final state = context.watch<TeachingProvider>().periodDetail(
+      teachingPeriodId,
+    );
+    final period = state.data;
 
     return Scaffold(
       body: switch (state.status) {
         DetailStatus.error => AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<TeachingProvider>().loadPeriodDetail(
+          onRetry: () => context.read<TeachingProvider>().refreshPeriodDetail(
             teachingPeriodId,
           ),
         ),

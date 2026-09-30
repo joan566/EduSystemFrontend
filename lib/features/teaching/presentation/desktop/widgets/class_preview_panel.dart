@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../../core/cache/synced_data_state.dart';
 import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/state/detail_state.dart';
 import '../../../../../core/state/list_state.dart';
@@ -169,22 +170,14 @@ class _ClassPreview extends StatefulWidget {
   State<_ClassPreview> createState() => _ClassPreviewState();
 }
 
-class _ClassPreviewState extends State<_ClassPreview> {
+class _ClassPreviewState extends State<_ClassPreview>
+    with SyncedDataState<_ClassPreview> {
+  /// Classes already previewed come from memory.
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final id = widget.period.id;
-      final teaching = context.read<TeachingProvider>();
-      final schedule = context.read<ScheduleProvider>();
-      if (teaching.periodSummary(id).status == DetailStatus.initial) {
-        teaching.loadPeriodSummary(id);
-      }
-      if (schedule.classSchedules(id).status == ViewStatus.initial) {
-        schedule.loadClassSchedules(id);
-      }
-    });
+  void ensureData() {
+    final id = widget.period.id;
+    context.read<TeachingProvider>().ensurePeriodSummary(id);
+    context.read<ScheduleProvider>().ensureClassSchedules(id);
   }
 
   @override

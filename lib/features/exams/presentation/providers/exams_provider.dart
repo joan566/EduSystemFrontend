@@ -1,44 +1,61 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/cache/keyed_cache.dart';
+import '../../../../core/cache/session_notifier.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/events/domain_events.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
 import '../../data/repositories/exam_repository.dart';
 import '../../domain/entities/exam_entity.dart';
 
-class ExamsProvider extends ChangeNotifier {
-  ExamsProvider(this._repository);
+/// Exams, per class (`teachingPeriodId → its exams`, every page) and per
+/// exam (`examId → exam with questions`).
+///
+/// Each class keeps its own list, so the Exámenes screen and a class's
+/// screen never overwrite each other's. Create, edit and delete answer with
+/// (or imply) the new state, which is written locally: no list is re-read
+/// after a mutation.
+class ExamsProvider extends SessionNotifier {
+  ExamsProvider(this._repository, DomainEvents events) : super(events);
 
   final ExamRepository _repository;
-  int? _teachingPeriodId;
 
-  ListViewState<ExamSummaryEntity> _state = const ListViewState();
-  ListViewState<ExamSummaryEntity> get state => _state;
+  late final _exams = keyedCache<int, List<ExamSummaryEntity>>();
 
-  DetailViewState<ExamEntity> _detailState = const DetailViewState();
-  DetailViewState<ExamEntity> get detailState => _detailState;
+  /// Bounded: one per exam opened.
+  late final _details = keyedCache<int, ExamEntity>(maxEntries: 30);
 
-  Future<void> load({required int teachingPeriodId, int page = 0}) async {
-    _teachingPeriodId = teachingPeriodId;
-    _state = ListViewState.loading();
-    notifyListeners();
-    try {
-      final result = await _repository.getPage(
-        teachingPeriodId: teachingPeriodId,
-        page: page,
-      );
-      _state = ListViewState.fromPage(
-        content: result.content,
-        page: result.page,
-        totalPages: result.totalPages,
-        totalElements: result.totalElements,
-      );
-    } on AppException catch (e) {
-      _state = ListViewState.error(e);
-    }
-    notifyListeners();
-  }
+  // --- Lists per class -----------------------------------------------------
+
+  /// All the exams of a class, newest first (like the API). Screens filter
+  /// and page them in memory.
+  ListViewState<ExamSummaryEntity> exams(int teachingPeriodId) =>
+      _exams.view(teachingPeriodId);
+
+  Future<void> ensureExams(int teachingPeriodId) => _exams.ensure(
+    teachingPeriodId,
+    () => _repository.getAll(teachingPeriodId),
+  );
+
+  Future<void> refreshExams(int teachingPeriodId) => _exams.refresh(
+    teachingPeriodId,
+    () => _repository.getAll(teachingPeriodId),
+  );
+
+  // --- Detail --------------------------------------------------------------
+
+  DetailViewState<ExamEntity> detail(int examId) => _details.detailView(examId);
+
+  Future<void> ensureDetail(int examId) =>
+      _details.ensure(examId, () => _repository.getById(examId));
+
+  Future<void> refreshDetail(int examId) =>
+      _details.refresh(examId, () => _repository.getById(examId));
+
+  // --- Mutations -----------------------------------------------------------
+
+  AppException? _lastError;
+  AppException? get lastError => _lastError;
 
   Future<ExamEntity?> create({
     required int teachingPeriodId,
@@ -57,8 +74,9 @@ class ExamsProvider extends ChangeNotifier {
         maximumScore: maximumScore,
         numberOfQuestions: numberOfQuestions,
       );
-      if (_teachingPeriodId == teachingPeriodId)
-        await load(teachingPeriodId: teachingPeriodId);
+      _announce(exam.teachingPeriodId);
+      _details.set(exam.id, exam);
+      _exams.update(exam.teachingPeriodId, (list) => _upsert(list, exam));
       return exam;
     } on AppException catch (e) {
       _lastError = e;
@@ -66,75 +84,58 @@ class ExamsProvider extends ChangeNotifier {
     }
   }
 
-  AppException? _lastError;
-  AppException? get lastError => _lastError;
-
-  Future<void> loadDetail(int examId) async {
-    _detailState = DetailViewState.loading();
-    notifyListeners();
-    try {
-      final exam = await _repository.getById(examId);
-      _detailState = DetailViewState.success(exam);
-    } on AppException catch (e) {
-      _detailState = DetailViewState.error(e);
-    }
-    notifyListeners();
-  }
-
   Future<AppException?> updateMetadata(
     int examId, {
     required String name,
     String? description,
     DateTime? evaluationDate,
-  }) async {
-    try {
-      final exam = await _repository.update(
-        examId,
-        name: name,
-        description: description,
-        evaluationDate: evaluationDate,
-      );
-      _detailState = DetailViewState.success(exam);
-      notifyListeners();
-      _reloadListFor(exam.teachingPeriodId);
-      return null;
-    } on AppException catch (e) {
-      return e;
-    }
-  }
+  }) => _write(
+    () => _repository.update(
+      examId,
+      name: name,
+      description: description,
+      evaluationDate: evaluationDate,
+    ),
+  );
 
   Future<AppException?> saveQuestions(
     int examId,
     List<ExamQuestion> questions,
-  ) async {
+  ) => _write(() => _repository.replaceQuestions(examId, questions));
+
+  /// Writes the exam the API answers with into its detail and its class's
+  /// list (name, date, readiness).
+  Future<AppException?> _write(Future<ExamEntity> Function() request) async {
     try {
-      final exam = await _repository.replaceQuestions(examId, questions);
-      _detailState = DetailViewState.success(exam);
-      notifyListeners();
-      _reloadListFor(exam.teachingPeriodId);
+      final exam = await request();
+      _announce(exam.teachingPeriodId);
+      _details.set(exam.id, exam);
+      _exams.update(exam.teachingPeriodId, (list) => _upsert(list, exam));
       return null;
     } on AppException catch (e) {
       return e;
-    }
-  }
-
-  /// Keeps the list (name, date, readiness) in step with detail edits, so
-  /// going back shows the current state.
-  void _reloadListFor(int teachingPeriodId) {
-    if (_teachingPeriodId == teachingPeriodId) {
-      load(teachingPeriodId: teachingPeriodId, page: _state.page);
     }
   }
 
   Future<AppException?> delete(int examId) async {
+    final teachingPeriodId = _classOf(examId);
     try {
       await _repository.delete(examId);
-      if (_teachingPeriodId != null)
-        await load(teachingPeriodId: _teachingPeriodId!);
-      return null;
     } on AppException catch (e) {
       return e;
     }
+    if (teachingPeriodId != null) {
+      _announce(teachingPeriodId);
+      _exams.update(
+        teachingPeriodId,
+        (list) => list.where((e) => e.id != examId).toList(),
+      );
+    } else {
+      // Unknown class: no list can be patched, so all are re-read later.
+      _exams.invalidateAll();
+    }
+    _details.remove(examId);
+    return null;
   }
 
   Future<BinaryDownload> downloadAnswerSheet(int examId, int studentId) =>
@@ -142,4 +143,60 @@ class ExamsProvider extends ChangeNotifier {
 
   Future<BinaryDownload> downloadAnswerSheets(int examId) =>
       _repository.getAnswerSheets(examId);
+
+  // --- Helpers -------------------------------------------------------------
+
+  void _announce(int teachingPeriodId) =>
+      publish(ClassDataChanged(teachingPeriodId, const {ClassAspect.exams}));
+
+  int? _classOf(int examId) {
+    final fromDetail = _details.dataOf(examId)?.teachingPeriodId;
+    if (fromDetail != null) return fromDetail;
+    for (final tp in _exams.keys) {
+      if (_exams.dataOf(tp)?.any((e) => e.id == examId) ?? false) return tp;
+    }
+    return null;
+  }
+
+  /// Inserts or replaces [exam] (as a list row) keeping the API's order:
+  /// newest date first, undated last, then newest first.
+  static List<ExamSummaryEntity> _upsert(
+    List<ExamSummaryEntity> list,
+    ExamEntity exam,
+  ) {
+    final row = ExamSummaryEntity(
+      id: exam.id,
+      evaluationId: exam.evaluationId,
+      teachingPeriodId: exam.teachingPeriodId,
+      name: exam.name,
+      description: exam.description,
+      evaluationDate: exam.evaluationDate,
+      maximumScore: exam.maximumScore,
+      numberOfQuestions: exam.numberOfQuestions,
+      ready: exam.ready,
+    );
+    return [
+      for (final e in list)
+        if (e.id != exam.id) e,
+      row,
+    ]..sort(_apiOrder);
+  }
+
+  static int _apiOrder(ExamSummaryEntity a, ExamSummaryEntity b) {
+    final da = a.evaluationDate;
+    final db = b.evaluationDate;
+    if (da != null && db != null && da != db) return db.compareTo(da);
+    if ((da == null) != (db == null)) return da == null ? 1 : -1;
+    return b.id.compareTo(a.id);
+  }
+
+  @override
+  void onDomainEvent(DomainEvent event) {
+    // Deleting a class takes its exams with it.
+    if (event is CatalogChanged &&
+        event.resource == CatalogResource.teachingPeriods &&
+        event.change == CatalogChange.deleted) {
+      _exams.invalidateAll();
+    }
+  }
 }

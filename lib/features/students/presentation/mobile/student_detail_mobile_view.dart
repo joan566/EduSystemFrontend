@@ -126,10 +126,8 @@ class _StudentDetailMobileViewState extends State<StudentDetailMobileView>
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<StudentsProvider>().detailState;
-    final detail = state.data?.student.id == widget.studentId
-        ? state.data
-        : null;
+    final state = context.watch<StudentsProvider>().detail(widget.studentId);
+    final detail = state.data;
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -158,7 +156,7 @@ class _StudentDetailMobileViewState extends State<StudentDetailMobileView>
             child: switch (state.status) {
               DetailStatus.error => AppErrorState(
                 exception: state.error!,
-                onRetry: () => context.read<StudentsProvider>().loadDetail(
+                onRetry: () => context.read<StudentsProvider>().refreshDetail(
                   widget.studentId,
                 ),
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../desktop/schedule_desktop_view.dart';
 import '../mobile/schedule_mobile_view.dart';
@@ -15,7 +16,8 @@ class SchedulePage extends StatefulWidget {
   State<SchedulePage> createState() => _SchedulePageState();
 }
 
-class _SchedulePageState extends State<SchedulePage> {
+class _SchedulePageState extends State<SchedulePage>
+    with SyncedDataState<SchedulePage> {
   // Lives here so the week shown survives a mobile <-> desktop switch.
   DateTime _weekStart = mondayOf(DateTime.now());
   DateTime _selectedDay = _today();
@@ -25,19 +27,18 @@ class _SchedulePageState extends State<SchedulePage> {
     return DateTime(now.year, now.month, now.day);
   }
 
+  DateTime get _weekEnd => _weekStart.add(const Duration(days: 6));
+
+  /// Weeks already seen come from memory.
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-  }
+  void ensureData() =>
+      context.read<ScheduleProvider>().ensureCalendar(_weekStart, _weekEnd);
 
-  void _load() => context.read<ScheduleProvider>().loadCalendar(
-    from: _weekStart,
-    to: _weekStart.add(const Duration(days: 6)),
-  );
+  void _retry() =>
+      context.read<ScheduleProvider>().refreshCalendar(_weekStart, _weekEnd);
 
-  /// Shows [day]'s week with [day] selected; reloads only if the week
-  /// changed.
+  /// Shows [day]'s week with [day] selected; reads the week only if it
+  /// changed and isn't cached yet.
   void _showDay(DateTime day) {
     final weekStart = mondayOf(day);
     final weekChanged = !isSameDay(weekStart, _weekStart);
@@ -45,7 +46,7 @@ class _SchedulePageState extends State<SchedulePage> {
       _weekStart = weekStart;
       _selectedDay = DateTime(day.year, day.month, day.day);
     });
-    if (weekChanged) _load();
+    if (weekChanged) ensureData();
   }
 
   void _shiftWeek(int weeks) => _showDay(
@@ -65,7 +66,7 @@ class _SchedulePageState extends State<SchedulePage> {
       onPrevious: () => _shiftWeek(-1),
       onNext: () => _shiftWeek(1),
       onToday: () => _showDay(_today()),
-      onRetry: _load,
+      onRetry: _retry,
     );
     return ResponsiveBuilder(
       mobile: (_) => ScheduleMobileView(week: week),

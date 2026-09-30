@@ -1,68 +1,84 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/cache/catalog.dart';
+import '../../../../core/cache/session_notifier.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/events/domain_events.dart';
 import '../../../../core/state/list_state.dart';
 import '../../data/repositories/academic_period_repository.dart';
 import '../../domain/entities/academic_period_entity.dart';
 
-class AcademicPeriodsProvider extends ChangeNotifier {
-  AcademicPeriodsProvider(this._repository);
+/// The teacher's academic periods, a session catalog (all pages), newest
+/// first like the API.
+class AcademicPeriodsProvider extends SessionNotifier {
+  AcademicPeriodsProvider(this._repository, DomainEvents events)
+    : super(events);
 
   final AcademicPeriodRepository _repository;
 
-  ListViewState<AcademicPeriodEntity> _state = const ListViewState();
-  ListViewState<AcademicPeriodEntity> get state => _state;
+  late final Catalog<AcademicPeriodEntity> _periods = Catalog(
+    cachedValue(),
+    idOf: (p) => p.id,
+    fetch: _repository.getAll,
+    compare: (a, b) => b.startDate.compareTo(a.startDate),
+  );
 
-  Future<void> load({int page = 0}) async {
-    _state = ListViewState.loading();
-    notifyListeners();
-    try {
-      final result = await _repository.getPage(page: page);
-      _state = ListViewState.fromPage(
-        content: result.content,
-        page: result.page,
-        totalPages: result.totalPages,
-        totalElements: result.totalElements,
-      );
-    } on AppException catch (e) {
-      _state = ListViewState.error(e);
-    }
-    notifyListeners();
-  }
+  /// Every period, newest first (empty until loaded).
+  List<AcademicPeriodEntity> get all => _periods.items;
+
+  /// The whole catalog as a screen state.
+  ListViewState<AcademicPeriodEntity> get state => _periods.view;
+
+  /// One page of the periods matching [where].
+  ListViewState<AcademicPeriodEntity> query({
+    bool Function(AcademicPeriodEntity period)? where,
+    int page = 0,
+  }) => _periods.page(where: where, page: page);
+
+  Future<void> ensure() => _periods.ensure();
+  Future<void> refresh() => _periods.refresh();
 
   Future<AppException?> create({
     required String name,
     required DateTime startDate,
     required DateTime endDate,
-  }) async {
-    try {
-      await _repository.create(name: name, startDate: startDate, endDate: endDate);
-      await load(page: 0);
-      return null;
-    } on AppException catch (e) {
-      return e;
-    }
-  }
+  }) => _mutate(CatalogChange.created, () async {
+    _periods.upsert(
+      await _repository.create(
+        name: name,
+        startDate: startDate,
+        endDate: endDate,
+      ),
+    );
+  });
 
   Future<AppException?> update(
     int id, {
     required String name,
     required DateTime startDate,
     required DateTime endDate,
-  }) async {
-    try {
-      await _repository.update(id, name: name, startDate: startDate, endDate: endDate);
-      await load(page: _state.page);
-      return null;
-    } on AppException catch (e) {
-      return e;
-    }
-  }
+  }) => _mutate(CatalogChange.updated, () async {
+    _periods.upsert(
+      await _repository.update(
+        id,
+        name: name,
+        startDate: startDate,
+        endDate: endDate,
+      ),
+    );
+  });
 
-  Future<AppException?> delete(int id) async {
+  Future<AppException?> delete(int id) =>
+      _mutate(CatalogChange.deleted, () async {
+        await _repository.delete(id);
+        _periods.remove(id);
+      });
+
+  Future<AppException?> _mutate(
+    CatalogChange change,
+    Future<void> Function() action,
+  ) async {
     try {
-      await _repository.delete(id);
-      await load(page: _state.page);
+      await action();
+      publish(CatalogChanged(CatalogResource.academicPeriods, change));
       return null;
     } on AppException catch (e) {
       return e;

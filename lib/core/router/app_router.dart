@@ -35,17 +35,26 @@ import '../../features/teaching/presentation/pages/teaching_period_detail_page.d
 import '../layout/app_shell.dart';
 import '../widgets/mobile/mobile_more_page.dart';
 import 'route_paths.dart';
+import 'shell_route_observer.dart';
 
 /// Centralized routing (§17). Auth state drives redirects here rather
 /// than in every page: an unauthenticated user is always sent to
 /// `/login`, and an authenticated one is kept out of the auth screens.
+///
+/// Each session builds its own [AppRouter] (see `SessionScope`), so no
+/// route of a previous teacher survives a user change. Only the first
+/// router of the app honours the platform's location (a web deep link or a
+/// reload); later ones start from [RoutePaths.dashboard] and let the
+/// redirect pick login or the dashboard.
 class AppRouter {
-  AppRouter(this._authProvider);
+  AppRouter(this._authProvider, {this.restorePlatformLocation = true});
 
   final AuthProvider _authProvider;
+  final bool restorePlatformLocation;
 
   late final GoRouter router = GoRouter(
     initialLocation: RoutePaths.dashboard,
+    overridePlatformDefaultLocation: !restorePlatformLocation,
     refreshListenable: _authProvider,
     redirect: _redirect,
     routes: [
@@ -62,6 +71,7 @@ class AppRouter {
         builder: (context, state) => const ForgotPasswordPage(),
       ),
       ShellRoute(
+        observers: [shellRouteObserver],
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           GoRoute(
@@ -93,8 +103,7 @@ class AppRouter {
                 builder: (context, state) => StudentDetailPage(
                   studentId: int.parse(state.pathParameters['id']!),
                   initialTab:
-                      int.tryParse(state.uri.queryParameters['tab'] ?? '') ??
-                      0,
+                      int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
                 ),
               ),
             ],
@@ -141,8 +150,7 @@ class AppRouter {
                 builder: (context, state) => ExamDetailPage(
                   examId: int.parse(state.pathParameters['id']!),
                   initialTab:
-                      int.tryParse(state.uri.queryParameters['tab'] ?? '') ??
-                      0,
+                      int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
                 ),
                 routes: [
                   GoRoute(

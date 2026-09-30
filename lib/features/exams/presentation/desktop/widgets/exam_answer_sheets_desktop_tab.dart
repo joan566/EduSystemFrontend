@@ -56,16 +56,16 @@ class _ExamAnswerSheetsDesktopTabState
   @override
   void didUpdateWidget(covariant ExamAnswerSheetsDesktopTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.period?.groupId != widget.period?.groupId) _loadRoster();
+    if (oldWidget.period?.groupId != widget.period?.groupId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadRoster());
+    }
   }
 
   void _loadRoster() {
     final period = widget.period;
     if (!mounted || period == null) return;
     final students = context.read<StudentsProvider>();
-    if (students.groupRoster(period.groupId).status == ViewStatus.initial) {
-      students.loadGroupRoster(period.groupId);
-    }
+    students.ensureGroupRoster(period.groupId);
   }
 
   Future<void> _downloadAll() async {
@@ -368,7 +368,7 @@ class _PerStudentCardState extends State<_PerStudentCard> {
         case ViewStatus.error:
           body = AppErrorState(
             exception: state.error!,
-            onRetry: () => context.read<StudentsProvider>().loadGroupRoster(
+            onRetry: () => context.read<StudentsProvider>().refreshGroupRoster(
               period.groupId,
             ),
           );

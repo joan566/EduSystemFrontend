@@ -25,10 +25,16 @@ class StudentsMobileView extends StatelessWidget {
     super.key,
     required this.filters,
     required this.onFiltersChanged,
+    required this.page,
+    required this.onPageChanged,
   });
 
   final StudentListFilters filters;
   final ValueChanged<StudentListFilters> onFiltersChanged;
+
+  /// Page of the server listing (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   Future<void> _openStatusFilter(BuildContext context) async {
     final picked = await showMobileSheet<StudentStatusFilter>(
@@ -92,7 +98,13 @@ class StudentsMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<StudentsProvider>().state;
+    final state = context.watch<StudentsProvider>().query(
+      StudentsProvider.queryOf(
+        page: page,
+        groupId: filters.groupId,
+        search: filters.search,
+      ),
+    );
     final courses = teacherCourses(
       context.watch<TeachingProvider>().allPeriods,
     );
@@ -235,7 +247,13 @@ class StudentsMobileView extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<StudentsProvider>().load(),
+          onRetry: () => context.read<StudentsProvider>().refreshQuery(
+            StudentsProvider.queryOf(
+              page: page,
+              groupId: filters.groupId,
+              search: filters.search,
+            ),
+          ),
         );
       case ViewStatus.empty:
         return filters.groupId == null && filters.search.isEmpty
@@ -277,8 +295,7 @@ class StudentsMobileView extends StatelessWidget {
                 page: state.page,
                 totalPages: state.totalPages,
                 totalElements: state.totalElements,
-                onPageChanged: (page) =>
-                    context.read<StudentsProvider>().load(page: page),
+                onPageChanged: onPageChanged,
               ),
           ],
         );

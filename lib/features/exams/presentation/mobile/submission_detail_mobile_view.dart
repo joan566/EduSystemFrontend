@@ -61,7 +61,10 @@ class SubmissionDetailMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<SubmissionsProvider>().detailState;
+    final state = context.watch<SubmissionsProvider>().detail(
+      examId,
+      submissionId,
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(state.data?.student.name ?? 'Resultado')),
@@ -80,7 +83,7 @@ class SubmissionDetailMobileView extends StatelessWidget {
       case DetailStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<SubmissionsProvider>().loadDetail(
+          onRetry: () => context.read<SubmissionsProvider>().refreshDetail(
             examId,
             submissionId,
           ),

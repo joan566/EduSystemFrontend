@@ -21,7 +21,9 @@ class GradingConfigurationStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final configState = context.watch<GradingProvider>().configState;
+    final configState = context.watch<GradingProvider>().configuration(
+      controller.teachingPeriodId,
+    );
     switch (configState.status) {
       case DetailStatus.initial:
       case DetailStatus.loading:
@@ -29,7 +31,7 @@ class GradingConfigurationStateView extends StatelessWidget {
       case DetailStatus.error:
         return AppErrorState(
           exception: configState.error!,
-          onRetry: () => controller.load(context),
+          onRetry: () => controller.load(context, refresh: true),
         );
       case DetailStatus.success:
         return ListenableBuilder(

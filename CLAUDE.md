@@ -53,6 +53,43 @@ features/<feature>/presentation/
   `showDesktopDialog`, `DesktopUploadZone`, `DesktopHeroBanner`,
   `DesktopStatCard`.
 
+## Data, cache and sessions
+
+Providers hold the teacher's data for the session, not "what a screen
+shows". Navigating is mostly reading memory; the backend is read only when
+data is missing, stale, expired, or on an explicit refresh.
+
+- **Session isolation.** `core/session/session_scope.dart` owns every domain
+  provider, the `DomainEvents` bus and its own `GoRouter`, keyed by the
+  signed-in user id (`main.dart`). Logout, expiry, account deletion or
+  another teacher signing in rebuilds it empty — never add a `reset()`.
+  Only `ApiClient`, `AuthProvider` and `SessionExpiryNotifier` are
+  app-level. Nothing private is persisted to disk.
+- **Providers** extend `SessionNotifier` and create their caches with
+  `cachedValue()` / `keyedCache()` (`core/cache/`). Key per-entity data by
+  id and per-class data by `teachingPeriodId` — never a single `state`
+  slot shared by screens. Catalogs (levels, subjects, periods, courses,
+  assignments, classes, scales) are whole lists (`Catalog`, all pages via
+  `fetchAllPages`) filtered and paged in memory; students stay
+  server-paginated, cached per exact query.
+- **API**: `ensureX()` (read only if needed), `refreshX()` (force; pull to
+  refresh, retry), getters returning `ListViewState`/`DetailViewState`.
+  Filters, search, page, selection live in the page entry point.
+- **Mutations**: backend first, then write the answer locally
+  (`upsert`/`update`/`set`/`remove`); if the endpoint answers nothing,
+  re-read only that resource. Then `publish` a `DomainEvent`
+  (`ClassDataChanged`, `CatalogChanged`, `StudentsChanged`,
+  `ExamResultsChanged`, `SessionDataReset`); other providers only mark
+  their own caches stale in `onDomainEvent` (never fetch there). Optimistic
+  updates only for simple toggles, with rollback.
+- **Pages** use `SyncedDataState` (`ensureData()` runs on entry, on return
+  via `shellRouteObserver`, and after events while visible). Never fetch
+  from `build`. TTL only for time-sensitive data (today/week agenda, audit);
+  `AppResumed` re-reads them, and everything after a long background.
+- Debug builds log `[HTTP] METHOD /route` per request and expose
+  `ext.edusystem.httpReport` (counts and timings per route, no ids,
+  queries, bodies or headers).
+
 ## Commands
 
 ```bash

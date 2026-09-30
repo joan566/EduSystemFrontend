@@ -7,7 +7,6 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../core/widgets/shared/app_confirm_dialog.dart';
 import '../../../../core/widgets/shared/app_download.dart';
 import '../providers/exams_provider.dart';
-import '../providers/submissions_provider.dart';
 
 /// Exam-level actions with user feedback, shared by the mobile and desktop
 /// views.
@@ -45,10 +44,7 @@ class ExamActions {
   }
 
   /// One PDF with the answer sheets of every active student (§39).
-  static Future<void> downloadAnswerSheets(
-    BuildContext context,
-    int examId,
-  ) {
+  static Future<void> downloadAnswerSheets(BuildContext context, int examId) {
     final provider = context.read<ExamsProvider>();
     return fetchAndSaveFile(
       context,
@@ -71,12 +67,10 @@ class ExamActions {
     );
   }
 
-  /// Batch grading adds submissions in the background, so the results
-  /// listing is re-read on return.
-  static Future<void> openBatches(BuildContext context, int examId) async {
-    await context.push(RoutePaths.submissionBatches(examId));
-    if (context.mounted) context.read<SubmissionsProvider>().load(examId);
-  }
+  /// A batch finishing there makes this exam's results stale, so they are
+  /// re-read on return only then.
+  static Future<void> openBatches(BuildContext context, int examId) =>
+      context.push(RoutePaths.submissionBatches(examId));
 
   static void openScanning(BuildContext context, int examId) {
     context.push(RoutePaths.examScanning(examId));

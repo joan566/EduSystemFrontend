@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
-import '../../../../core/state/list_state.dart';
 import '../../../academic_levels/presentation/providers/academic_levels_provider.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../desktop/courses_desktop_view.dart';
@@ -20,29 +20,27 @@ class CoursesPage extends StatefulWidget {
   State<CoursesPage> createState() => _CoursesPageState();
 }
 
-class _CoursesPageState extends State<CoursesPage> {
-  // Lives here so the filters survive a mobile <-> desktop switch.
+class _CoursesPageState extends State<CoursesPage>
+    with SyncedDataState<CoursesPage> {
+  // Live here so they survive a mobile <-> desktop switch. Filtering and
+  // paging happen in memory over the whole course catalog.
   late CourseFilters _filters = CourseFilters(gradeId: widget.initialGradeId);
+  int _page = 0;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CoursesProvider>().applyFilters(gradeId: _filters.gradeId);
-      final levels = context.read<AcademicLevelsProvider>();
-      if (levels.state.status == ViewStatus.initial) levels.load();
-      // Classes, subjects and students per course come from here.
-      context.read<TeachingProvider>().ensureAllPeriodsLoaded();
-    });
+  void ensureData() {
+    context.read<CoursesProvider>().ensure();
+    context.read<AcademicLevelsProvider>().ensure();
+    // Classes, subjects and students per course come from here.
+    context.read<TeachingProvider>().ensureAllPeriodsLoaded();
   }
 
-  void _onFiltersChanged(CourseFilters filters) {
-    setState(() => _filters = filters);
-    context.read<CoursesProvider>().applyFilters(
-      gradeId: filters.gradeId,
-      academicYear: filters.academicYear,
-    );
-  }
+  void _onFiltersChanged(CourseFilters filters) => setState(() {
+    _filters = filters;
+    _page = 0;
+  });
+
+  void _onPageChanged(int page) => setState(() => _page = page);
 
   @override
   Widget build(BuildContext context) {
@@ -50,10 +48,14 @@ class _CoursesPageState extends State<CoursesPage> {
       mobile: (_) => CoursesMobileView(
         filters: _filters,
         onFiltersChanged: _onFiltersChanged,
+        page: _page,
+        onPageChanged: _onPageChanged,
       ),
       desktop: (_) => CoursesDesktopView(
         filters: _filters,
         onFiltersChanged: _onFiltersChanged,
+        page: _page,
+        onPageChanged: _onPageChanged,
       ),
     );
   }

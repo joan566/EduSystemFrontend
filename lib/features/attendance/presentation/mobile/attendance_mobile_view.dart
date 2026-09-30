@@ -74,8 +74,10 @@ class AttendanceMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AttendanceProvider>().day;
     final period = this.period;
+    final state = period == null
+        ? const DetailViewState<AttendanceDayEntity>()
+        : context.watch<AttendanceProvider>().day(period.id, date);
     final room = _room(context);
     final loaded = state.status == DetailStatus.success && period != null;
 

@@ -32,7 +32,7 @@ class TodaySection extends StatelessWidget {
       subtitle: Formatters.longDayMonth(today?.date ?? DateTime.now()),
       child: switch (state.status) {
         DetailStatus.error => DashboardErrorNotice(
-          onRetry: () => context.read<ScheduleProvider>().loadToday(),
+          onRetry: () => context.read<ScheduleProvider>().refreshToday(),
         ),
         DetailStatus.success when today!.classes.isNotEmpty => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

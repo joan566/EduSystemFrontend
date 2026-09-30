@@ -45,7 +45,6 @@ class ExamResultsDesktopTab extends StatefulWidget {
 }
 
 class _ExamResultsDesktopTabState extends State<ExamResultsDesktopTab> {
-  static const _pageSize = 100;
   static const _railWidth = 320.0;
   static const _railBesideMinWidth = 1100.0;
 
@@ -63,16 +62,16 @@ class _ExamResultsDesktopTabState extends State<ExamResultsDesktopTab> {
   @override
   void didUpdateWidget(covariant ExamResultsDesktopTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.period?.groupId != widget.period?.groupId) _loadRoster();
+    if (oldWidget.period?.groupId != widget.period?.groupId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadRoster());
+    }
   }
 
   void _loadRoster() {
     final period = widget.period;
     if (!mounted || period == null) return;
     final students = context.read<StudentsProvider>();
-    if (students.groupRoster(period.groupId).status == ViewStatus.initial) {
-      students.loadGroupRoster(period.groupId);
-    }
+    students.ensureGroupRoster(period.groupId);
   }
 
   void _sortBy(_SortColumn column) => setState(() {
@@ -116,12 +115,11 @@ class _ExamResultsDesktopTabState extends State<ExamResultsDesktopTab> {
   @override
   Widget build(BuildContext context) {
     final exam = widget.exam;
-    final state = context.watch<SubmissionsProvider>().state;
+    final state = context.watch<SubmissionsProvider>().results(exam.id);
     final summary = ExamResultsSummary.from(state.items, exam);
 
     final table = ExamResultsStateView(
       exam: exam,
-      pageSize: _pageSize,
       builder: (context, state) => _ResultsTable(
         exam: exam,
         rows: _visible(state.items),

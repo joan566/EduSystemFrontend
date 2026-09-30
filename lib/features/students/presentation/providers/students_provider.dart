@@ -1,137 +1,149 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/cache/keyed_cache.dart';
+import '../../../../core/cache/session_notifier.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/events/domain_events.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
 import '../../data/repositories/student_repository.dart';
 import '../../domain/entities/student_entity.dart';
 
-class StudentsProvider extends ChangeNotifier {
-  StudentsProvider(this._repository);
+/// A page of the student listing as the API serves it.
+typedef StudentQuery = ({int page, int size, int? groupId, String? search});
+
+/// Students. The teacher's whole student list is never loaded: the listing
+/// stays paginated and searched by the server, and each exact query
+/// (page, size, course, search) is cached, so repeating it (going back,
+/// switching screens) costs nothing. Each group's roster and each
+/// student's detail are cached by id.
+class StudentsProvider extends SessionNotifier {
+  StudentsProvider(this._repository, DomainEvents events) : super(events);
 
   final StudentRepository _repository;
-  int? _groupFilter;
-  String? _search;
 
-  ListViewState<StudentEntity> _state = const ListViewState();
-  ListViewState<StudentEntity> get state => _state;
+  /// Bounded: pages and searches visited this session.
+  late final _queries = keyedCache<StudentQuery, ApiPage<StudentEntity>>(
+    maxEntries: 40,
+  );
 
-  DetailViewState<StudentDetailEntity> _detailState = const DetailViewState();
-  DetailViewState<StudentDetailEntity> get detailState => _detailState;
+  late final _rosters = keyedCache<int, List<StudentEntity>>();
 
-  Future<void> load({
+  late final _details = keyedCache<int, StudentDetailEntity>(maxEntries: 40);
+
+  static StudentQuery queryOf({
     int page = 0,
+    int size = 20,
     int? groupId,
     String? search,
-    bool resetFilters = false,
-  }) async {
-    if (resetFilters) {
-      _groupFilter = null;
-    } else {
-      _groupFilter = groupId ?? _groupFilter;
-    }
-    _search = search ?? _search;
-    _state = ListViewState.loading();
-    notifyListeners();
-    try {
-      final result = await _repository.getPage(
-        page: page,
-        groupId: _groupFilter,
-        search: _search,
-      );
-      _state = ListViewState.fromPage(
-        content: result.content,
-        page: result.page,
-        totalPages: result.totalPages,
-        totalElements: result.totalElements,
-      );
-    } on AppException catch (e) {
-      _state = ListViewState.error(e);
-    }
-    notifyListeners();
+  }) {
+    final text = search?.trim();
+    return (
+      page: page,
+      size: size,
+      groupId: groupId,
+      search: text == null || text.isEmpty ? null : text,
+    );
   }
 
-  int? get groupFilter => _groupFilter;
-  String? get searchFilter => _search;
+  // --- Listing -------------------------------------------------------------
 
-  /// Sets the listing's course and search exactly (null clears each) and
-  /// loads the first page; the screen's own filters are the source of truth.
-  Future<void> applyFilters({int? groupId, String? search}) {
-    _groupFilter = groupId;
-    _search = search == null || search.isEmpty ? null : search;
-    return load();
-  }
+  ListViewState<StudentEntity> query(StudentQuery query) =>
+      _queries.view(query);
 
-  final Map<int, ListViewState<StudentEntity>> _groupRosters = {};
+  Future<void> ensureQuery(StudentQuery query) =>
+      _queries.ensure(query, () => _fetch(query));
 
-  /// Students of one group (e.g. a class's roster). Kept apart from
-  /// [state] so it never changes the Students screen's own filters.
+  Future<void> refreshQuery(StudentQuery query) =>
+      _queries.refresh(query, () => _fetch(query));
+
+  Future<ApiPage<StudentEntity>> _fetch(StudentQuery q) => _repository.getPage(
+    page: q.page,
+    size: q.size,
+    groupId: q.groupId,
+    search: q.search,
+  );
+
+  /// The teacher's number of students, from a one-row page (never the
+  /// whole list).
+  static final StudentQuery _count = queryOf(size: 1);
+
+  int? get totalStudents => _queries.dataOf(_count)?.totalElements;
+  ListViewState<StudentEntity> get totalState => _queries.view(_count);
+  Future<void> ensureTotal() => ensureQuery(_count);
+  Future<void> refreshTotal() => refreshQuery(_count);
+
+  // --- Group rosters -------------------------------------------------------
+
+  /// Students of one group (a class's roster), all of them.
   ListViewState<StudentEntity> groupRoster(int groupId) =>
-      _groupRosters[groupId] ?? const ListViewState();
+      _rosters.view(groupId);
 
-  Future<void> loadGroupRoster(int groupId) async {
-    _groupRosters[groupId] = ListViewState.loading();
-    notifyListeners();
-    try {
-      // A whole class at once (the API's max page), so rosters and
-      // per-student lists aren't cut at the default 20.
-      final result = await _repository.getPage(
-        page: 0,
-        size: 100,
-        groupId: groupId,
-      );
-      _groupRosters[groupId] = ListViewState.fromPage(
-        content: result.content,
-        page: result.page,
-        totalPages: result.totalPages,
-        totalElements: result.totalElements,
-      );
-    } on AppException catch (e) {
-      _groupRosters[groupId] = ListViewState.error(e);
-    }
-    notifyListeners();
-  }
+  Future<void> ensureGroupRoster(int groupId) =>
+      _rosters.ensure(groupId, () => _repository.getGroup(groupId));
 
-  Future<void> search(String query) =>
-      load(page: 0, search: query.isEmpty ? null : query);
+  Future<void> refreshGroupRoster(int groupId) =>
+      _rosters.refresh(groupId, () => _repository.getGroup(groupId));
 
-  Future<void> loadDetail(int id) async {
-    _detailState = DetailViewState.loading();
-    notifyListeners();
-    try {
-      final detail = await _repository.getById(id);
-      _detailState = DetailViewState.success(detail);
-    } on AppException catch (e) {
-      _detailState = DetailViewState.error(e);
-    }
-    notifyListeners();
-  }
+  // --- Detail --------------------------------------------------------------
 
+  DetailViewState<StudentDetailEntity> detail(int id) =>
+      _details.detailView(id);
+
+  Future<void> ensureDetail(int id) =>
+      _details.ensure(id, () => _repository.getById(id));
+
+  Future<void> refreshDetail(int id) =>
+      _details.refresh(id, () => _repository.getById(id));
+
+  // --- Mutations -----------------------------------------------------------
+
+  /// Withdraws the student from a group. The API answers without the new
+  /// state, so only this student's detail is re-read; listings and
+  /// rosters go stale.
   Future<AppException?> withdraw(int studentId, int groupId) async {
     try {
       await _repository.withdraw(studentId, groupId);
-      // Refresh whichever views show this student: its detail and/or the
-      // listing (whose status column changes).
-      await Future.wait([
-        if (_detailState.data?.student.id == studentId) loadDetail(studentId),
-        if (_state.items.any((s) => s.id == studentId)) load(page: _state.page),
-      ]);
-      return null;
     } on AppException catch (e) {
       return e;
     }
+    publish(StudentsChanged(studentId: studentId));
+    if (_details.peek(studentId) != null) await refreshDetail(studentId);
+    return null;
   }
 
-  /// Deletes the student and all of their data (irreversible), then
-  /// reloads the listing. Unlike [withdraw], nothing is kept.
+  /// Deletes the student and all of their data (irreversible).
   Future<AppException?> delete(int studentId) async {
     try {
       await _repository.delete(studentId);
-      final lastOnPage = _state.items.length == 1 && _state.page > 0;
-      await load(page: lastOnPage ? _state.page - 1 : _state.page);
-      return null;
     } on AppException catch (e) {
       return e;
+    }
+    publish(StudentsChanged(studentId: studentId));
+    _details.remove(studentId);
+    return null;
+  }
+
+  @override
+  void onDomainEvent(DomainEvent event) {
+    switch (event) {
+      case StudentsChanged(:final studentId):
+        // Pages, counts and rosters may all include (or have lost) them.
+        _queries.invalidateAll();
+        _rosters.invalidateAll();
+        _details.invalidateWhere(
+          (id, _) => studentId == null || id == studentId,
+        );
+      case ClassDataChanged(:final aspects)
+          when aspects.contains(ClassAspect.roster):
+        _rosters.invalidateAll();
+        _queries.invalidateAll();
+      case CatalogChanged(resource: CatalogResource.courses)
+          when event.renamesOrRemoves:
+        // Listings and details show each student's course.
+        _queries.invalidateAll();
+        _details.invalidateAll();
+        _rosters.invalidateAll();
+      default:
+        break;
     }
   }
 }

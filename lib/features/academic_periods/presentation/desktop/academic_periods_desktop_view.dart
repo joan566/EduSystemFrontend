@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/cached_value.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/desktop/desktop_catalog_header.dart';
@@ -30,10 +31,16 @@ class AcademicPeriodsDesktopView extends StatelessWidget {
     super.key,
     required this.filter,
     required this.onFilterChanged,
+    required this.page,
+    required this.onPageChanged,
   });
 
   final PeriodStatusFilter filter;
   final ValueChanged<PeriodStatusFilter> onFilterChanged;
+
+  /// Page of the filtered periods (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   static const _sideWidth = 320.0;
   static const _sideBesideMinWidth = 1080.0;
@@ -57,12 +64,18 @@ class AcademicPeriodsDesktopView extends StatelessWidget {
       context.watch<TeachingProvider>().allPeriods,
     );
     final textTheme = Theme.of(context).textTheme;
+    final visible = localPage(
+      sortPeriods(
+        state.items.where((p) => matchesPeriodFilter(p, filter)).toList(),
+      ),
+      page: page,
+    );
 
     final Widget main = switch (state.status) {
       ViewStatus.initial || ViewStatus.loading => const AppLoading(),
       ViewStatus.error => AppErrorState(
         exception: state.error!,
-        onRetry: () => context.read<AcademicPeriodsProvider>().load(),
+        onRetry: () => context.read<AcademicPeriodsProvider>().refresh(),
       ),
       ViewStatus.empty => AppEmptyState(
         title: 'No hay periodos académicos',
@@ -92,9 +105,7 @@ class AcademicPeriodsDesktopView extends StatelessWidget {
           const SizedBox(height: 14),
           DesktopListTable<AcademicPeriodEntity>(
             shrinkWrap: true,
-            items: sortPeriods(
-              state.items.where((p) => matchesPeriodFilter(p, filter)).toList(),
-            ),
+            items: visible.items,
             onRowTap: (p) => _openForm(context, initial: p),
             actions: [
               DesktopRowAction(
@@ -174,14 +185,12 @@ class AcademicPeriodsDesktopView extends StatelessWidget {
                     Text('${classes[p.id] ?? 0}', style: textTheme.bodyMedium),
               ),
             ],
-            footer: state.totalPages > 1
+            footer: visible.totalPages > 1
                 ? AppPagination(
-                    page: state.page,
-                    totalPages: state.totalPages,
-                    totalElements: state.totalElements,
-                    onPageChanged: (page) => context
-                        .read<AcademicPeriodsProvider>()
-                        .load(page: page),
+                    page: visible.page,
+                    totalPages: visible.totalPages,
+                    totalElements: visible.totalElements,
+                    onPageChanged: onPageChanged,
                   )
                 : null,
           ),

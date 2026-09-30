@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
@@ -22,25 +23,34 @@ class GradesPage extends StatefulWidget {
   State<GradesPage> createState() => _GradesPageState();
 }
 
-class _GradesPageState extends State<GradesPage> {
+class _GradesPageState extends State<GradesPage>
+    with SyncedDataState<GradesPage> {
   // Live here so they survive a mobile <-> desktop switch.
   TeachingPeriodEntity? _period;
   int _tab = 0;
   GradesListFilters _filters = const GradesListFilters();
   int? _selectedStudentId;
 
+  /// The class's grades come from memory unless a grade, weight or
+  /// evaluation of it changed (e.g. inside a student's report).
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final teaching = context.read<TeachingProvider>();
-      await teaching.ensureAllPeriodsLoaded();
-      if (!mounted || _period != null || teaching.allPeriods.isEmpty) return;
-      final preferred = teaching.allPeriods
-          .where((p) => p.id == widget.initialTeachingPeriodId)
-          .firstOrNull;
-      _onPeriodChanged(preferred ?? teaching.allPeriods.first);
-    });
+  void ensureData() {
+    final period = _period;
+    if (period != null) {
+      context.read<GradingProvider>().ensurePeriodGrades(period.id);
+    } else {
+      _pickInitialClass();
+    }
+  }
+
+  Future<void> _pickInitialClass() async {
+    final teaching = context.read<TeachingProvider>();
+    await teaching.ensureAllPeriodsLoaded();
+    if (!mounted || _period != null || teaching.allPeriods.isEmpty) return;
+    final preferred = teaching.allPeriods
+        .where((p) => p.id == widget.initialTeachingPeriodId)
+        .firstOrNull;
+    _onPeriodChanged(preferred ?? teaching.allPeriods.first);
   }
 
   void _onPeriodChanged(TeachingPeriodEntity? period) {
@@ -49,7 +59,7 @@ class _GradesPageState extends State<GradesPage> {
       _period = period;
       _selectedStudentId = null;
     });
-    context.read<GradingProvider>().loadPeriodGrades(period.id);
+    context.read<GradingProvider>().ensurePeriodGrades(period.id);
   }
 
   @override

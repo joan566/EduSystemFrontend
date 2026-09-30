@@ -23,7 +23,19 @@ import '../shared/subject_usage.dart';
 /// Mobile "Materias": title with counts and add, search, then one card per
 /// subject with its icon, description and where you teach it.
 class SubjectsMobileView extends StatelessWidget {
-  const SubjectsMobileView({super.key});
+  const SubjectsMobileView({
+    super.key,
+    required this.search,
+    required this.onSearchChanged,
+    required this.page,
+    required this.onPageChanged,
+  });
+
+  /// The screen's search and page (owned by the page entry point).
+  final String search;
+  final ValueChanged<String> onSearchChanged;
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   Future<void> _openForm(BuildContext context, {SubjectEntity? initial}) async {
     final data = await showMobileForm<SubjectFormResult>(
@@ -36,8 +48,10 @@ class SubjectsMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<SubjectsProvider>();
-    final state = provider.state;
+    final state = context.watch<SubjectsProvider>().query(
+      search: search,
+      page: page,
+    );
     final usage = classesBySubject(
       context.watch<TeachingProvider>().allPeriods,
     );
@@ -58,9 +72,8 @@ class SubjectsMobileView extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
             child: AppSearchField(
               hint: 'Buscar materia...',
-              initialValue: provider.searchQuery,
-              onChanged: (value) =>
-                  context.read<SubjectsProvider>().search(value),
+              initialValue: search,
+              onChanged: onSearchChanged,
             ),
           ),
           Expanded(child: _body(context, state, usage)),
@@ -81,11 +94,11 @@ class SubjectsMobileView extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<SubjectsProvider>().load(),
+          onRetry: () => context.read<SubjectsProvider>().refresh(),
         );
       case ViewStatus.empty:
         return AppEmptyState(
-          title: context.read<SubjectsProvider>().searchQuery == null
+          title: search.trim().isEmpty
               ? 'No hay materias registradas'
               : 'Sin resultados',
           message:
@@ -137,8 +150,7 @@ class SubjectsMobileView extends StatelessWidget {
                 page: state.page,
                 totalPages: state.totalPages,
                 totalElements: state.totalElements,
-                onPageChanged: (page) =>
-                    context.read<SubjectsProvider>().load(page: page),
+                onPageChanged: (page) => onPageChanged(page),
               ),
           ],
         );

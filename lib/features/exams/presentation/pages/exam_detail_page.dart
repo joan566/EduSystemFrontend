@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../desktop/exam_detail_desktop_view.dart';
@@ -18,20 +19,18 @@ class ExamDetailPage extends StatefulWidget {
   State<ExamDetailPage> createState() => _ExamDetailPageState();
 }
 
-class _ExamDetailPageState extends State<ExamDetailPage> {
+class _ExamDetailPageState extends State<ExamDetailPage>
+    with SyncedDataState<ExamDetailPage> {
   // Created once the exam has loaded; lives here so question drafts survive
   // a mobile <-> desktop switch.
   QuestionsDraftController? _questions;
   late int _tab = widget.initialTab.clamp(0, 2);
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ExamsProvider>().loadDetail(widget.examId);
-      // The class name and roster size shown in the header come from here.
-      context.read<TeachingProvider>().ensureAllPeriodsLoaded();
-    });
+  void ensureData() {
+    context.read<ExamsProvider>().ensureDetail(widget.examId);
+    // The class name and roster size shown in the header come from here.
+    context.read<TeachingProvider>().ensureAllPeriodsLoaded();
   }
 
   @override
@@ -42,8 +41,8 @@ class _ExamDetailPageState extends State<ExamDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final exam = context.watch<ExamsProvider>().detailState.data;
-    if (_questions == null && exam != null && exam.id == widget.examId) {
+    final exam = context.watch<ExamsProvider>().detail(widget.examId).data;
+    if (_questions == null && exam != null) {
       _questions = QuestionsDraftController(exam);
     }
     final questions = _questions;

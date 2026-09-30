@@ -1,6 +1,7 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/cache/keyed_cache.dart';
+import '../../../../core/cache/session_notifier.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/events/domain_events.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
 import '../../data/repositories/exam_repository.dart';
@@ -8,19 +9,73 @@ import '../../domain/entities/submission_entity.dart';
 
 enum UploadState { idle, uploading, done, error }
 
-/// Owns submission listing, review/detail, correction and upload for a
-/// single exam (§46-51). Scoped per exam like [ExamsProvider]'s detail
-/// state, since a submission always belongs to exactly one exam.
-class SubmissionsProvider extends ChangeNotifier {
-  SubmissionsProvider(this._repository);
+/// Submissions (§46-51): each exam's results (`examId → its submissions`),
+/// each submission's review (`(examId, submissionId) → detail`), its
+/// scanned image (a few, recently viewed) and the single-sheet upload.
+///
+/// Corrections answer with the updated submission, which is written into
+/// the review and into its exam's results; uploads and batch grading make
+/// the exam's results stale ([ExamResultsChanged]).
+class SubmissionsProvider extends SessionNotifier {
+  SubmissionsProvider(this._repository, DomainEvents events) : super(events);
 
   final ExamRepository _repository;
 
-  ListViewState<SubmissionSummaryEntity> _state = const ListViewState();
-  ListViewState<SubmissionSummaryEntity> get state => _state;
+  late final _results = keyedCache<int, List<SubmissionSummaryEntity>>(
+    maxEntries: 20,
+  );
 
-  DetailViewState<SubmissionEntity> _detailState = const DetailViewState();
-  DetailViewState<SubmissionEntity> get detailState => _detailState;
+  late final _details = keyedCache<(int, int), SubmissionEntity>(
+    maxEntries: 30,
+  );
+
+  /// Scanned sheets are reviewed back and forth; the last few are kept so
+  /// reopening one doesn't download it again. Small on purpose.
+  late final _images = keyedCache<(int, int), List<int>>(maxEntries: 6);
+
+  // --- Results per exam ----------------------------------------------------
+
+  ListViewState<SubmissionSummaryEntity> results(int examId) =>
+      _results.view(examId);
+
+  Future<void> ensureResults(int examId) =>
+      _results.ensure(examId, () => _repository.getAllSubmissions(examId));
+
+  Future<void> refreshResults(int examId) =>
+      _results.refresh(examId, () => _repository.getAllSubmissions(examId));
+
+  // --- One submission ------------------------------------------------------
+
+  DetailViewState<SubmissionEntity> detail(int examId, int submissionId) =>
+      _details.detailView((examId, submissionId));
+
+  Future<void> ensureDetail(int examId, int submissionId) => _details.ensure((
+    examId,
+    submissionId,
+  ), () => _repository.getSubmission(examId, submissionId));
+
+  Future<void> refreshDetail(int examId, int submissionId) => _details.refresh((
+    examId,
+    submissionId,
+  ), () => _repository.getSubmission(examId, submissionId));
+
+  /// The scanned sheet. Throws [AppException].
+  Future<List<int>> getImage(int examId, int submissionId) async {
+    final key = (examId, submissionId);
+    await _images.ensure(
+      key,
+      () => _repository.getSubmissionImage(examId, submissionId),
+    );
+    final bytes = _images.dataOf(key);
+    if (bytes != null) return bytes;
+    throw _images.peek(key)?.error ??
+        const AppException(
+          code: AppErrorCode.unknown,
+          message: 'An unexpected error occurred.',
+        );
+  }
+
+  // --- Single-sheet upload (scanning) --------------------------------------
 
   UploadState _uploadState = UploadState.idle;
   UploadState get uploadState => _uploadState;
@@ -29,72 +84,13 @@ class SubmissionsProvider extends ChangeNotifier {
   SubmissionEntity? _lastUploaded;
   SubmissionEntity? get lastUploaded => _lastUploaded;
 
-  // Remembered so a reload without [size] (e.g. back from batch grading)
-  // keeps the page size the current view asked for.
-  int _pageSize = 20;
-
-  /// Exam the listing [state] belongs to. Views that switch exams quickly
-  /// (the desktop list preview) check it before showing the numbers.
-  int? _examId;
-  int? get examId => _examId;
-
-  // Only the latest request may write [state]; an older response arriving
-  // late would otherwise show another exam's sheets.
-  int _request = 0;
-
-  Future<void> load(
-    int examId, {
-    int page = 0,
-    int? size,
-    String? status,
-  }) async {
-    _pageSize = size ?? _pageSize;
-    _examId = examId;
-    final request = ++_request;
-    _state = ListViewState.loading();
-    notifyListeners();
-    try {
-      final result = await _repository.getSubmissions(
-        examId,
-        page: page,
-        size: _pageSize,
-        status: status,
-      );
-      if (request != _request) return;
-      _state = ListViewState.fromPage(
-        content: result.content,
-        page: result.page,
-        totalPages: result.totalPages,
-        totalElements: result.totalElements,
-      );
-    } on AppException catch (e) {
-      if (request != _request) return;
-      _state = ListViewState.error(e);
-    }
-    notifyListeners();
-  }
-
-  Future<List<int>> getImage(int examId, int submissionId) =>
-      _repository.getSubmissionImage(examId, submissionId);
-
-  Future<void> loadDetail(int examId, int submissionId) async {
-    _detailState = DetailViewState.loading();
-    notifyListeners();
-    try {
-      final submission = await _repository.getSubmission(examId, submissionId);
-      _detailState = DetailViewState.success(submission);
-    } on AppException catch (e) {
-      _detailState = DetailViewState.error(e);
-    }
-    notifyListeners();
-  }
-
   Future<void> upload(
     int examId, {
     required List<int> imageBytes,
     required String fileName,
     int? studentId,
     bool replace = false,
+    int? teachingPeriodId,
   }) async {
     _uploadState = UploadState.uploading;
     _uploadError = null;
@@ -107,6 +103,8 @@ class SubmissionsProvider extends ChangeNotifier {
         studentId: studentId,
         replace: replace,
       );
+      _announce(examId, teachingPeriodId);
+      _details.set((examId, submission.id), submission);
       _lastUploaded = submission;
       _uploadState = UploadState.done;
     } on AppException catch (e) {
@@ -123,47 +121,108 @@ class SubmissionsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Corrections ---------------------------------------------------------
+
   Future<AppException?> correctAnswer(
     int examId,
     int submissionId,
     int questionNumber, {
     String? selectedOption,
     String? reason,
-  }) async {
-    try {
-      final submission = await _repository.correctAnswer(
-        examId,
-        submissionId,
-        questionNumber,
-        selectedOption: selectedOption,
-        reason: reason,
-      );
-      _detailState = DetailViewState.success(submission);
-      notifyListeners();
-      return null;
-    } on AppException catch (e) {
-      return e;
-    }
-  }
+    int? teachingPeriodId,
+  }) => _correct(
+    examId,
+    teachingPeriodId,
+    () => _repository.correctAnswer(
+      examId,
+      submissionId,
+      questionNumber,
+      selectedOption: selectedOption,
+      reason: reason,
+    ),
+  );
 
   Future<AppException?> setFinalGrade(
     int examId,
     int submissionId, {
     required double finalGrade,
     String? reason,
-  }) async {
+    int? teachingPeriodId,
+  }) => _correct(
+    examId,
+    teachingPeriodId,
+    () => _repository.setFinalGrade(
+      examId,
+      submissionId,
+      finalGrade: finalGrade,
+      reason: reason,
+    ),
+  );
+
+  /// Writes the corrected submission into its review and its exam's
+  /// results row; the class's grades go stale.
+  Future<AppException?> _correct(
+    int examId,
+    int? teachingPeriodId,
+    Future<SubmissionEntity> Function() request,
+  ) async {
     try {
-      final submission = await _repository.setFinalGrade(
+      final submission = await request();
+      _announce(examId, teachingPeriodId, newSheets: false);
+      _details.set((examId, submission.id), submission);
+      _results.update(
         examId,
-        submissionId,
-        finalGrade: finalGrade,
-        reason: reason,
+        (rows) => [
+          for (final row in rows)
+            row.id == submission.id ? _rowOf(submission) : row,
+        ],
       );
-      _detailState = DetailViewState.success(submission);
-      notifyListeners();
       return null;
     } on AppException catch (e) {
       return e;
+    }
+  }
+
+  static SubmissionSummaryEntity _rowOf(SubmissionEntity s) =>
+      SubmissionSummaryEntity(
+        id: s.id,
+        studentId: s.student.id,
+        studentCode: s.student.studentCode,
+        studentName: s.student.name,
+        status: s.status,
+        score: s.score,
+        finalGrade: s.finalGrade,
+        statusDetail: s.statusDetail,
+        submittedAt: s.submittedAt,
+        processedAt: s.processedAt,
+      );
+
+  void _announce(int examId, int? teachingPeriodId, {bool newSheets = true}) {
+    publish(
+      ExamResultsChanged(
+        examId,
+        teachingPeriodId: teachingPeriodId,
+        newSheets: newSheets,
+      ),
+    );
+    if (teachingPeriodId != null) {
+      publish(ClassDataChanged(teachingPeriodId, const {ClassAspect.grades}));
+    }
+  }
+
+  @override
+  void onDomainEvent(DomainEvent event) {
+    switch (event) {
+      case ExamResultsChanged(:final examId, newSheets: true):
+        // A sheet was added or regraded: rows, reviews and images may be
+        // new.
+        _results.invalidate(examId);
+        _details.invalidateWhere((key, _) => key.$1 == examId);
+        _images.removeWhere((key, _) => key.$1 == examId);
+      case StudentsChanged():
+        _results.invalidateAll();
+      default:
+        break;
     }
   }
 }

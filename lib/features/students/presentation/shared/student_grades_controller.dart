@@ -30,72 +30,89 @@ class StudentClassGrade {
       error?.code == 'GRADING_CONFIGURATION_REQUIRED';
 }
 
-/// Loads a student's grades across the teacher's classes of every course
-/// they've been enrolled in: one period-grades request per class, read
-/// for this student. Owned by the detail page so the result survives a
-/// layout switch; loaded the first time the "Notas" tab is shown.
+/// A student's grades across the teacher's classes of every course they've
+/// been enrolled in, read from each class's period grades.
+///
+/// A class's period grades are one response for all its students, cached
+/// per class by [GradingProvider]: looking at another student of the same
+/// classes (the detail, the desktop preview walking the table) reuses them
+/// instead of asking once per student and class. Owned by the detail page
+/// so it survives a layout switch; loaded the first time "Notas" is shown.
 class StudentGradesController extends ChangeNotifier {
-  StudentGradesController({required this.teaching, required this.grading});
+  StudentGradesController({required this.teaching, required this.grading}) {
+    teaching.addListener(_notify);
+    grading.addListener(_notify);
+  }
 
   final TeachingProvider teaching;
   final GradingProvider grading;
 
-  bool _loading = false;
-  bool get loading => _loading;
-
-  List<StudentClassGrade>? _grades;
-
-  /// Null until loaded; newest classes first.
-  List<StudentClassGrade>? get grades => _grades;
-
-  int? _loadedFor;
+  StudentDetailEntity? _detail;
+  bool _classesKnown = false;
   bool _disposed = false;
 
-  Future<void> ensureLoaded(StudentDetailEntity detail) async {
-    if (_loadedFor == detail.student.id || _loading) return;
-    await reload(detail);
+  /// The teacher's classes in the student's courses, newest first.
+  List<TeachingPeriodEntity> _classes() {
+    final detail = _detail;
+    if (detail == null) return const [];
+    final groups = {for (final e in detail.enrollments) e.groupId};
+    return teaching.allPeriods.where((p) => groups.contains(p.groupId)).toList()
+      ..sort((a, b) {
+        final byStart = b.startDate.compareTo(a.startDate);
+        return byStart != 0 ? byStart : a.subjectName.compareTo(b.subjectName);
+      });
   }
 
-  Future<void> reload(StudentDetailEntity detail) async {
-    _loading = true;
+  /// Null until every class's grades are known; newest classes first.
+  List<StudentClassGrade>? get grades {
+    final detail = _detail;
+    if (detail == null || !_classesKnown) return null;
+    final result = <StudentClassGrade>[];
+    for (final period in _classes()) {
+      final state = grading.periodGrades(period.id);
+      final data = state.data;
+      if (data != null) {
+        result.add(
+          StudentClassGrade(
+            period: period,
+            scale: data.scale,
+            grade: data.students
+                .where((s) => s.studentId == detail.student.id)
+                .firstOrNull,
+          ),
+        );
+      } else if (state.error != null) {
+        result.add(StudentClassGrade(period: period, error: state.error));
+      } else {
+        return null; // still loading
+      }
+    }
+    return result;
+  }
+
+  bool get loading => _detail != null && grades == null;
+
+  /// Reads what isn't cached yet (at most one request per class, shared by
+  /// every student of it).
+  Future<void> ensureLoaded(StudentDetailEntity detail) => _load(detail);
+
+  /// Re-reads the period grades of the student's classes.
+  Future<void> reload(StudentDetailEntity detail) =>
+      _load(detail, refresh: true);
+
+  Future<void> _load(StudentDetailEntity detail, {bool refresh = false}) async {
+    _detail = detail;
     _notify();
     await teaching.ensureAllPeriodsLoaded();
-    final groups = {for (final e in detail.enrollments) e.groupId};
-    final classes =
-        teaching.allPeriods.where((p) => groups.contains(p.groupId)).toList()
-          ..sort((a, b) {
-            final byStart = b.startDate.compareTo(a.startDate);
-            return byStart != 0
-                ? byStart
-                : a.subjectName.compareTo(b.subjectName);
-          });
-
-    final results = await Future.wait([
-      for (final period in classes) _gradeIn(period, detail.student.id),
-    ]);
     if (_disposed) return;
-    _grades = results;
-    _loadedFor = detail.student.id;
-    _loading = false;
+    _classesKnown = true;
+    await Future.wait([
+      for (final period in _classes())
+        refresh
+            ? grading.refreshPeriodGrades(period.id)
+            : grading.ensurePeriodGrades(period.id),
+    ]);
     _notify();
-  }
-
-  Future<StudentClassGrade> _gradeIn(
-    TeachingPeriodEntity period,
-    int studentId,
-  ) async {
-    try {
-      final grades = await grading.fetchPeriodGrades(period.id);
-      return StudentClassGrade(
-        period: period,
-        scale: grades.scale,
-        grade: grades.students
-            .where((s) => s.studentId == studentId)
-            .firstOrNull,
-      );
-    } on AppException catch (e) {
-      return StudentClassGrade(period: period, error: e);
-    }
   }
 
   void _notify() {
@@ -105,6 +122,8 @@ class StudentGradesController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    teaching.removeListener(_notify);
+    grading.removeListener(_notify);
     super.dispose();
   }
 }

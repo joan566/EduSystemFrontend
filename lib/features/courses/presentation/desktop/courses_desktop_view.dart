@@ -33,10 +33,16 @@ class CoursesDesktopView extends StatelessWidget {
     super.key,
     required this.filters,
     required this.onFiltersChanged,
+    required this.page,
+    required this.onPageChanged,
   });
 
   final CourseFilters filters;
   final ValueChanged<CourseFilters> onFiltersChanged;
+
+  /// Page of the filtered courses (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   static const _sideWidth = 320.0;
   static const _sideBesideMinWidth = 1080.0;
@@ -54,8 +60,13 @@ class CoursesDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<CoursesProvider>().state;
-    final levels = context.watch<AcademicLevelsProvider>().state.items;
+    final courses = context.watch<CoursesProvider>();
+    final state = courses.query(
+      gradeId: filters.gradeId,
+      academicYear: filters.academicYear,
+      page: page,
+    );
+    final levels = context.watch<AcademicLevelsProvider>().all;
     final usage = classesByCourse(context.watch<TeachingProvider>().allPeriods);
     final filtered = filters.gradeId != null || filters.academicYear != null;
 
@@ -141,7 +152,13 @@ class CoursesDesktopView extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _YearsCard(courses: state.items, usage: usage),
+                              _YearsCard(
+                                courses: courses.matching(
+                                  gradeId: filters.gradeId,
+                                  academicYear: filters.academicYear,
+                                ),
+                                usage: usage,
+                              ),
                               const SizedBox(height: 16),
                               const DesktopCatalogRelations(
                                 current: CatalogKind.courses,
@@ -174,7 +191,7 @@ class CoursesDesktopView extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<CoursesProvider>().load(),
+          onRetry: () => context.read<CoursesProvider>().refresh(),
         );
       case ViewStatus.empty:
         return AppEmptyState(
@@ -289,8 +306,7 @@ class CoursesDesktopView extends StatelessWidget {
                   page: state.page,
                   totalPages: state.totalPages,
                   totalElements: state.totalElements,
-                  onPageChanged: (page) =>
-                      context.read<CoursesProvider>().load(page: page),
+                  onPageChanged: onPageChanged,
                 )
               : null,
         );

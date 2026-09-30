@@ -101,21 +101,21 @@ class _StudentGradesMobileViewState extends State<StudentGradesMobileView>
       case 1:
         context.push(RoutePaths.studentDetail(report.student.id));
       case 2:
-        await context.push(
+        // Saving weights there makes this report stale; it is re-read on
+        // return only then.
+        context.push(
           RoutePaths.gradingSettingsForClass(report.teachingPeriodId),
         );
-        if (mounted) widget.onRefresh();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<GradebookProvider>().report;
-    final report =
-        state.data?.student.id == widget.studentId &&
-            state.data?.teachingPeriodId == widget.teachingPeriodId
-        ? state.data
-        : null;
+    final state = context.watch<GradebookProvider>().report(
+      widget.teachingPeriodId,
+      widget.studentId,
+    );
+    final report = state.data;
 
     return Scaffold(
       body: switch (state.status) {

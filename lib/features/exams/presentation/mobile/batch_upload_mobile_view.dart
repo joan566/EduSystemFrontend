@@ -46,9 +46,9 @@ class BatchUploadMobileView extends StatelessWidget {
           Text('Lotes anteriores', style: context.textStyles.titleMedium),
           const SizedBox(height: 12),
           BatchHistoryList(
-            state: provider.history,
+            state: provider.history(controller.examId),
             onOpen: (id) => controller.openBatch(context, id),
-            onRetry: () => controller.loadHistory(context),
+            onRetry: () => controller.refreshHistory(context),
           ),
         ],
       ),

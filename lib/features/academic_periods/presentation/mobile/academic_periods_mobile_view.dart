@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/cached_value.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/mobile/mobile_catalog_card.dart';
@@ -27,10 +28,16 @@ class AcademicPeriodsMobileView extends StatelessWidget {
     super.key,
     required this.filter,
     required this.onFilterChanged,
+    required this.page,
+    required this.onPageChanged,
   });
 
   final PeriodStatusFilter filter;
   final ValueChanged<PeriodStatusFilter> onFilterChanged;
+
+  /// Page of the filtered periods (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   Future<void> _openForm(
     BuildContext context, {
@@ -78,7 +85,8 @@ class AcademicPeriodsMobileView extends StatelessWidget {
               ViewStatus.initial || ViewStatus.loading => const AppLoading(),
               ViewStatus.error => AppErrorState(
                 exception: state.error!,
-                onRetry: () => context.read<AcademicPeriodsProvider>().load(),
+                onRetry: () =>
+                    context.read<AcademicPeriodsProvider>().refresh(),
               ),
               ViewStatus.empty => AppEmptyState(
                 title: 'No hay periodos académicos',
@@ -89,11 +97,15 @@ class AcademicPeriodsMobileView extends StatelessWidget {
                 onAction: () => _openForm(context),
               ),
               ViewStatus.success => () {
-                final periods = sortPeriods(
-                  state.items
-                      .where((p) => matchesPeriodFilter(p, filter))
-                      .toList(),
+                final visible = localPage(
+                  sortPeriods(
+                    state.items
+                        .where((p) => matchesPeriodFilter(p, filter))
+                        .toList(),
+                  ),
+                  page: page,
                 );
+                final periods = visible.items;
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                   children: [
@@ -114,14 +126,12 @@ class AcademicPeriodsMobileView extends StatelessWidget {
                               AcademicPeriodActions.delete(context, p),
                         ),
                       ),
-                    if (state.totalPages > 1)
+                    if (visible.totalPages > 1)
                       AppPagination(
-                        page: state.page,
-                        totalPages: state.totalPages,
-                        totalElements: state.totalElements,
-                        onPageChanged: (page) => context
-                            .read<AcademicPeriodsProvider>()
-                            .load(page: page),
+                        page: visible.page,
+                        totalPages: visible.totalPages,
+                        totalElements: visible.totalElements,
+                        onPageChanged: onPageChanged,
                       ),
                   ],
                 );

@@ -63,7 +63,10 @@ class SubmissionDetailDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<SubmissionsProvider>().detailState;
+    final state = context.watch<SubmissionsProvider>().detail(
+      examId,
+      submissionId,
+    );
     final name = state.data?.student.name ?? 'Resultado';
 
     return Scaffold(
@@ -92,7 +95,7 @@ class SubmissionDetailDesktopView extends StatelessWidget {
       case DetailStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<SubmissionsProvider>().loadDetail(
+          onRetry: () => context.read<SubmissionsProvider>().refreshDetail(
             examId,
             submissionId,
           ),

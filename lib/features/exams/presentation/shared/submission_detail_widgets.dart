@@ -13,6 +13,7 @@ import '../../../../core/widgets/shared/app_list_tile.dart';
 import '../../../../core/widgets/shared/app_status_chip.dart';
 import '../../../../core/widgets/shared/app_text_field.dart';
 import '../../domain/entities/submission_entity.dart';
+import '../providers/exams_provider.dart';
 import '../providers/submissions_provider.dart';
 
 /// Manual review mutations with user feedback, shared by both views: each
@@ -20,6 +21,11 @@ import '../providers/submissions_provider.dart';
 /// hands the result here.
 class SubmissionReviewActions {
   SubmissionReviewActions._();
+
+  /// The exam's class, from the exam in memory (the review is opened from
+  /// it): a correction changes that class's grades.
+  static int? _classOf(BuildContext context, int examId) =>
+      context.read<ExamsProvider>().detail(examId).data?.teachingPeriodId;
 
   static Future<void> correctAnswer(
     BuildContext context, {
@@ -35,6 +41,7 @@ class SubmissionReviewActions {
       answer.questionNumber,
       selectedOption: result,
       reason: 'Corrección manual del profesor',
+      teachingPeriodId: _classOf(context, examId),
     );
     if (!context.mounted) return;
     if (error != null) {
@@ -56,6 +63,7 @@ class SubmissionReviewActions {
       submissionId,
       finalGrade: result,
       reason: 'Ajuste manual del profesor',
+      teachingPeriodId: _classOf(context, examId),
     );
     if (!context.mounted) return;
     if (error != null) {

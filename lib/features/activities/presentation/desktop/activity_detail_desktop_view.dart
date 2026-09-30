@@ -22,8 +22,9 @@ class ActivityDetailDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ActivitiesProvider>().detailState;
-    final gradesState = context.watch<ActivitiesProvider>().gradesState;
+    final activities = context.watch<ActivitiesProvider>();
+    final state = activities.detail(controller.activityId);
+    final gradesState = activities.grades(controller.activityId);
     final activity = state.data;
     final canSave =
         activity != null && gradesState.status == ViewStatus.success;
@@ -79,7 +80,7 @@ class ActivityDetailDesktopView extends StatelessWidget {
       case DetailStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<ActivitiesProvider>().loadDetail(
+          onRetry: () => context.read<ActivitiesProvider>().refreshDetail(
             controller.activityId,
           ),
         );
@@ -99,7 +100,7 @@ class ActivityDetailDesktopView extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<ActivitiesProvider>().loadGrades(
+          onRetry: () => context.read<ActivitiesProvider>().refreshGrades(
             controller.activityId,
           ),
         );

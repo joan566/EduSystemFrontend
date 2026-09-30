@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../../../core/widgets/mobile/mobile_brand_bar.dart';
-import '../providers/dashboard_provider.dart';
+import '../shared/dashboard_data.dart';
 import '../shared/dashboard_state.dart';
 import '../shared/getting_started_card.dart';
 import 'widgets/classes_carousel_section.dart';
@@ -22,7 +21,7 @@ class DashboardMobileView extends StatelessWidget {
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: () => context.read<DashboardProvider>().loadAll(),
+        onRefresh: () => refreshDashboardData(context),
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
           children: [

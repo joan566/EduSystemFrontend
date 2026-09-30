@@ -9,6 +9,7 @@ import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../domain/entities/attendance_entity.dart';
 import '../providers/attendance_provider.dart';
 import '../shared/attendance_day_controller.dart';
 import 'widgets/attendance_roster_table.dart';
@@ -42,8 +43,10 @@ class AttendanceDesktopView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AttendanceProvider>();
-    final state = provider.day;
     final period = this.period;
+    final state = period == null
+        ? const DetailViewState<AttendanceDayEntity>()
+        : provider.day(period.id, date);
     final blocks = period == null
         ? const []
         : context.watch<ScheduleProvider>().classSchedules(period.id).items;
@@ -132,7 +135,7 @@ class AttendanceDesktopView extends StatelessWidget {
                                 AttendanceSummaryCard(controller: controller),
                                 const SizedBox(height: 16),
                                 RecentSessionsCard(
-                                  state: provider.state,
+                                  state: provider.sessions(period.id),
                                   date: date,
                                   onOpen: onDateChanged,
                                 ),

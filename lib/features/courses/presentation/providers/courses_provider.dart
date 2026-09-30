@@ -1,86 +1,110 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/cache/catalog.dart';
+import '../../../../core/cache/session_notifier.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/events/domain_events.dart';
 import '../../../../core/state/list_state.dart';
 import '../../data/repositories/course_repository.dart';
 import '../../domain/entities/course_entity.dart';
 
-class CoursesProvider extends ChangeNotifier {
-  CoursesProvider(this._repository);
+/// The teacher's courses (groups), a session catalog of every level and
+/// year. The Cursos screen's level/year filters are its own state and are
+/// applied in memory.
+class CoursesProvider extends SessionNotifier {
+  CoursesProvider(this._repository, DomainEvents events) : super(events);
 
   final CourseRepository _repository;
-  int? _gradeFilter;
-  int? _yearFilter;
 
-  ListViewState<CourseEntity> _state = const ListViewState();
-  ListViewState<CourseEntity> get state => _state;
-  int? get gradeFilter => _gradeFilter;
-  int? get yearFilter => _yearFilter;
+  late final Catalog<CourseEntity> _courses = Catalog(
+    cachedValue(),
+    idOf: (c) => c.id,
+    fetch: _repository.getAll,
+    compare: _apiOrder,
+  );
 
-  /// Sets the level and year filters exactly (null clears each) and loads
-  /// the first page.
-  Future<void> applyFilters({int? gradeId, int? academicYear}) {
-    _gradeFilter = gradeId;
-    _yearFilter = academicYear;
-    return load();
+  /// The API's order: newest year first, then level and course name.
+  static int _apiOrder(CourseEntity a, CourseEntity b) {
+    final byYear = b.academicYear.compareTo(a.academicYear);
+    if (byYear != 0) return byYear;
+    final byLevel = a.gradeName.toLowerCase().compareTo(
+      b.gradeName.toLowerCase(),
+    );
+    return byLevel != 0
+        ? byLevel
+        : a.name.toLowerCase().compareTo(b.name.toLowerCase());
   }
 
-  Future<void> load({int page = 0, int? gradeId, int? academicYear, bool resetFilters = false}) async {
-    if (resetFilters) {
-      _gradeFilter = null;
-      _yearFilter = null;
-    } else {
-      _gradeFilter = gradeId ?? _gradeFilter;
-      _yearFilter = academicYear ?? _yearFilter;
-    }
-    _state = ListViewState.loading();
-    notifyListeners();
-    try {
-      final result = await _repository.getPage(
-        page: page,
-        gradeId: _gradeFilter,
-        academicYear: _yearFilter,
-      );
-      _state = ListViewState.fromPage(
-        content: result.content,
-        page: result.page,
-        totalPages: result.totalPages,
-        totalElements: result.totalElements,
-      );
-    } on AppException catch (e) {
-      _state = ListViewState.error(e);
-    }
-    notifyListeners();
-  }
+  /// Every course (empty until loaded) — what forms offer.
+  List<CourseEntity> get all => _courses.items;
+
+  /// The whole catalog's load state.
+  ListViewState<CourseEntity> get state => _courses.view;
+
+  static bool Function(CourseEntity) _matching(int? gradeId, int? year) =>
+      (c) =>
+          (gradeId == null || c.gradeId == gradeId) &&
+          (year == null || c.academicYear == year);
+
+  /// One page of the courses of [gradeId] in [academicYear] (null: any).
+  ListViewState<CourseEntity> query({
+    int? gradeId,
+    int? academicYear,
+    int page = 0,
+  }) => _courses.page(where: _matching(gradeId, academicYear), page: page);
+
+  /// Every course of [gradeId] in [academicYear] (null: any).
+  List<CourseEntity> matching({int? gradeId, int? academicYear}) =>
+      all.where(_matching(gradeId, academicYear)).toList();
+
+  Future<void> ensure() => _courses.ensure();
+  Future<void> refresh() => _courses.refresh();
 
   Future<AppException?> create({
     required int gradeId,
     required String name,
     required int academicYear,
-  }) async {
-    try {
-      await _repository.create(gradeId: gradeId, name: name, academicYear: academicYear);
-      await load(page: 0);
-      return null;
-    } on AppException catch (e) {
-      return e;
+  }) => _mutate(CatalogChange.created, () async {
+    _courses.upsert(
+      await _repository.create(
+        gradeId: gradeId,
+        name: name,
+        academicYear: academicYear,
+      ),
+    );
+  });
+
+  Future<AppException?> update(
+    int id, {
+    required String name,
+    required int academicYear,
+  }) => _mutate(CatalogChange.updated, () async {
+    _courses.upsert(
+      await _repository.update(id, name: name, academicYear: academicYear),
+    );
+  });
+
+  Future<AppException?> delete(int id) =>
+      _mutate(CatalogChange.deleted, () async {
+        await _repository.delete(id);
+        _courses.remove(id);
+      });
+
+  @override
+  void onDomainEvent(DomainEvent event) {
+    // Courses embed their level's name.
+    if (event is CatalogChanged &&
+        event.resource == CatalogResource.academicLevels &&
+        event.renamesOrRemoves) {
+      _courses.invalidate();
     }
   }
 
-  Future<AppException?> update(int id, {required String name, required int academicYear}) async {
+  Future<AppException?> _mutate(
+    CatalogChange change,
+    Future<void> Function() action,
+  ) async {
     try {
-      await _repository.update(id, name: name, academicYear: academicYear);
-      await load(page: _state.page);
-      return null;
-    } on AppException catch (e) {
-      return e;
-    }
-  }
-
-  Future<AppException?> delete(int id) async {
-    try {
-      await _repository.delete(id);
-      await load(page: _state.page);
+      await action();
+      publish(CatalogChanged(CatalogResource.courses, change));
       return null;
     } on AppException catch (e) {
       return e;

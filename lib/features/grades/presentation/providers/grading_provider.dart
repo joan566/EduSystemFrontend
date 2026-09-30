@@ -1,44 +1,67 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/cache/catalog.dart';
+import '../../../../core/cache/session_notifier.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/events/domain_events.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../data/repositories/grading_repository.dart';
 import '../../domain/entities/grading_entities.dart';
 
-class GradingProvider extends ChangeNotifier {
-  GradingProvider(this._repository);
+/// Grading catalogs (scales, evaluation categories — read once per
+/// session) and, per class, its grading configuration and its period
+/// grades.
+///
+/// A class's period grades are one response for every student of the
+/// class: whoever needs one student's grade in that class (the Grades
+/// screen, a student's detail, a preview) reads it from here, so it is
+/// requested once per class, not once per student.
+class GradingProvider extends SessionNotifier {
+  GradingProvider(this._repository, DomainEvents events) : super(events);
 
   final GradingRepository _repository;
 
-  List<GradingScaleEntity> _scales = [];
-  List<GradingScaleEntity> get scales => _scales;
+  late final Catalog<GradingScaleEntity> _scales = Catalog(
+    cachedValue(),
+    idOf: (s) => s.id,
+    fetch: _repository.getScales,
+    // The API lists them by id.
+    compare: (a, b) => a.id.compareTo(b.id),
+  );
 
-  List<EvaluationCategoryEntity> _categories = [];
-  List<EvaluationCategoryEntity> get categories => _categories;
+  late final _categories = cachedValue<List<EvaluationCategoryEntity>>();
 
-  DetailViewState<GradingConfigurationEntity?> _configState =
-      const DetailViewState();
-  DetailViewState<GradingConfigurationEntity?> get configState => _configState;
+  /// Null data: the class has no configuration yet.
+  late final _configurations = keyedCache<int, GradingConfigurationEntity?>();
 
-  DetailViewState<PeriodGradesEntity> _periodGradesState =
-      const DetailViewState();
-  DetailViewState<PeriodGradesEntity> get periodGradesState =>
-      _periodGradesState;
+  late final _periodGrades = keyedCache<int, PeriodGradesEntity>();
 
-  Future<void> loadCatalog() async {
-    try {
-      final results = await Future.wait([
-        _repository.getScales(),
-        _repository.getCategories(),
-      ]);
-      _scales = results[0] as List<GradingScaleEntity>;
-      _categories = results[1] as List<EvaluationCategoryEntity>;
-      notifyListeners();
-    } on AppException {
-      // Surfaced implicitly: dependent screens show their own empty state
-      // when scales/categories end up empty.
-    }
-  }
+  /// What changes a class's computed grades.
+  static const _gradeInputs = {
+    ClassAspect.grades,
+    ClassAspect.exams,
+    ClassAspect.activities,
+    ClassAspect.attendance,
+    ClassAspect.configuration,
+    ClassAspect.roster,
+  };
+
+  // --- Catalogs ------------------------------------------------------------
+
+  List<GradingScaleEntity> get scales => _scales.items;
+  List<EvaluationCategoryEntity> get categories => _categories.data ?? const [];
+
+  /// Why the catalogs couldn't be read, if they couldn't.
+  AppException? get catalogError =>
+      _scales.view.error ?? _categories.detailView.error;
+
+  Future<void> ensureCatalog() => Future.wait([
+    _scales.ensure(),
+    _categories.ensure(_repository.getCategories),
+  ]);
+
+  Future<void> refreshCatalog() => Future.wait([
+    _scales.refresh(),
+    _categories.refresh(_repository.getCategories),
+  ]);
 
   Future<AppException?> createScale({
     required String name,
@@ -46,29 +69,42 @@ class GradingProvider extends ChangeNotifier {
     required double maximumValue,
   }) async {
     try {
-      await _repository.createScale(
-        name: name,
-        minimumValue: minimumValue,
-        maximumValue: maximumValue,
+      _scales.upsert(
+        await _repository.createScale(
+          name: name,
+          minimumValue: minimumValue,
+          maximumValue: maximumValue,
+        ),
       );
-      await loadCatalog();
+      publish(
+        const CatalogChanged(
+          CatalogResource.gradingScales,
+          CatalogChange.created,
+        ),
+      );
       return null;
     } on AppException catch (e) {
       return e;
     }
   }
 
-  Future<void> loadConfiguration(int teachingPeriodId) async {
-    _configState = DetailViewState.loading();
-    notifyListeners();
-    try {
-      final config = await _repository.getConfiguration(teachingPeriodId);
-      _configState = DetailViewState.success(config);
-    } on AppException catch (e) {
-      _configState = DetailViewState.error(e);
-    }
-    notifyListeners();
-  }
+  // --- Configuration per class --------------------------------------------
+
+  DetailViewState<GradingConfigurationEntity?> configuration(
+    int teachingPeriodId,
+  ) => _configurations.detailView(teachingPeriodId);
+
+  Future<void> ensureConfiguration(int teachingPeriodId) =>
+      _configurations.ensure(
+        teachingPeriodId,
+        () => _repository.getConfiguration(teachingPeriodId),
+      );
+
+  Future<void> refreshConfiguration(int teachingPeriodId) =>
+      _configurations.refresh(
+        teachingPeriodId,
+        () => _repository.getConfiguration(teachingPeriodId),
+      );
 
   Future<AppException?> saveConfiguration(
     int teachingPeriodId, {
@@ -83,42 +119,48 @@ class GradingProvider extends ChangeNotifier {
         weights: weights,
         passingGrade: passingGrade,
       );
-      _configState = DetailViewState.success(config);
-      notifyListeners();
+      _configurations.set(teachingPeriodId, config);
+      publish(
+        ClassDataChanged(teachingPeriodId, const {ClassAspect.configuration}),
+      );
       return null;
     } on AppException catch (e) {
       return e;
     }
   }
 
-  /// One class's period grades without touching [periodGradesState], for
-  /// screens that read several classes at once (e.g. a student's grades).
-  /// Throws [AppException].
-  Future<PeriodGradesEntity> fetchPeriodGrades(int teachingPeriodId) =>
-      _repository.getPeriodGrades(teachingPeriodId);
+  // --- Period grades per class --------------------------------------------
 
-  int _periodGradesRequest = 0;
+  DetailViewState<PeriodGradesEntity> periodGrades(int teachingPeriodId) =>
+      _periodGrades.detailView(teachingPeriodId);
 
-  /// [silent] keeps the current grades on screen while refreshing (e.g.
-  /// back from a student whose grade may have changed).
-  Future<void> loadPeriodGrades(
-    int teachingPeriodId, {
-    bool silent = false,
-  }) async {
-    final request = ++_periodGradesRequest;
-    if (!silent ||
-        _periodGradesState.data?.teachingPeriodId != teachingPeriodId) {
-      _periodGradesState = DetailViewState.loading();
-      notifyListeners();
+  Future<void> ensurePeriodGrades(int teachingPeriodId) => _periodGrades.ensure(
+    teachingPeriodId,
+    () => _repository.getPeriodGrades(teachingPeriodId),
+  );
+
+  Future<void> refreshPeriodGrades(int teachingPeriodId) =>
+      _periodGrades.refresh(
+        teachingPeriodId,
+        () => _repository.getPeriodGrades(teachingPeriodId),
+      );
+
+  // --- Invalidation -------------------------------------------------------
+
+  @override
+  void onDomainEvent(DomainEvent event) {
+    switch (event) {
+      case ClassDataChanged(:final teachingPeriodId)
+          when event.affects(_gradeInputs):
+        _periodGrades.invalidate(teachingPeriodId);
+      case StudentsChanged():
+        // A student left or arrived: their classes' grades change.
+        _periodGrades.invalidateAll();
+      case ExamResultsChanged(teachingPeriodId: null):
+        // The exam's class isn't known here: any class may have changed.
+        _periodGrades.invalidateAll();
+      default:
+        break;
     }
-    try {
-      final grades = await _repository.getPeriodGrades(teachingPeriodId);
-      if (request != _periodGradesRequest) return;
-      _periodGradesState = DetailViewState.success(grades);
-    } on AppException catch (e) {
-      if (request != _periodGradesRequest) return;
-      _periodGradesState = DetailViewState.error(e);
-    }
-    notifyListeners();
   }
 }

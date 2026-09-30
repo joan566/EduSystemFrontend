@@ -21,7 +21,7 @@ class RecentActivitySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AuditProvider>().state;
+    final state = context.watch<AuditProvider>().recent;
 
     return MobileSectionCard(
       icon: Icons.history_rounded,
@@ -30,7 +30,9 @@ class RecentActivitySection extends StatelessWidget {
       onLink: () => context.push(RoutePaths.audit),
       child: switch (state.status) {
         ViewStatus.error => DashboardErrorNotice(
-          onRetry: () => context.read<AuditProvider>().load(page: 0),
+          onRetry: () => context.read<AuditProvider>().refreshFeed(
+            AuditProvider.recentQuery,
+          ),
         ),
         ViewStatus.success => Column(
           children: [

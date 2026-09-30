@@ -39,12 +39,11 @@ class StudentGradesDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<GradebookProvider>().report;
-    final report =
-        state.data?.student.id == studentId &&
-            state.data?.teachingPeriodId == teachingPeriodId
-        ? state.data
-        : null;
+    final state = context.watch<GradebookProvider>().report(
+      teachingPeriodId,
+      studentId,
+    );
+    final report = state.data;
 
     return Scaffold(
       body: switch (state.status) {
@@ -141,12 +140,11 @@ class _Header extends StatelessWidget {
           label: 'Configurar pesos',
           icon: Icons.tune,
           variant: AppButtonVariant.outlined,
-          onPressed: () async {
-            await context.push(
-              RoutePaths.gradingSettingsForClass(report.teachingPeriodId),
-            );
-            if (context.mounted) onRefresh();
-          },
+          // Saving weights there makes this report stale; it is re-read on
+          // return only then.
+          onPressed: () => context.push(
+            RoutePaths.gradingSettingsForClass(report.teachingPeriodId),
+          ),
         ),
         IconButton(
           tooltip: 'Actualizar',

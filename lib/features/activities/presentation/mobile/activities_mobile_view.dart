@@ -24,11 +24,17 @@ class ActivitiesMobileView extends StatelessWidget {
     super.key,
     required this.period,
     required this.onPeriodChanged,
+    required this.page,
+    required this.onPageChanged,
     this.preferredPeriodId,
   });
 
   final TeachingPeriodEntity? period;
   final ValueChanged<TeachingPeriodEntity?> onPeriodChanged;
+
+  /// Page of the class's activities (owned by the page entry point).
+  final int page;
+  final ValueChanged<int> onPageChanged;
 
   /// Class the selector picks on first load, if present.
   final int? preferredPeriodId;
@@ -50,7 +56,13 @@ class ActivitiesMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ActivitiesProvider>().state;
+    final period = this.period;
+    final state = period == null
+        ? const ListViewState<ActivityEntity>()
+        : context.watch<ActivitiesProvider>().activitiesPage(
+            period.id,
+            page: page,
+          );
 
     return Scaffold(
       floatingActionButton: period == null
@@ -78,7 +90,7 @@ class ActivitiesMobileView extends StatelessWidget {
                     message: 'Elige una clase arriba para ver sus actividades.',
                     icon: Icons.assignment_outlined,
                   )
-                : _buildBody(context, state, period!),
+                : _buildBody(context, state, period),
           ),
         ],
       ),
@@ -97,9 +109,8 @@ class ActivitiesMobileView extends StatelessWidget {
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
-          onRetry: () => context.read<ActivitiesProvider>().load(
-            teachingPeriodId: period.id,
-          ),
+          onRetry: () =>
+              context.read<ActivitiesProvider>().refreshActivities(period.id),
         );
       case ViewStatus.empty:
         return AppEmptyState(
@@ -117,10 +128,7 @@ class ActivitiesMobileView extends StatelessWidget {
             page: state.page,
             totalPages: state.totalPages,
             totalElements: state.totalElements,
-            onPageChanged: (page) => context.read<ActivitiesProvider>().load(
-              teachingPeriodId: period.id,
-              page: page,
-            ),
+            onPageChanged: onPageChanged,
           ),
           itemBuilder: (context, item) => AppListTile(
             icon: Icons.assignment_outlined,

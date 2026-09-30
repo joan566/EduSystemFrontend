@@ -31,12 +31,23 @@ class ActivityRemoteDataSource {
     return ActivityModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<ApiPage<ActivityEntity>> getPage({required int teachingPeriodId, int page = 0}) async {
+  Future<ApiPage<ActivityEntity>> getPage({
+    required int teachingPeriodId,
+    int page = 0,
+    int size = 20,
+  }) async {
     final response = await _client.get(
       ApiEndpoints.activities,
-      queryParameters: {'teachingPeriodId': teachingPeriodId, 'page': page, 'size': 20},
+      queryParameters: {
+        'teachingPeriodId': teachingPeriodId,
+        'page': page,
+        'size': size,
+      },
     );
-    return ApiPage.fromJson(response.data as Map<String, dynamic>, ActivityModel.fromJson);
+    return ApiPage.fromJson(
+      response.data as Map<String, dynamic>,
+      ActivityModel.fromJson,
+    );
   }
 
   Future<ActivityEntity> getById(int id) async {
@@ -83,7 +94,11 @@ class ActivityRemoteDataSource {
       data: {
         'grades': [
           for (final g in grades)
-            {'studentId': g.studentId, 'grade': g.grade, if (g.comment != null) 'comment': g.comment},
+            {
+              'studentId': g.studentId,
+              'grade': g.grade,
+              if (g.comment != null) 'comment': g.comment,
+            },
         ],
       },
     );

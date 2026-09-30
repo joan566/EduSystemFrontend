@@ -57,8 +57,8 @@ class TeachingDesktopView extends StatelessWidget {
   static const _previewWidth = 360.0;
 
   Future<void> _createAssignment(BuildContext context) async {
-    final inputs = TeachingActions.assignmentFormInputs(context);
-    if (inputs == null) return;
+    final inputs = await TeachingActions.assignmentFormInputs(context);
+    if (inputs == null || !context.mounted) return;
     final data = await showDesktopDialog<AssignmentFormResult>(
       context,
       child: AssignmentForm(subjects: inputs.subjects, courses: inputs.courses),
@@ -68,8 +68,8 @@ class TeachingDesktopView extends StatelessWidget {
   }
 
   Future<void> _createPeriod(BuildContext context) async {
-    final inputs = TeachingActions.periodFormInputs(context);
-    if (inputs == null) return;
+    final inputs = await TeachingActions.periodFormInputs(context);
+    if (inputs == null || !context.mounted) return;
     final data = await showDesktopDialog<TeachingPeriodFormResult>(
       context,
       child: TeachingPeriodForm(
@@ -97,7 +97,10 @@ class TeachingDesktopView extends StatelessWidget {
     final academicPeriod = academicPeriods
         .where((p) => p.id == academicPeriodId)
         .firstOrNull;
-    final assignmentsState = teaching.assignmentsState;
+    final assignmentsState = teaching.assignments(
+      subjectId: filters.subjectId,
+      active: filters.active,
+    );
 
     String? description(int subjectId) =>
         subjects.where((s) => s.id == subjectId).firstOrNull?.description;
@@ -198,10 +201,7 @@ class TeachingDesktopView extends StatelessWidget {
                     ViewStatus.error => AppErrorState(
                       exception: assignmentsState.error!,
                       onRetry: () =>
-                          context.read<TeachingProvider>().loadAssignments(
-                            subjectId: filters.subjectId,
-                            active: filters.active,
-                          ),
+                          context.read<TeachingProvider>().refreshAssignments(),
                     ),
                     ViewStatus.empty => AppEmptyState(
                       title: 'No tienes asignaciones',

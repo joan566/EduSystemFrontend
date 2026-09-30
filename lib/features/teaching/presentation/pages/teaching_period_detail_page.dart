@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../activities/presentation/providers/activities_provider.dart';
 import '../../../audit/presentation/providers/audit_provider.dart';
@@ -24,7 +25,9 @@ class TeachingPeriodDetailPage extends StatefulWidget {
 }
 
 class _TeachingPeriodDetailPageState extends State<TeachingPeriodDetailPage>
-    with SingleTickerProviderStateMixin {
+    with
+        SingleTickerProviderStateMixin,
+        SyncedDataState<TeachingPeriodDetailPage> {
   // Resumen / Estudiantes / Clases (Horario) / Evaluaciones, on both
   // layouts. Lives here so the open tab survives a layout switch.
   late final TabController _tabController = TabController(
@@ -32,25 +35,40 @@ class _TeachingPeriodDetailPageState extends State<TeachingPeriodDetailPage>
     vsync: this,
   )..addListener(() => setState(() {}));
 
+  /// Everything the class screen shows. What is already cached for this
+  /// class (from an earlier visit or another screen) is not read again;
+  /// what a mutation made stale is.
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  void ensureData() {
+    final id = widget.teachingPeriodId;
+    context.read<ScheduleProvider>().ensureClassSchedules(id);
+    context.read<ExamsProvider>().ensureExams(id);
+    context.read<ActivitiesProvider>().ensureActivities(id);
+    context.read<AuditProvider>().ensureClassLogs(id);
+    final teaching = context.read<TeachingProvider>();
+    teaching.ensurePeriodSummary(id);
+    teaching.ensurePeriodDetail(id).then((_) {
+      final period = teaching.periodDetail(id).data;
+      if (!mounted || period == null) return;
+      context.read<StudentsProvider>().ensureGroupRoster(period.groupId);
+    });
   }
 
-  Future<void> _load() async {
+  /// Pull-to-refresh / "Actualizar": re-reads everything shown.
+  Future<void> _refresh() async {
     final id = widget.teachingPeriodId;
     final teaching = context.read<TeachingProvider>();
     final students = context.read<StudentsProvider>();
-    context.read<ScheduleProvider>().loadClassSchedules(id);
-    context.read<ExamsProvider>().load(teachingPeriodId: id);
-    context.read<ActivitiesProvider>().load(teachingPeriodId: id);
-    context.read<AuditProvider>().loadClassLogs(id);
-    teaching.loadPeriodSummary(id);
-    await teaching.loadPeriodDetail(id);
-    final period = teaching.periodDetail.data;
-    if (!mounted || period == null || period.id != id) return;
-    students.loadGroupRoster(period.groupId);
+    await Future.wait([
+      context.read<ScheduleProvider>().refreshClassSchedules(id),
+      context.read<ExamsProvider>().refreshExams(id),
+      context.read<ActivitiesProvider>().refreshActivities(id),
+      context.read<AuditProvider>().refreshClassLogs(id),
+      teaching.refreshPeriodSummary(id),
+      teaching.refreshPeriodDetail(id),
+    ]);
+    final period = teaching.periodDetail(id).data;
+    if (period != null) await students.refreshGroupRoster(period.groupId);
   }
 
   @override
@@ -65,12 +83,12 @@ class _TeachingPeriodDetailPageState extends State<TeachingPeriodDetailPage>
       mobile: (_) => TeachingPeriodDetailMobileView(
         teachingPeriodId: widget.teachingPeriodId,
         tabController: _tabController,
-        onRefresh: _load,
+        onRefresh: _refresh,
       ),
       desktop: (_) => TeachingPeriodDetailDesktopView(
         teachingPeriodId: widget.teachingPeriodId,
         tabController: _tabController,
-        onRefresh: _load,
+        onRefresh: _refresh,
       ),
     );
   }

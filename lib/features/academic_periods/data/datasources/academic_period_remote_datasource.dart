@@ -9,12 +9,18 @@ class AcademicPeriodRemoteDataSource {
 
   final ApiClient _client;
 
-  Future<ApiPage<AcademicPeriodEntity>> getPage({int page = 0}) async {
+  Future<ApiPage<AcademicPeriodEntity>> getPage({
+    int page = 0,
+    int size = 20,
+  }) async {
     final response = await _client.get(
       ApiEndpoints.academicPeriods,
-      queryParameters: {'page': page, 'size': 20},
+      queryParameters: {'page': page, 'size': size},
     );
-    return ApiPage.fromJson(response.data as Map<String, dynamic>, AcademicPeriodModel.fromJson);
+    return ApiPage.fromJson(
+      response.data as Map<String, dynamic>,
+      AcademicPeriodModel.fromJson,
+    );
   }
 
   Future<AcademicPeriodEntity> create({
@@ -24,7 +30,11 @@ class AcademicPeriodRemoteDataSource {
   }) async {
     final response = await _client.post(
       ApiEndpoints.academicPeriods,
-      data: AcademicPeriodModel.toRequest(name: name, startDate: startDate, endDate: endDate),
+      data: AcademicPeriodModel.toRequest(
+        name: name,
+        startDate: startDate,
+        endDate: endDate,
+      ),
     );
     return AcademicPeriodModel.fromJson(response.data as Map<String, dynamic>);
   }
@@ -37,10 +47,15 @@ class AcademicPeriodRemoteDataSource {
   }) async {
     final response = await _client.put(
       ApiEndpoints.academicPeriodById(id),
-      data: AcademicPeriodModel.toRequest(name: name, startDate: startDate, endDate: endDate),
+      data: AcademicPeriodModel.toRequest(
+        name: name,
+        startDate: startDate,
+        endDate: endDate,
+      ),
     );
     return AcademicPeriodModel.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<void> delete(int id) => _client.delete(ApiEndpoints.academicPeriodById(id));
+  Future<void> delete(int id) =>
+      _client.delete(ApiEndpoints.academicPeriodById(id));
 }

@@ -22,4 +22,15 @@ class TeachingAssignmentEntity {
   final bool active;
 
   String get displayName => '$subjectName — $gradeName $groupName';
+
+  TeachingAssignmentEntity copyWith({bool? active}) => TeachingAssignmentEntity(
+    id: id,
+    groupId: groupId,
+    groupName: groupName,
+    gradeName: gradeName,
+    academicYear: academicYear,
+    subjectId: subjectId,
+    subjectName: subjectName,
+    active: active ?? this.active,
+  );
 }
