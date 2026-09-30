@@ -2,12 +2,70 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/shared/app_button.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../domain/entities/exam_entity.dart';
 import '../shared/questions_draft_controller.dart';
 
 /// Mobile question bank editor: every question as an editable card in one
 /// scrolling list, "Agregar pregunta" at the end, and the save button
 /// pinned below.
+/// Placeholder of [QuestionsEditorMobile] while an exam's questions load:
+/// the count line and question cards with their statement and options.
+class QuestionsEditorMobileSkeleton extends StatelessWidget {
+  const QuestionsEditorMobileSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Skeleton(
+      child: SkeletonFill(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SkeletonText(style: textTheme.bodySmall, width: 150),
+            const SizedBox(height: 10),
+            SkeletonRepeat(
+              count: 3,
+              spacing: 12,
+              builder: (context, i) => SkeletonSurface(
+                radius: 14,
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        SkeletonText(style: textTheme.titleMedium, width: 96),
+                        const SizedBox(width: 10),
+                        const SkeletonBox(width: 70, height: 20, radius: 10),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const SkeletonBox(height: 48, radius: 8),
+                    const SizedBox(height: 12),
+                    for (var o = 0; o < 4; o++) ...[
+                      if (o > 0) const SizedBox(height: 8),
+                      const Row(
+                        children: [
+                          SkeletonCircle(size: 20),
+                          SizedBox(width: 10),
+                          Expanded(child: SkeletonBox(height: 36, radius: 8)),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class QuestionsEditorMobile extends StatefulWidget {
   const QuestionsEditorMobile({
     super.key,

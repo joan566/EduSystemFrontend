@@ -5,9 +5,9 @@ import 'package:provider/provider.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../domain/entities/student_entity.dart';
 import '../providers/students_provider.dart';
 import '../shared/student_detail_widgets.dart';
@@ -84,7 +84,12 @@ class _StudentDetailDesktopViewState extends State<StudentDetailDesktopView>
           onRetry: () =>
               context.read<StudentsProvider>().refreshDetail(widget.studentId),
         ),
-        _ when detail == null => const AppLoading(),
+        _ when detail == null => const DesktopDetailSkeleton(
+          actions: 2,
+          rail: 2,
+          tabs: 2,
+          main: StudentGradesPanelSkeleton(),
+        ),
         _ => _Workspace(detail: detail, tabs: _tabs, grades: widget.grades),
       },
     );

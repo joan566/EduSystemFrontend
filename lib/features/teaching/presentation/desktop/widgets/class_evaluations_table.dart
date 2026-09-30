@@ -7,6 +7,7 @@ import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
 import '../../../../../core/widgets/shared/app_empty_state.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../shared/class_evaluations.dart';
 import 'class_evaluation_lists.dart';
@@ -67,9 +68,11 @@ class ClassEvaluationsTable extends StatelessWidget {
               ],
             )
           else if (items == null)
-            const SizedBox(
-              height: 80,
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            const SkeletonTileList(
+              count: 5,
+              leadingSize: 36,
+              trailingWidth: 80,
+              spacing: 18,
             )
           else if (items.isEmpty)
             const AppEmptyState(

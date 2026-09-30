@@ -6,12 +6,13 @@ import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
+import '../../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../audit/domain/entities/audit_log_entity.dart';
 import '../../../../audit/presentation/providers/audit_provider.dart';
 import '../../../../audit/presentation/shared/audit_labels.dart';
 import '../../shared/dashboard_error_notice.dart';
-import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 
 /// "Actividad reciente" as a vertical timeline (icons joined by a line).
 class ActivityRail extends StatelessWidget {
@@ -42,6 +43,10 @@ class ActivityRail extends StatelessWidget {
                 isLast: i == state.items.take(_maxItems).length - 1,
               ),
           ],
+        ),
+        ViewStatus.initial || ViewStatus.loading => const SkeletonTileList(
+          count: 4,
+          leading: SkeletonLeading.circle,
         ),
         _ => Text(
           'Sin actividad reciente.',

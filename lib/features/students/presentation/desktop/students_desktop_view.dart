@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/router/route_paths.dart';
+import '../../../../core/state/kept_listing.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_dropdown.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
@@ -36,6 +38,7 @@ class StudentsDesktopView extends StatelessWidget {
     required this.onSelect,
     required this.page,
     required this.onPageChanged,
+    required this.listing,
   });
 
   final StudentListFilters filters;
@@ -47,16 +50,21 @@ class StudentsDesktopView extends StatelessWidget {
   final int page;
   final ValueChanged<int> onPageChanged;
 
+  /// Keeps the previous rows visible while another page/search loads.
+  final KeptListing<StudentEntity> listing;
+
   static const _previewMinWidth = 1100.0;
   static const _previewWidth = 360.0;
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<StudentsProvider>().query(
-      StudentsProvider.queryOf(
-        page: page,
-        groupId: filters.groupId,
-        search: filters.search,
+    final (:state, :updating) = listing.resolve(
+      context.watch<StudentsProvider>().query(
+        StudentsProvider.queryOf(
+          page: page,
+          groupId: filters.groupId,
+          search: filters.search,
+        ),
       ),
     );
     final courses = teacherCourses(
@@ -101,6 +109,7 @@ class StudentsDesktopView extends StatelessWidget {
                   final table = _body(
                     context,
                     state: state,
+                    updating: updating,
                     students: students,
                     actions: actions,
                     clickOpens: !showPreview,
@@ -132,13 +141,23 @@ class StudentsDesktopView extends StatelessWidget {
   Widget _body(
     BuildContext context, {
     required ListViewState<StudentEntity> state,
+    required bool updating,
     required List<StudentEntity> students,
     required StudentRowActions actions,
     required bool clickOpens,
   }) {
     final unfiltered = filters.groupId == null && filters.search.isEmpty;
     return switch (state.status) {
-      ViewStatus.initial || ViewStatus.loading => const AppLoading(),
+      ViewStatus.initial ||
+      ViewStatus.loading => const DesktopListTableSkeleton(
+        columns: [
+          SkeletonColumn('Estudiante', flex: 6, cell: SkeletonCell.entity),
+          SkeletonColumn('Código', flex: 3),
+          SkeletonColumn('Identificación', flex: 3),
+          SkeletonColumn('Curso', flex: 2),
+          SkeletonColumn('Estado', width: 120, cell: SkeletonCell.chip),
+        ],
+      ),
       ViewStatus.error => AppErrorState(
         exception: state.error!,
         onRetry: () => context.read<StudentsProvider>().refreshQuery(
@@ -166,19 +185,22 @@ class StudentsDesktopView extends StatelessWidget {
         message: 'Ningún estudiante de esta página tiene ese estado.',
         icon: Icons.filter_alt_off_outlined,
       ),
-      ViewStatus.success => StudentsTable(
-        students: students,
-        selectedStudentId: selectedStudentId,
-        actions: actions,
-        clickOpens: clickOpens,
-        footer: state.totalPages > 1
-            ? AppPagination(
-                page: state.page,
-                totalPages: state.totalPages,
-                totalElements: state.totalElements,
-                onPageChanged: onPageChanged,
-              )
-            : null,
+      ViewStatus.success => AppUpdating(
+        updating: updating,
+        child: StudentsTable(
+          students: students,
+          selectedStudentId: selectedStudentId,
+          actions: actions,
+          clickOpens: clickOpens,
+          footer: state.totalPages > 1
+              ? AppPagination(
+                  page: state.page,
+                  totalPages: state.totalPages,
+                  totalElements: state.totalElements,
+                  onPageChanged: onPageChanged,
+                )
+              : null,
+        ),
       ),
     };
   }

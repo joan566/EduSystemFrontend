@@ -4,8 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/exam_entity.dart';
 import '../providers/exams_provider.dart';
@@ -152,7 +153,12 @@ class _ExamDetailMobileViewState extends State<ExamDetailMobileView>
             context.read<ExamsProvider>().refreshDetail(widget.examId),
       );
     }
-    if (exam == null) return const AppLoading();
+    if (exam == null) {
+      return const MobileDetailSkeleton(
+        avatar: SkeletonLeading.square,
+        tabs: 3,
+      );
+    }
 
     final period = context
         .watch<TeachingProvider>()
@@ -193,7 +199,7 @@ class _ExamDetailMobileViewState extends State<ExamDetailMobileView>
             controller: _tabs,
             children: [
               questions == null
-                  ? const AppLoading()
+                  ? const QuestionsEditorMobileSkeleton()
                   : QuestionsEditorMobile(
                       controller: questions,
                       embedded: false,

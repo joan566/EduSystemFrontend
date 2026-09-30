@@ -6,7 +6,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/mobile/mobile_form.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
 import '../../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../../core/widgets/shared/app_loading.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../students/presentation/providers/students_provider.dart';
 import '../../../../teaching/domain/entities/teaching_period_entity.dart';
@@ -218,9 +218,11 @@ class _StudentPickerSheet extends StatelessWidget {
           ),
           Flexible(
             child: switch (state.status) {
-              ViewStatus.initial || ViewStatus.loading => const Padding(
-                padding: EdgeInsets.all(24),
-                child: AppLoading(),
+              ViewStatus.initial ||
+              ViewStatus.loading => const SkeletonTileList(
+                count: 5,
+                leading: SkeletonLeading.circle,
+                padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
               ),
               ViewStatus.error => AppErrorState(
                 exception: state.error!,

@@ -5,9 +5,10 @@ import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/subject_visuals.dart';
 import '../../../../../core/utils/formatters.dart';
+import '../../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../../core/widgets/desktop/desktop_stat_card.dart';
 import '../../../../../core/widgets/shared/app_empty_state.dart';
-import '../../../../../core/widgets/shared/app_loading.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../grades/presentation/shared/category_visuals.dart';
 import '../../../domain/entities/student_entity.dart';
@@ -52,10 +53,7 @@ class _StudentGradesPanelState extends State<StudentGradesPanel> {
       builder: (context, _) {
         final grades = widget.controller.grades;
         if (grades == null) {
-          return const Padding(
-            padding: EdgeInsets.all(32),
-            child: AppLoading(),
-          );
+          return const Skeleton(child: StudentGradesPanelSkeleton());
         }
         if (grades.isEmpty) {
           return const AppEmptyState(
@@ -142,6 +140,41 @@ class _StudentGradesPanelState extends State<StudentGradesPanel> {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Placeholder of [StudentGradesPanel]: its stat cards and grades table.
+/// Not a [Skeleton] root (the detail page skeleton reuses it).
+class StudentGradesPanelSkeleton extends StatelessWidget {
+  const StudentGradesPanelSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DesktopStatsRowSkeleton(),
+        SizedBox(height: 20),
+        DesktopListTableSkeleton(
+          root: false,
+          shrinkWrap: true,
+          rows: 4,
+          columns: [
+            SkeletonColumn('Clase', flex: _flexClass, cell: SkeletonCell.badge),
+            SkeletonColumn(
+              'Nota del periodo',
+              flex: _flexGrade,
+              cell: SkeletonCell.bar,
+            ),
+            SkeletonColumn(
+              'Categorías',
+              flex: _flexCategories,
+              cell: SkeletonCell.value,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

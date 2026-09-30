@@ -4,11 +4,12 @@ import 'package:provider/provider.dart';
 import '../../../../../core/state/list_state.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
 import '../../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../../core/widgets/shared/app_list_tile.dart';
-import '../../../../../core/widgets/shared/app_loading.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../schedule/domain/entities/schedule_entities.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../schedule/presentation/shared/class_schedule_actions.dart';
@@ -46,7 +47,13 @@ class ClassScheduleTab extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const Padding(padding: EdgeInsets.all(24), child: AppLoading());
+        return const MobileListSkeleton(
+          itemCount: 3,
+          leading: SkeletonLeading.square,
+          leadingSize: 40,
+          padding: EdgeInsets.zero,
+          shrinkWrap: true,
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,

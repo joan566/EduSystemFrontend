@@ -8,11 +8,12 @@ import '../../../../core/widgets/mobile/mobile_catalog_card.dart';
 import '../../../../core/widgets/mobile/mobile_catalog_header.dart';
 import '../../../../core/widgets/mobile/mobile_filter_pills.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/app_status_chip.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/academic_period_entity.dart';
 import '../providers/academic_periods_provider.dart';
@@ -82,7 +83,12 @@ class AcademicPeriodsMobileView extends StatelessWidget {
           ),
           Expanded(
             child: switch (state.status) {
-              ViewStatus.initial || ViewStatus.loading => const AppLoading(),
+              ViewStatus.initial || ViewStatus.loading => const MobileListSkeleton(
+                leading: SkeletonLeading.square,
+                leadingSize: 48,
+                meta: true,
+                trailingWidth: 64,
+              ),
               ViewStatus.error => AppErrorState(
                 exception: state.error!,
                 onRetry: () =>

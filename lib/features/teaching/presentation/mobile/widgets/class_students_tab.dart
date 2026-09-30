@@ -7,7 +7,8 @@ import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../../core/widgets/shared/app_loading.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../students/presentation/providers/students_provider.dart';
 
 /// "Estudiantes": the class's group roster.
@@ -25,7 +26,27 @@ class ClassStudentsTab extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const Padding(padding: EdgeInsets.all(24), child: AppLoading());
+        return Skeleton(
+          child: SkeletonSurface(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SkeletonText(style: textTheme.titleMedium, width: 110),
+                const SizedBox(height: 14),
+                SkeletonRepeat(
+                  count: 6,
+                  spacing: 14,
+                  builder: (context, i) => SkeletonTile(
+                    leadingSize: 36,
+                    titleFactor: SkeletonRepeat.factor(i),
+                    subtitleFactor: SkeletonRepeat.factor(i + 2, base: 0.45),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,

@@ -5,6 +5,8 @@ import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/subject_visuals.dart';
 import '../../../../../core/utils/formatters.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../domain/entities/schedule_entities.dart';
 import '../../shared/schedule_week.dart';
 
@@ -14,6 +16,100 @@ const _gutterWidth = 60.0;
 /// The week as a calendar: one column per day, one row per hour, each
 /// class placed at its real time. Day headers select the day shown in the
 /// side agenda; a line marks the current time on today's column.
+/// Placeholder of [WeekTimeGrid] while a week loads: the same card, day
+/// headers and hour gutter over a school day (7–17), with a few class
+/// blocks. Not a [Skeleton] root.
+class WeekTimeGridSkeleton extends StatelessWidget {
+  const WeekTimeGridSkeleton({super.key});
+
+  static const _hours = 10;
+
+  /// (day, start hour offset, length in hours) of the placeholder blocks.
+  static const _blocks = [
+    (0, 1, 1),
+    (0, 4, 2),
+    (1, 0, 2),
+    (1, 5, 1),
+    (2, 2, 1),
+    (3, 1, 2),
+    (3, 6, 1),
+    (4, 3, 1),
+    (4, 7, 2),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SkeletonSurface(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 12, 12, 10),
+            child: Row(
+              children: [
+                const SizedBox(width: _gutterWidth),
+                for (var d = 0; d < 5; d++)
+                  const Expanded(
+                    child: Column(
+                      children: [
+                        SkeletonBox(width: 28, height: 10),
+                        SizedBox(height: 6),
+                        SkeletonCircle(size: 28),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: colors.outline),
+          Expanded(
+            child: SkeletonFill(
+              padding: const EdgeInsets.fromLTRB(0, 10, 12, 16),
+              child: SizedBox(
+                height: _hours * _hourHeight,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final dayWidth = (constraints.maxWidth - _gutterWidth) / 5;
+                    return Stack(
+                      children: [
+                        for (var h = 0; h < _hours; h++) ...[
+                          Positioned(
+                            top: h * _hourHeight,
+                            left: 16,
+                            child: const SkeletonBox(width: 30, height: 10),
+                          ),
+                          Positioned(
+                            top: h * _hourHeight,
+                            left: _gutterWidth,
+                            right: 0,
+                            child: Divider(
+                              height: 1,
+                              color: colors.outline.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                        for (final (day, start, length) in _blocks)
+                          Positioned(
+                            top: start * _hourHeight + 2,
+                            left: _gutterWidth + day * dayWidth + 4,
+                            width: dayWidth - 8,
+                            height: length * _hourHeight - 4,
+                            child: const SkeletonBox(radius: 10),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class WeekTimeGrid extends StatelessWidget {
   const WeekTimeGrid({super.key, required this.week, required this.range});
 

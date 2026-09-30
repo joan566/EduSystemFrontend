@@ -7,12 +7,13 @@ import '../../../../../core/state/detail_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/subject_visuals.dart';
 import '../../../../../core/utils/formatters.dart';
+import '../../../../../core/widgets/mobile/mobile_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
+import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../schedule/domain/entities/schedule_entities.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../schedule/presentation/shared/schedule_widgets.dart';
 import '../../shared/dashboard_error_notice.dart';
-import '../../../../../core/widgets/shared/tinted_icon.dart';
-import '../../../../../core/widgets/mobile/mobile_section_card.dart';
 
 /// "Hoy": the next (or current) class highlighted, then the day's classes
 /// as a timeline, and a link to the full calendar. Statuses use the
@@ -56,9 +57,11 @@ class TodaySection extends StatelessWidget {
               (provider.week.data?.occurrencesByTeachingPeriod.isNotEmpty ??
               false),
         ),
-        _ => const SizedBox(
-          height: 48,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        _ => const SkeletonTileList(
+          count: 2,
+          leading: SkeletonLeading.circle,
+          leadingSize: 10,
+          trailingWidth: 48,
         ),
       },
     );

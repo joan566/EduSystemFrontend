@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/state/detail_state.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../providers/submission_batches_provider.dart';
 import '../shared/batch_detail_widgets.dart';
 
@@ -22,7 +23,13 @@ class BatchDetailMobileView extends StatelessWidget {
         title: Text(state.data?.batch.fileName ?? 'Lote de hojas'),
       ),
       body: switch (state.status) {
-        DetailStatus.initial || DetailStatus.loading => const AppLoading(),
+        DetailStatus.initial ||
+        DetailStatus.loading => const MobileDetailSkeleton(
+          avatar: SkeletonLeading.square,
+          stats: 2,
+          sections: 1,
+          rowsPerSection: 5,
+        ),
         DetailStatus.error => AppErrorState(
           exception: state.error!,
           onRetry: props.onRetry,

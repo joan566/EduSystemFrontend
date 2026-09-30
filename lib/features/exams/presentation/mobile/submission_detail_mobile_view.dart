@@ -5,8 +5,8 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../domain/entities/submission_entity.dart';
 import '../providers/submissions_provider.dart';
 import '../shared/submission_detail_widgets.dart';
@@ -79,7 +79,11 @@ class SubmissionDetailMobileView extends StatelessWidget {
     switch (state.status) {
       case DetailStatus.initial:
       case DetailStatus.loading:
-        return const AppLoading();
+        return const MobileDetailSkeleton(
+          stats: 3,
+          sections: 1,
+          rowsPerSection: 6,
+        );
       case DetailStatus.error:
         return AppErrorState(
           exception: state.error!,

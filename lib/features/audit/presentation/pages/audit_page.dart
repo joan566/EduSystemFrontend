@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
+import '../../../../core/state/kept_listing.dart';
 import '../../domain/entities/audit_log_entity.dart';
 import '../desktop/audit_desktop_view.dart';
 import '../mobile/audit_mobile_view.dart';
@@ -24,6 +25,9 @@ class _AuditPageState extends State<AuditPage> with SyncedDataState<AuditPage> {
   AuditAction? _actionFilter;
   late int? _teachingPeriodId = widget.initialTeachingPeriodId;
   int _page = 0;
+
+  /// The rows on screen stay while another page or filter loads.
+  final _listing = KeptListing<AuditLogEntity>();
 
   /// The page and filters on screen, so they are never dropped.
   AuditQuery get _query => (
@@ -71,6 +75,7 @@ class _AuditPageState extends State<AuditPage> with SyncedDataState<AuditPage> {
         onActionFilterChanged: _onActionFilterChanged,
         query: _query,
         onRetry: _retry,
+        listing: _listing,
       ),
       desktop: (_) => AuditDesktopView(
         actionFilter: _actionFilter,
@@ -80,6 +85,7 @@ class _AuditPageState extends State<AuditPage> with SyncedDataState<AuditPage> {
         onActionFilterChanged: _onActionFilterChanged,
         query: _query,
         onRetry: _retry,
+        listing: _listing,
       ),
     );
   }

@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/widgets/desktop/desktop_page_header.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../providers/submission_batches_provider.dart';
 import '../shared/batch_detail_widgets.dart';
 
@@ -31,8 +33,19 @@ class BatchDetailDesktopView extends StatelessWidget {
           ),
           Expanded(
             child: switch (state.status) {
-              DetailStatus.initial ||
-              DetailStatus.loading => const AppLoading(),
+              DetailStatus.initial || DetailStatus.loading => const Skeleton(
+                child: SkeletonFill(
+                  padding: EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      DesktopStatsRowSkeleton(),
+                      SizedBox(height: 20),
+                      DesktopSectionSkeleton(rows: 6, trailingWidth: 90),
+                    ],
+                  ),
+                ),
+              ),
               DetailStatus.error => AppErrorState(
                 exception: state.error!,
                 onRetry: props.onRetry,

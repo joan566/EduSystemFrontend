@@ -10,8 +10,9 @@ import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_form_frame.dart';
 import '../../../../core/widgets/shared/app_list_tile.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_status_chip.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../imports/domain/entities/import_batch_entity.dart';
 import '../../../imports/presentation/providers/imports_provider.dart';
 
@@ -203,7 +204,22 @@ class ImportHistoryList extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const Padding(padding: EdgeInsets.all(24), child: AppLoading());
+        return Skeleton(
+          child: SkeletonRepeat(
+            count: 4,
+            spacing: 8,
+            builder: (context, i) => SkeletonSurface(
+              radius: 10,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: SkeletonTile(
+                leading: SkeletonLeading.square,
+                titleFactor: SkeletonRepeat.factor(i),
+                trailingWidth: 84,
+                trailingHeight: 22,
+              ),
+            ),
+          ),
+        );
       case ViewStatus.error:
         return Padding(
           padding: const EdgeInsets.all(24),
@@ -367,10 +383,13 @@ class _ImportBatchDetailState extends State<ImportBatchDetail> {
             Text('Motivo', style: textTheme.labelLarge),
             const SizedBox(height: 6),
             if (_loadingReason)
-              const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+              const Skeleton(
+                child: SkeletonSurface(
+                  color: AppColors.errorBg,
+                  radius: 10,
+                  padding: EdgeInsets.all(12),
+                  child: SkeletonText(lines: 2),
+                ),
               )
             else
               Container(

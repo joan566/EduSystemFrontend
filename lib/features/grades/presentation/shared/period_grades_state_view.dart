@@ -6,7 +6,6 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../domain/entities/grading_entities.dart';
 import '../providers/grading_provider.dart';
 
@@ -14,15 +13,18 @@ import '../providers/grading_provider.dart';
 /// changes): loading, error, a missing or incomplete configuration (with a
 /// way to Configuración de notas) and an empty roster. [builder] only
 /// renders real data; the backend is the sole source of the grades.
+/// [placeholder] is the platform's skeleton of that data while it loads.
 class PeriodGradesStateView extends StatelessWidget {
   const PeriodGradesStateView({
     super.key,
     required this.teachingPeriodId,
     required this.builder,
+    required this.placeholder,
   });
 
   final int teachingPeriodId;
   final Widget Function(BuildContext context, PeriodGradesEntity data) builder;
+  final Widget placeholder;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +35,7 @@ class PeriodGradesStateView extends StatelessWidget {
     switch (state.status) {
       case DetailStatus.initial:
       case DetailStatus.loading:
-        return const AppLoading();
+        return placeholder;
       case DetailStatus.error:
         final error = state.error!;
         final missing = error.code == 'GRADING_CONFIGURATION_REQUIRED';

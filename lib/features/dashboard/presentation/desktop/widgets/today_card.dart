@@ -7,12 +7,13 @@ import '../../../../../core/state/detail_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/subject_visuals.dart';
 import '../../../../../core/utils/formatters.dart';
+import '../../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../schedule/domain/entities/schedule_entities.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../schedule/presentation/shared/schedule_widgets.dart';
 import '../../shared/dashboard_error_notice.dart';
-import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 
 /// "Hoy": the day's classes as a timeline with statuses (server clock).
 class TodayCard extends StatelessWidget {
@@ -58,9 +59,10 @@ class TodayCard extends StatelessWidget {
               provider.week.data?.occurrencesByTeachingPeriod.isNotEmpty ??
               false,
         ),
-        _ => const SizedBox(
-          height: 80,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        _ => const SkeletonTileList(
+          leading: SkeletonLeading.circle,
+          leadingSize: 10,
+          trailingWidth: 90,
         ),
       },
     );

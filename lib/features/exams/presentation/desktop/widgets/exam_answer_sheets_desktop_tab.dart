@@ -6,8 +6,8 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
 import '../../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../../core/widgets/shared/app_loading.dart';
 import '../../../../../core/widgets/shared/app_search_field.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../students/domain/entities/student_entity.dart';
 import '../../../../students/presentation/providers/students_provider.dart';
 import '../../../../teaching/domain/entities/teaching_period_entity.dart';
@@ -356,15 +356,12 @@ class _PerStudentCardState extends State<_PerStudentCard> {
 
     Widget body;
     if (period == null || state == null) {
-      body = const Padding(padding: EdgeInsets.all(16), child: AppLoading());
+      body = const _RosterSkeleton();
     } else {
       switch (state.status) {
         case ViewStatus.initial:
         case ViewStatus.loading:
-          body = const Padding(
-            padding: EdgeInsets.all(16),
-            child: AppLoading(),
-          );
+          body = const _RosterSkeleton();
         case ViewStatus.error:
           body = AppErrorState(
             exception: state.error!,
@@ -472,6 +469,23 @@ class _PerStudentCardState extends State<_PerStudentCard> {
           body,
         ],
       ),
+    );
+  }
+}
+
+/// Placeholder of the class roster: one row per student with the download
+/// button's room.
+class _RosterSkeleton extends StatelessWidget {
+  const _RosterSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SkeletonTileList(
+      count: 6,
+      leading: SkeletonLeading.circle,
+      leadingSize: 32,
+      trailingWidth: 24,
+      padding: EdgeInsets.all(16),
     );
   }
 }

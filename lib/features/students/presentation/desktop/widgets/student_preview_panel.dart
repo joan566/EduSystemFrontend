@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../grades/presentation/providers/grading_provider.dart';
 import '../../../../teaching/presentation/providers/teaching_provider.dart';
@@ -265,10 +266,7 @@ class _GradesGlance extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final grades = this.grades;
     if (grades == null) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: LinearProgressIndicator(minHeight: 2),
-      );
+      return const SkeletonValueRows(count: 2);
     }
     if (grades.isEmpty) {
       return Text(

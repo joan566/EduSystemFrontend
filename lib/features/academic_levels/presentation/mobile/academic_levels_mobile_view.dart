@@ -7,10 +7,11 @@ import '../../../../core/state/list_state.dart';
 import '../../../../core/widgets/mobile/mobile_catalog_card.dart';
 import '../../../../core/widgets/mobile/mobile_catalog_header.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../../teaching/presentation/shared/class_lookup.dart';
 import '../../domain/entities/academic_level_entity.dart';
@@ -71,7 +72,11 @@ class AcademicLevelsMobileView extends StatelessWidget {
           ),
           Expanded(
             child: switch (state.status) {
-              ViewStatus.initial || ViewStatus.loading => const AppLoading(),
+              ViewStatus.initial || ViewStatus.loading => const MobileListSkeleton(
+                leading: SkeletonLeading.square,
+                leadingSize: 48,
+                meta: true,
+              ),
               ViewStatus.error => AppErrorState(
                 exception: state.error!,
                 onRetry: () => context.read<AcademicLevelsProvider>().refresh(),

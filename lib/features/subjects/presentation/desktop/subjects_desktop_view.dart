@@ -11,9 +11,10 @@ import '../../../../core/widgets/desktop/desktop_section_card.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
@@ -143,7 +144,7 @@ class SubjectsDesktopView extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const _SubjectsGridSkeleton();
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
@@ -205,6 +206,80 @@ class SubjectsDesktopView extends StatelessWidget {
           },
         );
     }
+  }
+}
+
+/// Placeholder of the subjects grid: [_SubjectCard]s with the same size,
+/// stripe and layout, laid out by the same column rule.
+class _SubjectsGridSkeleton extends StatelessWidget {
+  const _SubjectsGridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final outline = Theme.of(context).colorScheme.outline;
+    return Skeleton(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const gap = 16.0;
+          final columns = (constraints.maxWidth / 280).floor().clamp(1, 4);
+          final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+          return SkeletonFill(
+            child: Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (var i = 0; i < columns * 3; i++)
+                  SizedBox(
+                    width: width,
+                    height: 188,
+                    child: SkeletonSurface(
+                      padding: EdgeInsets.zero,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            height: 4,
+                            color: outline.withValues(alpha: 0.6),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SkeletonBox(
+                                  width: 42,
+                                  height: 42,
+                                  radius: 12,
+                                ),
+                                const SizedBox(height: 10),
+                                SkeletonText(
+                                  style: textTheme.titleMedium,
+                                  widthFactor: SkeletonRepeat.factor(i),
+                                ),
+                                const SizedBox(height: 2),
+                                SkeletonText(
+                                  style: textTheme.bodySmall,
+                                  lines: 2,
+                                ),
+                                const SizedBox(height: 10),
+                                SkeletonText(
+                                  style: textTheme.bodySmall,
+                                  widthFactor: 0.4,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 

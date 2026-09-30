@@ -6,11 +6,11 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/desktop/desktop_dialog.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_dropdown.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../academic_periods/domain/entities/academic_period_entity.dart';
 import '../../../academic_periods/presentation/providers/academic_periods_provider.dart';
@@ -197,7 +197,27 @@ class TeachingDesktopView extends StatelessWidget {
                   final showPreview = constraints.maxWidth >= _previewMinWidth;
                   final table = switch (assignmentsState.status) {
                     ViewStatus.initial ||
-                    ViewStatus.loading => const AppLoading(),
+                    ViewStatus.loading => const DesktopListTableSkeleton(
+                      columns: [
+                        SkeletonColumn(
+                          'Clase',
+                          flex: 5,
+                          cell: SkeletonCell.badge,
+                        ),
+                        SkeletonColumn('En el periodo', flex: 3),
+                        SkeletonColumn('Horario', flex: 2),
+                        SkeletonColumn(
+                          'Alumnos',
+                          flex: 2,
+                          cell: SkeletonCell.value,
+                        ),
+                        SkeletonColumn(
+                          'Activa',
+                          width: 120,
+                          cell: SkeletonCell.chip,
+                        ),
+                      ],
+                    ),
                     ViewStatus.error => AppErrorState(
                       exception: assignmentsState.error!,
                       onRetry: () =>

@@ -1,28 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Centered spinner for full-page loading states.
-class AppLoading extends StatelessWidget {
-  const AppLoading({super.key, this.message});
-
-  final String? message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(strokeWidth: 2.5),
-          if (message != null) ...[
-            const SizedBox(height: 16),
-            Text(message!, style: Theme.of(context).textTheme.bodyMedium),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 /// Determinate/indeterminate progress bar for uploads and long-running
 /// processing (§60: never just a spinner for everything).
 class AppProgressBar extends StatelessWidget {
@@ -58,24 +35,34 @@ class AppProgressBar extends StatelessWidget {
   }
 }
 
-/// Rectangular placeholder for skeleton loading states in lists/cards.
-class AppSkeleton extends StatelessWidget {
-  const AppSkeleton({super.key, this.width, this.height = 14, this.borderRadius = 6});
+/// Content already on screen while a newer version of it loads (the next
+/// page, a new search): [child] stays and a slim bar runs on top, instead
+/// of replacing it with a skeleton.
+class AppUpdating extends StatelessWidget {
+  const AppUpdating({super.key, required this.updating, required this.child});
 
-  final double? width;
-  final double height;
-  final double borderRadius;
+  final bool updating;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.surfaceContainerHighest;
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(borderRadius),
-      ),
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        child,
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: AnimatedOpacity(
+            opacity: updating ? 1 : 0,
+            duration: const Duration(milliseconds: 150),
+            child: updating
+                ? const LinearProgressIndicator(minHeight: 2)
+                : const SizedBox(height: 2),
+          ),
+        ),
+      ],
     );
   }
 }

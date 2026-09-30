@@ -5,8 +5,9 @@ import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/subject_visuals.dart';
 import '../../../../../core/utils/formatters.dart';
+import '../../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../../core/widgets/shared/app_empty_state.dart';
-import '../../../../../core/widgets/shared/app_loading.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../grades/presentation/shared/category_visuals.dart';
 import '../../../domain/entities/student_entity.dart';
@@ -45,7 +46,17 @@ class _StudentGradesTabState extends State<StudentGradesTab> {
       listenable: widget.controller,
       builder: (context, _) {
         final grades = widget.controller.grades;
-        if (grades == null) return const AppLoading();
+        if (grades == null) {
+          return const MobileListSkeleton(
+            itemCount: 4,
+            leading: SkeletonLeading.square,
+            leadingSize: 40,
+            trailingWidth: 56,
+            bar: true,
+            radius: 16,
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
+          );
+        }
         if (grades.isEmpty) {
           return const AppEmptyState(
             title: 'Sin clases con este estudiante',

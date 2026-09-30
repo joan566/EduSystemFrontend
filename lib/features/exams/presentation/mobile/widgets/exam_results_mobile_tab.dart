@@ -7,11 +7,13 @@ import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../domain/entities/exam_entity.dart';
 import '../../../domain/entities/submission_entity.dart';
-import '../../shared/exam_actions.dart';
 import '../../providers/submissions_provider.dart';
+import '../../shared/exam_actions.dart';
 import '../../shared/exam_results.dart';
 import '../../shared/exam_results_summary.dart';
 
@@ -67,7 +69,9 @@ class ExamResultsMobileTab extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: _StatsCard(exam: exam, period: period, state: state),
+          child: state.isLoading || state.status == ViewStatus.initial
+              ? const _StatsCardSkeleton()
+              : _StatsCard(exam: exam, period: period, state: state),
         ),
         actions,
         Padding(
@@ -82,9 +86,50 @@ class ExamResultsMobileTab extends StatelessWidget {
           child: ExamResultsStateView(
             exam: exam,
             builder: (context, state) => _ResultsCard(exam: exam, state: state),
+            placeholder: const SkeletonSurface(
+              radius: 14,
+              child: SkeletonTileList(
+                count: 6,
+                leading: SkeletonLeading.circle,
+                leadingSize: 36,
+                trailingWidth: 64,
+              ),
+            ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Placeholder of [_StatsCard] while the results load (not zeros).
+class _StatsCardSkeleton extends StatelessWidget {
+  const _StatsCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Skeleton(
+      child: SkeletonSurface(
+        radius: 14,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          children: [
+            for (var i = 0; i < 4; i++)
+              Expanded(
+                child: Column(
+                  children: [
+                    const SkeletonBox(width: 22, height: 22, radius: 6),
+                    const SizedBox(height: 6),
+                    SkeletonText(style: textTheme.titleMedium, width: 32),
+                    const SizedBox(height: 2),
+                    SkeletonText(style: textTheme.bodySmall, width: 52),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

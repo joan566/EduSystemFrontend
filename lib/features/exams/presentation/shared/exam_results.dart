@@ -6,7 +6,6 @@ import '../../../../core/state/list_state.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_status_chip.dart';
 import '../../domain/entities/exam_entity.dart';
 import '../../domain/entities/submission_entity.dart';
@@ -14,7 +13,8 @@ import '../providers/submissions_provider.dart';
 import 'exam_actions.dart';
 
 /// An exam's submissions (§51, the whole class) with loading/error/empty
-/// resolved; [builder] renders the real listing, differently per platform.
+/// resolved; [builder] renders the real listing, differently per platform,
+/// and [placeholder] is that listing's loading skeleton.
 /// Switching tabs or coming back doesn't re-read them unless a sheet was
 /// scanned, graded or corrected meanwhile.
 class ExamResultsStateView extends StatefulWidget {
@@ -22,6 +22,7 @@ class ExamResultsStateView extends StatefulWidget {
     super.key,
     required this.exam,
     required this.builder,
+    required this.placeholder,
   });
 
   final ExamEntity exam;
@@ -30,6 +31,7 @@ class ExamResultsStateView extends StatefulWidget {
     ListViewState<SubmissionSummaryEntity> state,
   )
   builder;
+  final Widget placeholder;
 
   @override
   State<ExamResultsStateView> createState() => _ExamResultsStateViewState();
@@ -49,7 +51,7 @@ class _ExamResultsStateViewState extends State<ExamResultsStateView>
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return widget.placeholder;
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,

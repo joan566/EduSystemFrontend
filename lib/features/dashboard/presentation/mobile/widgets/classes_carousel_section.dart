@@ -4,14 +4,15 @@ import 'package:provider/provider.dart';
 
 import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/state/list_state.dart';
-import '../../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../../schedule/presentation/providers/schedule_provider.dart';
-import '../../../../teaching/presentation/providers/teaching_provider.dart';
-import '../../shared/dashboard_error_notice.dart';
 import '../../../../../core/theme/subject_visuals.dart';
-import '../../../../../core/widgets/shared/tinted_icon.dart';
-import '../../../../teaching/presentation/shared/class_counts.dart';
 import '../../../../../core/widgets/mobile/mobile_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
+import '../../../../../core/widgets/shared/tinted_icon.dart';
+import '../../../../schedule/presentation/providers/schedule_provider.dart';
+import '../../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../../teaching/presentation/providers/teaching_provider.dart';
+import '../../../../teaching/presentation/shared/class_counts.dart';
+import '../../shared/dashboard_error_notice.dart';
 
 /// "Tus clases": the teacher's classes as a horizontal, swipeable row of
 /// cards (subject, course, period, sessions this week, students).
@@ -58,6 +59,14 @@ class ClassesCarouselSection extends StatelessWidget {
                 weeklySessions: weekly == null ? null : weekly[period.id] ?? 0,
               );
             },
+          ),
+        ),
+        ViewStatus.initial || ViewStatus.loading => const Padding(
+          padding: EdgeInsets.only(right: 16),
+          child: SkeletonTileList(
+            count: 1,
+            leadingSize: 44,
+            padding: EdgeInsets.symmetric(vertical: 12),
           ),
         ),
         _ => Padding(

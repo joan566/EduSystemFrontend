@@ -9,6 +9,8 @@ import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/subject_visuals.dart';
 import '../../../../../core/utils/formatters.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../academic_periods/domain/entities/academic_period_entity.dart';
 import '../../../../schedule/domain/entities/schedule_entities.dart';
@@ -312,11 +314,8 @@ class _ClassPreviewState extends State<_ClassPreview>
                   'No pudimos cargar el progreso.',
                   style: textTheme.bodySmall,
                 ),
-                _ => const SizedBox(
-                  height: 76,
-                  child: Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+                _ => const Skeleton(
+                  child: SkeletonRingSummary(ringSize: 76, stats: 0),
                 ),
               },
               const SizedBox(height: 18),

@@ -29,6 +29,7 @@ class ExamBuilderDesktopView extends StatelessWidget {
           Expanded(
             child: ExamBuilderSections(
               controller: controller,
+              questionsPlaceholder: const QuestionsEditorDesktopSkeleton(),
               questionsEditor: (questions) => Padding(
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                 child: QuestionsEditorDesktop(

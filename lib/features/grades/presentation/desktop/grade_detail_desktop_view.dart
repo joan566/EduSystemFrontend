@@ -9,11 +9,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/desktop/desktop_dialog.dart';
 import '../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/desktop/desktop_upload_zone.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/picked_file.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../domain/entities/gradebook_entities.dart';
 import '../providers/gradebook_provider.dart';
@@ -56,7 +57,11 @@ class GradeDetailDesktopView extends StatelessWidget {
             studentId,
           ),
         ),
-        _ when detail == null => const AppLoading(),
+        _ when detail == null => const DesktopDetailSkeleton(
+          avatar: SkeletonLeading.square,
+          rail: 2,
+          railEnd: true,
+        ),
         _ => LayoutBuilder(
           builder: (context, constraints) {
             final d = detail;

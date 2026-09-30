@@ -8,8 +8,9 @@ import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/subject_visuals.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../domain/entities/teaching_period_entity.dart';
@@ -123,7 +124,12 @@ class TeachingPeriodDetailMobileView extends StatelessWidget {
         _ when period == null => const Column(
           children: [
             _BackOnlyHeader(),
-            Expanded(child: AppLoading()),
+            Expanded(
+              child: MobileDetailSkeleton(
+                avatar: SkeletonLeading.square,
+                tabs: 4,
+              ),
+            ),
           ],
         ),
         _ => RefreshIndicator(

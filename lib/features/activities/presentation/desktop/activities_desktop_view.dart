@@ -8,10 +8,10 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/desktop/desktop_data_table.dart';
 import '../../../../core/widgets/desktop/desktop_dialog.dart';
 import '../../../../core/widgets/desktop/desktop_page_header.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/shared/teaching_period_selector.dart';
@@ -118,7 +118,14 @@ class ActivitiesDesktopView extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const DesktopDataTableSkeleton(
+          columns: [
+            SkeletonColumn('Nombre', flex: 3),
+            SkeletonColumn('Tipo', flex: 2),
+            SkeletonColumn('Puntaje máx.', cell: SkeletonCell.value),
+            SkeletonColumn('Fecha', flex: 2),
+          ],
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,

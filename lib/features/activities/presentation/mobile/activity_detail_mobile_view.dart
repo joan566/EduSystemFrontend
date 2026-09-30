@@ -3,11 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_list_tile.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../domain/entities/activity_entity.dart';
 import '../providers/activities_provider.dart';
 import '../shared/activity_grades_controller.dart';
@@ -69,7 +70,12 @@ class ActivityDetailMobileView extends StatelessWidget {
     switch (state.status) {
       case DetailStatus.initial:
       case DetailStatus.loading:
-        return const AppLoading();
+        return const MobileListSkeleton(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 24),
+          leading: SkeletonLeading.square,
+          trailingWidth: 72,
+          trailingHeight: 40,
+        );
       case DetailStatus.error:
         return AppErrorState(
           exception: state.error!,
@@ -102,7 +108,12 @@ class ActivityDetailMobileView extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const MobileListSkeleton(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 24),
+          leading: SkeletonLeading.square,
+          trailingWidth: 72,
+          trailingHeight: 40,
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,

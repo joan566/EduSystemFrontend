@@ -6,10 +6,13 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_dropdown.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_text_field.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../domain/entities/grading_entities.dart';
@@ -144,6 +147,7 @@ class GradingSettingsMobileView extends StatelessWidget {
                   )
                 : GradingConfigurationStateView(
                     controller: config,
+                    placeholder: const _EditorSkeleton(),
                     builder: (context) => _Editor(
                       controller: config,
                       onCreateScale: () => _createScale(context),
@@ -151,6 +155,34 @@ class GradingSettingsMobileView extends StatelessWidget {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Placeholder of [_Editor]: the weights total card and the components.
+class _EditorSkeleton extends StatelessWidget {
+  const _EditorSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Skeleton(
+      child: SkeletonFill(
+        padding: EdgeInsets.fromLTRB(16, 14, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SkeletonSurface(
+              radius: 14,
+              padding: EdgeInsets.all(14),
+              child: SkeletonTile(leadingSize: 60, gap: 14),
+            ),
+            SizedBox(height: 14),
+            MobileSectionSkeleton(rows: 4, trailingWidth: 56),
+            SizedBox(height: 14),
+            MobileSectionSkeleton(rows: 2),
+          ],
+        ),
       ),
     );
   }

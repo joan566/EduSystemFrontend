@@ -8,6 +8,8 @@ import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../schedule/domain/entities/schedule_entities.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../subjects/presentation/providers/subjects_provider.dart';
@@ -92,10 +94,7 @@ class _ProgressCard extends StatelessWidget {
             ),
           ],
         ),
-        _ => const SizedBox(
-          height: 92,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
+        _ => const Skeleton(child: SkeletonRingSummary()),
       },
     );
   }

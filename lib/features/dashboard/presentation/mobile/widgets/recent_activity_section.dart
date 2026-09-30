@@ -6,12 +6,13 @@ import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
+import '../../../../../core/widgets/mobile/mobile_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
+import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../audit/domain/entities/audit_log_entity.dart';
 import '../../../../audit/presentation/providers/audit_provider.dart';
 import '../../../../audit/presentation/shared/audit_labels.dart';
 import '../../shared/dashboard_error_notice.dart';
-import '../../../../../core/widgets/shared/tinted_icon.dart';
-import '../../../../../core/widgets/mobile/mobile_section_card.dart';
 
 /// Latest actions on the account (from the audit trail), newest first.
 class RecentActivitySection extends StatelessWidget {
@@ -41,6 +42,10 @@ class RecentActivitySection extends StatelessWidget {
               _ActivityRow(log: log),
             ],
           ],
+        ),
+        ViewStatus.initial || ViewStatus.loading => const SkeletonTileList(
+          leading: SkeletonLeading.circle,
+          leadingSize: 38,
         ),
         _ => Text(
           'Sin actividad reciente.',

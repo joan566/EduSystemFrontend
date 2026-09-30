@@ -9,10 +9,10 @@ import '../../../../core/widgets/desktop/desktop_catalog_header.dart';
 import '../../../../core/widgets/desktop/desktop_catalog_relations.dart';
 import '../../../../core/widgets/desktop/desktop_dialog.dart';
 import '../../../../core/widgets/desktop/desktop_list_table.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../../teaching/presentation/shared/class_lookup.dart';
@@ -58,7 +58,18 @@ class AcademicLevelsDesktopView extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     final Widget main = switch (state.status) {
-      ViewStatus.initial || ViewStatus.loading => const AppLoading(),
+      ViewStatus.initial || ViewStatus.loading => const DesktopListTableSkeleton(
+        columns: [
+          SkeletonColumn('Grado', flex: 5, cell: SkeletonCell.badge),
+          SkeletonColumn('Tus cursos', flex: 4),
+          SkeletonColumn(
+            'Tus clases',
+            width: 100,
+            cell: SkeletonCell.value,
+            alignEnd: true,
+          ),
+        ],
+      ),
       ViewStatus.error => AppErrorState(
         exception: state.error!,
         onRetry: () => context.read<AcademicLevelsProvider>().refresh(),

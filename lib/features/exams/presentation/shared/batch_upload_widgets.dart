@@ -7,8 +7,8 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_list_tile.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/picked_file.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../domain/entities/submission_batch_entity.dart';
 import '../providers/submission_batches_provider.dart';
 import 'batch_labels.dart';
@@ -85,9 +85,10 @@ class BatchHistoryList extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
-          child: AppLoading(),
+        return const SkeletonTileList(
+          leadingSize: 36,
+          trailingWidth: 80,
+          padding: EdgeInsets.symmetric(vertical: 8),
         );
       case ViewStatus.error:
         return AppErrorState(exception: state.error!, onRetry: onRetry);

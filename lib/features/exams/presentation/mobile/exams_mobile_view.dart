@@ -8,11 +8,12 @@ import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/mobile/mobile_brand_bar.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/exam_entity.dart';
@@ -421,7 +422,12 @@ class _ExamList extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const MobileListSkeleton(
+          padding: EdgeInsets.fromLTRB(16, 10, 16, 96),
+          leading: SkeletonLeading.square,
+          trailingWidth: 72,
+          meta: true,
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,

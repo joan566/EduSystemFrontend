@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/state/kept_listing.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/mobile/mobile_card_list.dart';
 import '../../../../core/widgets/mobile/mobile_page_header.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_dropdown.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_list_tile.dart';
 import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../domain/entities/audit_log_entity.dart';
 import '../providers/audit_provider.dart';
 import '../shared/audit_labels.dart';
@@ -25,11 +28,15 @@ class AuditMobileView extends StatelessWidget {
     required this.onActionFilterChanged,
     required this.query,
     required this.onRetry,
+    required this.listing,
   });
 
   /// The page and filters on screen.
   final AuditQuery query;
   final VoidCallback onRetry;
+
+  /// Keeps the previous rows visible while another page/filter loads.
+  final KeptListing<AuditLogEntity> listing;
 
   final AuditAction? actionFilter;
 
@@ -43,7 +50,9 @@ class AuditMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AuditProvider>().feed(query);
+    final (:state, :updating) = listing.resolve(
+      context.watch<AuditProvider>().feed(query),
+    );
 
     return Scaffold(
       body: Column(
@@ -75,17 +84,24 @@ class AuditMobileView extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 8),
-          Expanded(child: _buildBody(context, state)),
+          Expanded(child: _buildBody(context, state, updating: updating)),
         ],
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, ListViewState<AuditLogEntity> state) {
+  Widget _buildBody(
+    BuildContext context,
+    ListViewState<AuditLogEntity> state, {
+    required bool updating,
+  }) {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const MobileListSkeleton(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 88),
+          leading: SkeletonLeading.square,
+        );
       case ViewStatus.error:
         return AppErrorState(exception: state.error!, onRetry: onRetry);
       case ViewStatus.empty:
@@ -94,21 +110,24 @@ class AuditMobileView extends StatelessWidget {
           icon: Icons.history_outlined,
         );
       case ViewStatus.success:
-        return MobileCardList<AuditLogEntity>(
-          items: state.items,
-          footer: AppPagination(
-            page: state.page,
-            totalPages: state.totalPages,
-            totalElements: state.totalElements,
-            onPageChanged: onLoadPage,
-          ),
-          itemBuilder: (context, log) => AppListTile(
-            icon: auditResultIcon(log),
-            iconColor: auditResultColor(log),
-            title: auditActionLabel(log.action),
-            subtitle:
-                '${auditEntityLabel(log)} · ${Formatters.dateTime(log.createdAt)}',
-            subtitleMaxLines: 2,
+        return AppUpdating(
+          updating: updating,
+          child: MobileCardList<AuditLogEntity>(
+            items: state.items,
+            footer: AppPagination(
+              page: state.page,
+              totalPages: state.totalPages,
+              totalElements: state.totalElements,
+              onPageChanged: onLoadPage,
+            ),
+            itemBuilder: (context, log) => AppListTile(
+              icon: auditResultIcon(log),
+              iconColor: auditResultColor(log),
+              title: auditActionLabel(log.action),
+              subtitle:
+                  '${auditEntityLabel(log)} · ${Formatters.dateTime(log.createdAt)}',
+              subtitleMaxLines: 2,
+            ),
           ),
         );
     }

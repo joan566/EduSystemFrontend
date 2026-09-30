@@ -8,6 +8,8 @@ import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/mobile/mobile_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../audit/domain/entities/audit_log_entity.dart';
 import '../../../../audit/presentation/providers/audit_provider.dart';
@@ -150,10 +152,7 @@ class _ProgressCard extends StatelessWidget {
             ],
           ),
         ),
-        _ => const SizedBox(
-          height: 72,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
+        _ => const Skeleton(child: SkeletonRingSummary(ringSize: 72)),
       },
     );
   }
@@ -211,10 +210,7 @@ class _NextSessionCard extends StatelessWidget {
           'No pudimos cargar el horario.',
           style: textTheme.bodySmall,
         ),
-        _ => const SizedBox(
-          height: 48,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-        ),
+        _ => const SkeletonTileList(count: 1, trailingWidth: 56),
       },
     );
   }
@@ -359,9 +355,9 @@ class _ClassActivityCard extends StatelessWidget {
             ),
           ],
         ),
-        _ => const SizedBox(
-          height: 48,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        _ => const SkeletonTileList(
+          leading: SkeletonLeading.circle,
+          leadingSize: 32,
         ),
       },
     );

@@ -5,6 +5,7 @@ import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../domain/entities/attendance_entity.dart';
 import '../../shared/attendance_day_controller.dart';
 import '../../shared/attendance_visuals.dart';
@@ -254,10 +255,8 @@ class RecentSessionsCard extends StatelessWidget {
       icon: Icons.history,
       title: 'Registros recientes',
       child: switch (state.status) {
-        ViewStatus.initial || ViewStatus.loading => const Padding(
-          padding: EdgeInsets.all(8),
-          child: LinearProgressIndicator(),
-        ),
+        ViewStatus.initial ||
+        ViewStatus.loading => const SkeletonValueRows(count: 4, valueWidth: 48),
         ViewStatus.error => Text(
           'No se pudieron cargar los registros.',
           style: textTheme.bodySmall,

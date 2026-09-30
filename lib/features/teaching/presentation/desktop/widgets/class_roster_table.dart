@@ -6,6 +6,7 @@ import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../../core/widgets/shared/app_search_field.dart';
@@ -154,9 +155,15 @@ class _ClassRosterTableState extends State<ClassRosterTable> {
               ),
           ],
         ),
-        _ => const SizedBox(
-          height: 120,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        _ => const DesktopListTableSkeleton(
+          shrinkWrap: true,
+          rows: 6,
+          columns: [
+            SkeletonColumn('Estudiante', flex: 4, cell: SkeletonCell.entity),
+            SkeletonColumn('Código', flex: 2),
+            SkeletonColumn('Identificación', flex: 2),
+            SkeletonColumn('Correo', flex: 3),
+          ],
         ),
       },
     );

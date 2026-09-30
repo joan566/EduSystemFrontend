@@ -6,10 +6,11 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/subject_visuals.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_status_chip.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../domain/entities/teaching_period_entity.dart';
 import '../providers/teaching_provider.dart';
@@ -58,7 +59,12 @@ class TeachingPeriodDetailDesktopView extends StatelessWidget {
             teachingPeriodId,
           ),
         ),
-        _ when period == null => const AppLoading(),
+        _ when period == null => const DesktopDetailSkeleton(
+          avatar: SkeletonLeading.square,
+          tabs: 4,
+          rail: 3,
+          railEnd: true,
+        ),
         _ => _Workspace(
           period: period,
           tabController: tabController,

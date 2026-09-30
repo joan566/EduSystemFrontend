@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/widgets/desktop/desktop_catalog_header.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../providers/schedule_provider.dart';
 import '../shared/schedule_week.dart';
 import 'widgets/schedule_side_panel.dart';
@@ -108,7 +110,31 @@ class ScheduleDesktopView extends StatelessWidget {
                         ),
                       ],
                     ),
-                    _ => const AppLoading(),
+                    _ => const Skeleton(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: WeekTimeGridSkeleton()),
+                          SizedBox(width: 20),
+                          SizedBox(
+                            width: _sideWidth,
+                            child: SkeletonFill(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  DesktopSectionSkeleton(
+                                    rows: 3,
+                                    trailingWidth: 48,
+                                  ),
+                                  SizedBox(height: 16),
+                                  DesktopSectionSkeleton(rows: 2),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   },
                 ),
               ],

@@ -11,11 +11,12 @@ import '../../../../core/widgets/mobile/mobile_brand_bar.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
 import '../../../../core/widgets/mobile/mobile_header_action.dart';
 import '../../../../core/widgets/mobile/mobile_select_field.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../../core/widgets/shared/app_status_chip.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../academic_periods/domain/entities/academic_period_entity.dart';
 import '../../../academic_periods/presentation/providers/academic_periods_provider.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
@@ -275,6 +276,10 @@ class TeachingMobileView extends StatelessWidget {
                   onCreate: () => _createAssignment(context),
                 ),
                 _ClassesTab(
+                  loading: switch (teaching.periodsState.status) {
+                    ViewStatus.initial || ViewStatus.loading => true,
+                    _ => false,
+                  },
                   classes: _filtered(classes, subjects),
                   subjects: subjects,
                   onCreate: () => _createPeriod(context),
@@ -419,7 +424,13 @@ class _AssignmentsTab extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const MobileListSkeleton(
+          padding: EdgeInsets.fromLTRB(16, 14, 16, 24),
+          leading: SkeletonLeading.square,
+          leadingSize: 56,
+          trailingWidth: 60,
+          meta: true,
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
@@ -505,11 +516,14 @@ class _AssignmentsTab extends StatelessWidget {
 /// "Por periodo": the classes of the chosen academic period.
 class _ClassesTab extends StatelessWidget {
   const _ClassesTab({
+    required this.loading,
     required this.classes,
     required this.subjects,
     required this.onCreate,
   });
 
+  /// The class catalog is still being read: not the same as no classes.
+  final bool loading;
   final List<TeachingPeriodEntity> classes;
   final List<SubjectEntity> subjects;
   final VoidCallback onCreate;
@@ -545,6 +559,15 @@ class _ClassesTab extends StatelessWidget {
         ?.occurrencesByTeachingPeriod;
     final now = DateTime.now();
 
+    if (loading) {
+      return const MobileListSkeleton(
+        padding: EdgeInsets.fromLTRB(16, 14, 16, 24),
+        leading: SkeletonLeading.square,
+        leadingSize: 56,
+        trailingWidth: 60,
+        meta: true,
+      );
+    }
     if (classes.isEmpty) {
       return AppEmptyState(
         title: 'Sin clases en este periodo',

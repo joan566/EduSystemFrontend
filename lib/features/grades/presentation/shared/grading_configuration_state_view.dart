@@ -3,21 +3,23 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../providers/grading_provider.dart';
 import 'grading_configuration_controller.dart';
 
 /// Resolves the configuration's loading/error states and rebuilds [builder]
-/// on every edit; each platform's view only lays the editor out.
+/// on every edit; each platform's view only lays the editor out (and
+/// passes its skeleton as [placeholder]).
 class GradingConfigurationStateView extends StatelessWidget {
   const GradingConfigurationStateView({
     super.key,
     required this.controller,
     required this.builder,
+    required this.placeholder,
   });
 
   final GradingConfigurationController controller;
   final WidgetBuilder builder;
+  final Widget placeholder;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +29,7 @@ class GradingConfigurationStateView extends StatelessWidget {
     switch (configState.status) {
       case DetailStatus.initial:
       case DetailStatus.loading:
-        return const AppLoading();
+        return placeholder;
       case DetailStatus.error:
         return AppErrorState(
           exception: configState.error!,

@@ -8,10 +8,10 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
 import '../../../../core/widgets/mobile/mobile_section_card.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/gradebook_entities.dart';
 import '../providers/gradebook_provider.dart';
@@ -133,7 +133,13 @@ class _StudentGradesMobileViewState extends State<StudentGradesMobileView>
         _ when report == null => const Column(
           children: [
             Align(alignment: Alignment.centerLeft, child: BackButton()),
-            Expanded(child: AppLoading()),
+            Expanded(
+              child: MobileDetailSkeleton(
+                stats: 3,
+                sections: 1,
+                rowsPerSection: 5,
+              ),
+            ),
           ],
         ),
         _ => _Content(

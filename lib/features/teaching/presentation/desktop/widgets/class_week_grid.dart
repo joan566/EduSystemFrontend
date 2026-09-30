@@ -10,6 +10,7 @@ import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
 import '../../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../../core/widgets/shared/app_error_state.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../../../schedule/domain/entities/schedule_entities.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../schedule/presentation/shared/class_schedule_actions.dart';
@@ -86,11 +87,41 @@ class ClassWeekGrid extends StatelessWidget {
                 block: block,
               ),
             ),
-            _ => const SizedBox(
-              height: 200,
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
+            _ => const _GridSkeleton(),
           },
+        ],
+      ),
+    );
+  }
+}
+
+/// Placeholder of [_Grid]: a day header over a couple of class blocks per
+/// weekday.
+class _GridSkeleton extends StatelessWidget {
+  const _GridSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeleton(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var day = 0; day < 5; day++) ...[
+            if (day > 0) const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Center(child: SkeletonBox(width: 64, height: 12)),
+                  const SizedBox(height: 14),
+                  for (var i = 0; i < 1 + (day + 1) % 2; i++) ...[
+                    if (i > 0) const SizedBox(height: 10),
+                    const SkeletonBox(height: 64, radius: 10),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

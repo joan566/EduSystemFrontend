@@ -6,11 +6,11 @@ import '../../../../core/cache/cached_value.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_dropdown.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
@@ -162,10 +162,10 @@ class ExamsDesktopView extends StatelessWidget {
               actionLabel: 'Ir a Clases',
               onAction: () => context.go(RoutePaths.teaching),
             )
-          : const AppLoading();
+          : const _ExamsTableSkeleton();
     }
     return switch (state.status) {
-      ViewStatus.initial || ViewStatus.loading => const AppLoading(),
+      ViewStatus.initial || ViewStatus.loading => const _ExamsTableSkeleton(),
       ViewStatus.error => AppErrorState(
         exception: state.error!,
         onRetry: () => context.read<ExamsProvider>().refreshExams(period.id),
@@ -313,6 +313,22 @@ class _Toolbar extends StatelessWidget {
             },
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _ExamsTableSkeleton extends StatelessWidget {
+  const _ExamsTableSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DesktopListTableSkeleton(
+      columns: [
+        SkeletonColumn('Examen', flex: 6, cell: SkeletonCell.badge),
+        SkeletonColumn('Fecha', flex: 2),
+        SkeletonColumn('Preguntas', flex: 2, cell: SkeletonCell.value),
+        SkeletonColumn('Estado', width: 140, cell: SkeletonCell.chip),
       ],
     );
   }

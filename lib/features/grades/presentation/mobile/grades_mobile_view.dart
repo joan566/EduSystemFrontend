@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
@@ -213,6 +214,10 @@ class _GradesMobileViewState extends State<GradesMobileView>
                   )
                 : PeriodGradesStateView(
                     teachingPeriodId: period.id,
+                    placeholder: const MobileListSkeleton(
+                      padding: EdgeInsets.fromLTRB(16, 14, 16, 24),
+                      trailingWidth: 48,
+                    ),
                     builder: (context, data) => TabBarView(
                       controller: _tabs,
                       children: [

@@ -7,10 +7,11 @@ import '../../../../core/state/detail_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/desktop/desktop_dialog.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_status_chip.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
@@ -85,7 +86,12 @@ class _ExamDetailDesktopViewState extends State<ExamDetailDesktopView>
           onRetry: () =>
               context.read<ExamsProvider>().refreshDetail(widget.examId),
         ),
-        _ when exam == null => const AppLoading(),
+        _ when exam == null => const DesktopDetailSkeleton(
+          avatar: SkeletonLeading.none,
+          actions: 2,
+          tabs: 3,
+          main: SizedBox(height: 560, child: QuestionsEditorDesktopSkeleton()),
+        ),
         _ => _Workspace(
           exam: exam,
           questions: widget.questions,
@@ -135,7 +141,10 @@ class _Workspace extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               children: [
                 questions == null
-                    ? const AppLoading()
+                    ? const Padding(
+                        padding: EdgeInsets.only(top: 20),
+                        child: QuestionsEditorDesktopSkeleton(),
+                      )
                     : Padding(
                         padding: const EdgeInsets.only(top: 20),
                         child: QuestionsEditorDesktop(

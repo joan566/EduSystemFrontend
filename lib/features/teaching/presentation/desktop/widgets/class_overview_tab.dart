@@ -7,6 +7,7 @@ import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../audit/domain/entities/audit_log_entity.dart';
 import '../../../../audit/presentation/providers/audit_provider.dart';
@@ -89,9 +90,11 @@ class _RecentEvaluations extends StatelessWidget {
               ],
             )
           : items == null
-          ? const SizedBox(
-              height: 80,
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ? const SkeletonTileList(
+              count: 4,
+              leadingSize: 36,
+              trailingWidth: 64,
+              spacing: 16,
             )
           : items.isEmpty
           ? Text(
@@ -198,9 +201,9 @@ class _RecentActivity extends StatelessWidget {
             ),
           ],
         ),
-        _ => const SizedBox(
-          height: 80,
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        _ => const SkeletonTileList(
+          leading: SkeletonLeading.circle,
+          leadingSize: 28,
         ),
       },
     );

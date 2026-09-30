@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_dropdown.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
@@ -168,6 +169,27 @@ class _GradesDesktopViewState extends State<GradesDesktopView>
                     )
                   : PeriodGradesStateView(
                       teachingPeriodId: period.id,
+                      placeholder: const DesktopListTableSkeleton(
+                        columns: [
+                          SkeletonColumn(
+                            'Estudiante',
+                            flex: 5,
+                            cell: SkeletonCell.entity,
+                          ),
+                          SkeletonColumn('', flex: 2, cell: SkeletonCell.value),
+                          SkeletonColumn('', flex: 2, cell: SkeletonCell.value),
+                          SkeletonColumn(
+                            'Nota final',
+                            flex: 3,
+                            cell: SkeletonCell.bar,
+                          ),
+                          SkeletonColumn(
+                            'Estado',
+                            width: 116,
+                            cell: SkeletonCell.chip,
+                          ),
+                        ],
+                      ),
                       builder: (context, data) => _tabs.index == 1
                           ? ClassGradesSummaryDesktop(data: data)
                           : _StudentsPane(

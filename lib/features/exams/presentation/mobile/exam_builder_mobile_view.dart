@@ -37,6 +37,7 @@ class ExamBuilderMobileView extends StatelessWidget {
           Expanded(
             child: ExamBuilderSections(
               controller: controller,
+              questionsPlaceholder: const QuestionsEditorMobileSkeleton(),
               questionsEditor: (questions) => QuestionsEditorMobile(
                 controller: questions,
                 embedded: true,

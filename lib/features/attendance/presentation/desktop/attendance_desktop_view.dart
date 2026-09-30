@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/widgets/desktop/desktop_catalog_header.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../domain/entities/attendance_entity.dart';
@@ -144,7 +146,52 @@ class AttendanceDesktopView extends StatelessWidget {
                           ),
                         ],
                       ),
-                      _ => const AppLoading(),
+                      _ => const Skeleton(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: DesktopListTableSkeleton(
+                                root: false,
+                                rows: 10,
+                                columns: [
+                                  SkeletonColumn(
+                                    'Estudiante',
+                                    flex: 3,
+                                    cell: SkeletonCell.entity,
+                                  ),
+                                  SkeletonColumn(
+                                    'Estado',
+                                    width: 348,
+                                    cell: SkeletonCell.segments,
+                                  ),
+                                  SkeletonColumn('Observación', flex: 2),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 20),
+                            SizedBox(
+                              width: 340,
+                              child: SkeletonFill(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    DesktopSectionSkeleton(rows: 1),
+                                    SizedBox(height: 16),
+                                    DesktopSectionSkeleton(
+                                      rows: 4,
+                                      trailingWidth: 32,
+                                    ),
+                                    SizedBox(height: 16),
+                                    DesktopSectionSkeleton(rows: 3),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     },
                   ),
                 ],

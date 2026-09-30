@@ -5,13 +5,14 @@ import 'package:provider/provider.dart';
 import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/subject_visuals.dart';
+import '../../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../../../teaching/presentation/shared/class_counts.dart';
 import '../../shared/dashboard_error_notice.dart';
-import '../../../../../core/widgets/desktop/desktop_section_card.dart';
 
 /// "Tus clases": a two-column grid of class cards.
 class ClassesGridCard extends StatelessWidget {
@@ -60,6 +61,8 @@ class ClassesGridCard extends StatelessWidget {
             );
           },
         ),
+        ViewStatus.initial ||
+        ViewStatus.loading => const SkeletonTileList(count: 2, leadingSize: 42),
         _ => Text(
           'Aún no tienes clases. Crea una asignación y vincúlala a un '
           'periodo académico.',

@@ -7,11 +7,12 @@ import '../../../../core/state/list_state.dart';
 import '../../../../core/widgets/mobile/mobile_card_list.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
 import '../../../../core/widgets/mobile/mobile_page_header.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_list_tile.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/shared/teaching_period_selector.dart';
 import '../../domain/entities/activity_entity.dart';
@@ -105,7 +106,10 @@ class ActivitiesMobileView extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const MobileListSkeleton(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 88),
+          leading: SkeletonLeading.square,
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,

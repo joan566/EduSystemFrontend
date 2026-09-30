@@ -8,8 +8,9 @@ import '../../../../core/widgets/mobile/mobile_catalog_header.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
@@ -145,7 +146,20 @@ class AttendanceMobileView extends StatelessWidget {
                         detail: [period.courseLabel, ?room].join('  ·  '),
                       ),
                     ],
-                    _ => [const SizedBox(height: 240, child: AppLoading())],
+                    _ => [
+                      const Skeleton(
+                        child: SkeletonBox(height: 48, radius: 12),
+                      ),
+                      const SizedBox(height: 12),
+                      const SkeletonSurface(
+                        child: SkeletonTileList(
+                          count: 7,
+                          leading: SkeletonLeading.circle,
+                          trailingWidth: 116,
+                          trailingHeight: 32,
+                        ),
+                      ),
+                    ],
                   },
                 ],
               ),

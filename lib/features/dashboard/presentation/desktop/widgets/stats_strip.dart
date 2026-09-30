@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../../core/router/route_paths.dart';
 import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../../../courses/presentation/providers/courses_provider.dart';
 import '../../../../students/presentation/providers/students_provider.dart';
 import '../../../../teaching/presentation/providers/teaching_provider.dart';
@@ -132,6 +133,14 @@ class _Stat extends StatelessWidget {
                             color: colors.error,
                           ),
                         ],
+                      ),
+                    )
+                  else if (state.status == ViewStatus.initial ||
+                      state.status == ViewStatus.loading)
+                    Skeleton(
+                      child: SkeletonText(
+                        style: textTheme.headlineLarge,
+                        width: 40,
                       ),
                     )
                   else

@@ -7,10 +7,11 @@ import '../../../../core/widgets/mobile/mobile_catalog_header.dart';
 import '../../../../core/widgets/mobile/mobile_filter_pills.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
 import '../../../../core/widgets/mobile/mobile_select_field.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../academic_levels/domain/entities/academic_level_entity.dart';
 import '../../../academic_levels/presentation/providers/academic_levels_provider.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
@@ -100,7 +101,11 @@ class CoursesMobileView extends StatelessWidget {
           ),
           Expanded(
             child: switch (state.status) {
-              ViewStatus.initial || ViewStatus.loading => const AppLoading(),
+              ViewStatus.initial || ViewStatus.loading => const MobileListSkeleton(
+                leading: SkeletonLeading.square,
+                leadingSize: 48,
+                meta: true,
+              ),
               ViewStatus.error => AppErrorState(
                 exception: state.error!,
                 onRetry: () => context.read<CoursesProvider>().refresh(),

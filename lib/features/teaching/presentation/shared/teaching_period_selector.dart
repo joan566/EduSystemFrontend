@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/router/route_paths.dart';
+import '../../../../core/state/list_state.dart';
 import '../../../../core/widgets/shared/app_dropdown.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../domain/entities/teaching_period_entity.dart';
 import '../providers/teaching_provider.dart';
 
@@ -51,8 +53,17 @@ class _TeachingPeriodSelectorState extends State<TeachingPeriodSelector> {
 
   @override
   Widget build(BuildContext context) {
-    final periods = context.watch<TeachingProvider>().allPeriods;
+    final teaching = context.watch<TeachingProvider>();
+    final periods = teaching.allPeriods;
 
+    // Still reading the classes: the field's placeholder, not "no classes".
+    if (periods.isEmpty &&
+        switch (teaching.periodsState.status) {
+          ViewStatus.initial || ViewStatus.loading => true,
+          _ => false,
+        }) {
+      return const Skeleton(child: SkeletonBox(height: 48, radius: 8));
+    }
     if (periods.isEmpty) {
       final colors = Theme.of(context).colorScheme;
       return Container(

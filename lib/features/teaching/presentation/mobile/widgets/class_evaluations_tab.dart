@@ -7,6 +7,7 @@ import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/mobile/mobile_section_card.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../activities/presentation/providers/activities_provider.dart';
 import '../../../../exams/presentation/providers/exams_provider.dart';
@@ -156,10 +157,7 @@ class _EvaluationList<T> extends StatelessWidget {
           TextButton(onPressed: onRetry, child: const Text('Reintentar')),
         ],
       ),
-      _ => const SizedBox(
-        height: 48,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      ),
+      _ => const SkeletonTileList(trailingWidth: 56),
     };
   }
 }

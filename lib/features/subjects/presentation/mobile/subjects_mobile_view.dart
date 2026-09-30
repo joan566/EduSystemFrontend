@@ -6,11 +6,12 @@ import '../../../../core/theme/subject_visuals.dart';
 import '../../../../core/widgets/mobile/mobile_catalog_card.dart';
 import '../../../../core/widgets/mobile/mobile_catalog_header.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
@@ -90,7 +91,11 @@ class SubjectsMobileView extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const MobileListSkeleton(
+          leading: SkeletonLeading.square,
+          leadingSize: 48,
+          meta: true,
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,

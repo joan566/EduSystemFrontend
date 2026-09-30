@@ -8,7 +8,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/mobile/mobile_catalog_header.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../domain/entities/schedule_entities.dart';
 import '../providers/schedule_provider.dart';
 import '../shared/schedule_week.dart';
@@ -92,7 +93,7 @@ class ScheduleMobileView extends StatelessWidget {
                         ),
                       ),
                       DetailStatus.success => null,
-                      _ => const SizedBox(height: 200, child: AppLoading()),
+                      _ => const _TimelineSkeleton(),
                     },
                   ),
                 ],
@@ -100,6 +101,40 @@ class ScheduleMobileView extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Placeholder of the day's timeline: a time and a class card per row.
+class _TimelineSkeleton extends StatelessWidget {
+  const _TimelineSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Skeleton(
+      child: SkeletonRepeat(
+        count: 4,
+        spacing: 12,
+        builder: (context, i) => Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SkeletonText(style: textTheme.labelMedium, width: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SkeletonSurface(
+                radius: 12,
+                padding: const EdgeInsets.all(12),
+                child: SkeletonTile(
+                  leading: SkeletonLeading.square,
+                  leadingSize: 36,
+                  titleFactor: SkeletonRepeat.factor(i),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

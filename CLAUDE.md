@@ -53,6 +53,25 @@ features/<feature>/presentation/
   `showDesktopDialog`, `DesktopUploadZone`, `DesktopHeroBanner`,
   `DesktopStatCard`.
 
+### Loading states
+
+- Content being read shows a skeleton shaped like the real UI, never a
+  spinner: `core/widgets/shared/skeleton/` (`Skeleton` root with the shared
+  shimmer and a short reveal delay against flicker, `SkeletonBox`,
+  `SkeletonText`, `SkeletonTile`, `SkeletonSurface`, `SkeletonTileList`...),
+  `mobile_skeletons.dart` (`MobileListSkeleton`, `MobileDetailSkeleton`,
+  `MobileSectionSkeleton`) and `desktop_skeletons.dart`
+  (`DesktopListTableSkeleton` with the real column labels,
+  `DesktopDataTableSkeleton`, `DesktopDetailSkeleton`,
+  `DesktopSectionSkeleton`, `DesktopStatsRowSkeleton`). Shared state views
+  take the platform's skeleton as a `placeholder`.
+- Loading is not empty: switches handle `initial`/`loading` before any
+  "Sin …" fallback.
+- Server-paged listings keep the previous page on screen while the next
+  loads (`KeptListing` in the page entry point + `AppUpdating`).
+- Actions (save, delete, download) keep their inline indicator
+  (`AppButton.isLoading`); uploads/processing keep `AppProgressBar`.
+
 ## Data, cache and sessions
 
 Providers hold the teacher's data for the session, not "what a screen

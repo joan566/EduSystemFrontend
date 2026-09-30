@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../domain/entities/grading_entities.dart';
 import '../../providers/gradebook_provider.dart';
@@ -153,7 +154,7 @@ class _StudentGradePreviewState extends State<StudentGradePreview> {
           if (error != null)
             Text('No se pudieron cargar.', style: textTheme.bodySmall)
           else if (report == null)
-            const LinearProgressIndicator(minHeight: 2)
+            const SkeletonValueRows(count: 4)
           else if (report.evaluations.isEmpty)
             Text(
               'La clase aún no tiene evaluaciones.',

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/state/kept_listing.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/desktop/desktop_data_table.dart';
 import '../../../../core/widgets/desktop/desktop_page_header.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_dropdown.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
@@ -24,11 +26,15 @@ class AuditDesktopView extends StatelessWidget {
     required this.onActionFilterChanged,
     required this.query,
     required this.onRetry,
+    required this.listing,
   });
 
   /// The page and filters on screen.
   final AuditQuery query;
   final VoidCallback onRetry;
+
+  /// Keeps the previous rows visible while another page/filter loads.
+  final KeptListing<AuditLogEntity> listing;
 
   final AuditAction? actionFilter;
 
@@ -42,7 +48,9 @@ class AuditDesktopView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AuditProvider>().feed(query);
+    final (:state, :updating) = listing.resolve(
+      context.watch<AuditProvider>().feed(query),
+    );
 
     return Scaffold(
       body: Column(
@@ -80,7 +88,7 @@ class AuditDesktopView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Expanded(child: _buildBody(context, state)),
+          Expanded(child: _buildBody(context, state, updating: updating)),
           if (state.status == ViewStatus.success)
             AppPagination(
               page: state.page,
@@ -93,11 +101,23 @@ class AuditDesktopView extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, ListViewState<AuditLogEntity> state) {
+  Widget _buildBody(
+    BuildContext context,
+    ListViewState<AuditLogEntity> state, {
+    required bool updating,
+  }) {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const DesktopDataTableSkeleton(
+          rows: 12,
+          columns: [
+            SkeletonColumn('Resultado', cell: SkeletonCell.value),
+            SkeletonColumn('Acción', flex: 2),
+            SkeletonColumn('Entidad', flex: 2),
+            SkeletonColumn('Fecha', flex: 2),
+          ],
+        );
       case ViewStatus.error:
         return AppErrorState(exception: state.error!, onRetry: onRetry);
       case ViewStatus.empty:
@@ -106,30 +126,33 @@ class AuditDesktopView extends StatelessWidget {
           icon: Icons.history_outlined,
         );
       case ViewStatus.success:
-        return DesktopDataTable<AuditLogEntity>(
-          items: state.items,
-          columns: [
-            DesktopDataColumn(
-              label: 'Resultado',
-              cellBuilder: (log) => Icon(
-                auditResultIcon(log),
-                size: 18,
-                color: auditResultColor(log),
+        return AppUpdating(
+          updating: updating,
+          child: DesktopDataTable<AuditLogEntity>(
+            items: state.items,
+            columns: [
+              DesktopDataColumn(
+                label: 'Resultado',
+                cellBuilder: (log) => Icon(
+                  auditResultIcon(log),
+                  size: 18,
+                  color: auditResultColor(log),
+                ),
               ),
-            ),
-            DesktopDataColumn(
-              label: 'Acción',
-              cellBuilder: (log) => Text(auditActionLabel(log.action)),
-            ),
-            DesktopDataColumn(
-              label: 'Entidad',
-              cellBuilder: (log) => Text(auditEntityLabel(log)),
-            ),
-            DesktopDataColumn(
-              label: 'Fecha',
-              cellBuilder: (log) => Text(Formatters.dateTime(log.createdAt)),
-            ),
-          ],
+              DesktopDataColumn(
+                label: 'Acción',
+                cellBuilder: (log) => Text(auditActionLabel(log.action)),
+              ),
+              DesktopDataColumn(
+                label: 'Entidad',
+                cellBuilder: (log) => Text(auditEntityLabel(log)),
+              ),
+              DesktopDataColumn(
+                label: 'Fecha',
+                cellBuilder: (log) => Text(Formatters.dateTime(log.createdAt)),
+              ),
+            ],
+          ),
         );
     }
   }

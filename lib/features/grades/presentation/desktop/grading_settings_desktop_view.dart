@@ -7,10 +7,13 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/desktop/desktop_dialog.dart';
 import '../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_dropdown.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_text_field.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
@@ -110,6 +113,38 @@ class GradingSettingsDesktopView extends StatelessWidget {
                     )
                   : GradingConfigurationStateView(
                       controller: config,
+                      placeholder: const Skeleton(
+                        child: SkeletonFill(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: DesktopSectionSkeleton(
+                                  rows: 5,
+                                  trailingWidth: 90,
+                                ),
+                              ),
+                              SizedBox(width: 24),
+                              SizedBox(
+                                width: 340,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    DesktopSectionSkeleton(
+                                      rows: 1,
+                                      leading: SkeletonLeading.circle,
+                                      leadingSize: 60,
+                                    ),
+                                    SizedBox(height: 20),
+                                    DesktopSectionSkeleton(rows: 2),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       builder: (context) => LayoutBuilder(
                         builder: (context, constraints) {
                           final components = _ComponentsCard(

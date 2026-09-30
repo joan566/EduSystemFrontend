@@ -7,9 +7,11 @@ import '../../../../../core/state/list_state.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../../core/widgets/desktop/desktop_stat_card.dart';
 import '../../../../../core/widgets/shared/app_button.dart';
 import '../../../../../core/widgets/shared/app_search_field.dart';
+import '../../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../../../students/presentation/providers/students_provider.dart';
 import '../../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../../teaching/presentation/shared/class_lookup.dart';
@@ -128,6 +130,15 @@ class _ExamResultsDesktopTabState extends State<ExamResultsDesktopTab> {
         ascending: _ascending,
         onSort: _sortBy,
       ),
+      placeholder: const DesktopListTableSkeleton(
+        shrinkWrap: true,
+        columns: [
+          SkeletonColumn('Estudiante', flex: 5, cell: SkeletonCell.entity),
+          SkeletonColumn('Nota', flex: 4, cell: SkeletonCell.value),
+          SkeletonColumn('Estado', flex: 3, cell: SkeletonCell.chip),
+          SkeletonColumn('Procesada', flex: 3),
+        ],
+      ),
     );
 
     final rail = [
@@ -169,13 +180,16 @@ class _ExamResultsDesktopTabState extends State<ExamResultsDesktopTab> {
               onSearchChanged: (search) => setState(() => _search = search),
             ),
             const SizedBox(height: 16),
-            _Kpis(
-              exam: exam,
-              summary: summary,
-              students: widget.period?.studentCount,
-              onShowReview: () =>
-                  setState(() => _status = _StatusFilter.review),
-            ),
+            if (state.isLoading || state.status == ViewStatus.initial)
+              const Skeleton(child: DesktopStatsRowSkeleton())
+            else
+              _Kpis(
+                exam: exam,
+                summary: summary,
+                students: widget.period?.studentCount,
+                onShowReview: () =>
+                    setState(() => _status = _StatusFilter.review),
+              ),
             const SizedBox(height: 20),
             if (railBeside)
               Row(

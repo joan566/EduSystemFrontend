@@ -9,9 +9,10 @@ import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/mobile/mobile_file_picker_button.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
 import '../../../../core/widgets/mobile/mobile_section_card.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../domain/entities/gradebook_entities.dart';
 import '../providers/gradebook_provider.dart';
@@ -154,7 +155,9 @@ class GradeDetailMobileView extends StatelessWidget {
                   studentId,
                 ),
               ),
-              _ when detail == null => const AppLoading(),
+              _ when detail == null => const MobileDetailSkeleton(
+                avatar: SkeletonLeading.square,
+              ),
               _ => RefreshIndicator(
                 onRefresh: () => context
                     .read<GradebookProvider>()

@@ -5,10 +5,10 @@ import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/widgets/desktop/desktop_data_table.dart';
 import '../../../../core/widgets/desktop/desktop_page_header.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../domain/entities/activity_entity.dart';
 import '../providers/activities_provider.dart';
 import '../shared/activity_grades_controller.dart';
@@ -76,7 +76,13 @@ class ActivityDetailDesktopView extends StatelessWidget {
     switch (state.status) {
       case DetailStatus.initial:
       case DetailStatus.loading:
-        return const AppLoading();
+        return const DesktopDataTableSkeleton(
+          columns: [
+            SkeletonColumn('Código', flex: 2),
+            SkeletonColumn('Estudiante', flex: 4),
+            SkeletonColumn('Nota', cell: SkeletonCell.value),
+          ],
+        );
       case DetailStatus.error:
         return AppErrorState(
           exception: state.error!,
@@ -96,7 +102,13 @@ class ActivityDetailDesktopView extends StatelessWidget {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const DesktopDataTableSkeleton(
+          columns: [
+            SkeletonColumn('Código', flex: 2),
+            SkeletonColumn('Estudiante', flex: 4),
+            SkeletonColumn('Nota', cell: SkeletonCell.value),
+          ],
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,

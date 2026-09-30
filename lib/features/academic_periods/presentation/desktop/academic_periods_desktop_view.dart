@@ -9,10 +9,10 @@ import '../../../../core/widgets/desktop/desktop_catalog_relations.dart';
 import '../../../../core/widgets/desktop/desktop_dialog.dart';
 import '../../../../core/widgets/desktop/desktop_list_table.dart';
 import '../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/app_status_chip.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
@@ -72,7 +72,20 @@ class AcademicPeriodsDesktopView extends StatelessWidget {
     );
 
     final Widget main = switch (state.status) {
-      ViewStatus.initial || ViewStatus.loading => const AppLoading(),
+      ViewStatus.initial || ViewStatus.loading => const DesktopListTableSkeleton(
+        columns: [
+          SkeletonColumn('Periodo', flex: 3, cell: SkeletonCell.badge),
+          SkeletonColumn('Fechas', flex: 3),
+          SkeletonColumn('Duración', flex: 2),
+          SkeletonColumn('Estado', flex: 3, cell: SkeletonCell.chip),
+          SkeletonColumn(
+            'Tus clases',
+            width: 100,
+            cell: SkeletonCell.value,
+            alignEnd: true,
+          ),
+        ],
+      ),
       ViewStatus.error => AppErrorState(
         exception: state.error!,
         onRetry: () => context.read<AcademicPeriodsProvider>().refresh(),

@@ -3,10 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/router/route_paths.dart';
+import '../../../../core/state/kept_listing.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
 import '../../../../core/widgets/mobile/mobile_header_action.dart';
+import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_loading.dart';
@@ -27,6 +29,7 @@ class StudentsMobileView extends StatelessWidget {
     required this.onFiltersChanged,
     required this.page,
     required this.onPageChanged,
+    required this.listing,
   });
 
   final StudentListFilters filters;
@@ -35,6 +38,9 @@ class StudentsMobileView extends StatelessWidget {
   /// Page of the server listing (owned by the page entry point).
   final int page;
   final ValueChanged<int> onPageChanged;
+
+  /// Keeps the previous rows visible while another page/search loads.
+  final KeptListing<StudentEntity> listing;
 
   Future<void> _openStatusFilter(BuildContext context) async {
     final picked = await showMobileSheet<StudentStatusFilter>(
@@ -98,11 +104,13 @@ class StudentsMobileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<StudentsProvider>().query(
-      StudentsProvider.queryOf(
-        page: page,
-        groupId: filters.groupId,
-        search: filters.search,
+    final (:state, :updating) = listing.resolve(
+      context.watch<StudentsProvider>().query(
+        StudentsProvider.queryOf(
+          page: page,
+          groupId: filters.groupId,
+          search: filters.search,
+        ),
       ),
     );
     final courses = teacherCourses(
@@ -224,7 +232,7 @@ class StudentsMobileView extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(child: _body(context, state, students)),
+          Expanded(child: _body(context, state, students, updating: updating)),
         ],
       ),
     );
@@ -238,12 +246,17 @@ class StudentsMobileView extends StatelessWidget {
   Widget _body(
     BuildContext context,
     ListViewState<StudentEntity> state,
-    List<StudentEntity> students,
-  ) {
+    List<StudentEntity> students, {
+    required bool updating,
+  }) {
     switch (state.status) {
       case ViewStatus.initial:
       case ViewStatus.loading:
-        return const AppLoading();
+        return const MobileListSkeleton(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 24),
+          leadingSize: 48,
+          trailingWidth: 64,
+        );
       case ViewStatus.error:
         return AppErrorState(
           exception: state.error!,
@@ -272,32 +285,35 @@ class StudentsMobileView extends StatelessWidget {
                 icon: Icons.search_off,
               );
       case ViewStatus.success:
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-          children: [
-            if (students.isEmpty)
-              const AppEmptyState(
-                title: 'Sin resultados',
-                message: 'Ningún estudiante de esta página tiene ese estado.',
-                icon: Icons.filter_alt_off_outlined,
-              ),
-            for (final student in students)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: StudentListCard(
-                  student: student,
-                  onTap: () =>
-                      context.push(RoutePaths.studentDetail(student.id)),
+        return AppUpdating(
+          updating: updating,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+            children: [
+              if (students.isEmpty)
+                const AppEmptyState(
+                  title: 'Sin resultados',
+                  message: 'Ningún estudiante de esta página tiene ese estado.',
+                  icon: Icons.filter_alt_off_outlined,
                 ),
-              ),
-            if (state.totalPages > 1)
-              AppPagination(
-                page: state.page,
-                totalPages: state.totalPages,
-                totalElements: state.totalElements,
-                onPageChanged: onPageChanged,
-              ),
-          ],
+              for (final student in students)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: StudentListCard(
+                    student: student,
+                    onTap: () =>
+                        context.push(RoutePaths.studentDetail(student.id)),
+                  ),
+                ),
+              if (state.totalPages > 1)
+                AppPagination(
+                  page: state.page,
+                  totalPages: state.totalPages,
+                  totalElements: state.totalElements,
+                  onPageChanged: onPageChanged,
+                ),
+            ],
+          ),
         );
     }
   }

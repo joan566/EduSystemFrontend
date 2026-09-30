@@ -8,9 +8,9 @@ import '../../../../core/state/detail_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/desktop/desktop_section_card.dart';
+import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
-import '../../../../core/widgets/shared/app_loading.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/gradebook_entities.dart';
 import '../providers/gradebook_provider.dart';
@@ -51,7 +51,26 @@ class StudentGradesDesktopView extends StatelessWidget {
           exception: state.error!,
           onRetry: onRefresh,
         ),
-        _ when report == null => const AppLoading(),
+        _ when report == null => const DesktopDetailSkeleton(
+          rail: 3,
+          railEnd: true,
+          main: DesktopListTableSkeleton(
+            root: false,
+            shrinkWrap: true,
+            columns: [
+              SkeletonColumn('Evaluación', flex: 5, cell: SkeletonCell.badge),
+              SkeletonColumn('Componente', flex: 2),
+              SkeletonColumn('Peso', flex: 1, cell: SkeletonCell.value),
+              SkeletonColumn('Nota', flex: 3, cell: SkeletonCell.bar),
+              SkeletonColumn(
+                'Aporte',
+                flex: 1,
+                cell: SkeletonCell.value,
+                alignEnd: true,
+              ),
+            ],
+          ),
+        ),
         _ => LayoutBuilder(
           builder: (context, constraints) {
             final beside = constraints.maxWidth >= _railBesideMinWidth;

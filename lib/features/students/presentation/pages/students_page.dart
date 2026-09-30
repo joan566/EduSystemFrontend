@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
+import '../../../../core/state/kept_listing.dart';
+import '../../../../features/students/domain/entities/student_entity.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../desktop/students_desktop_view.dart';
 import '../mobile/students_mobile_view.dart';
@@ -27,6 +29,9 @@ class _StudentsPageState extends State<StudentsPage>
   /// Server page of the listing; back to 0 when the course or search
   /// changes.
   int _page = 0;
+
+  /// The rows on screen stay while the next page or search loads.
+  final _listing = KeptListing<StudentEntity>();
 
   /// The exact listing query already read (page, course, search) comes from
   /// memory.
@@ -67,6 +72,7 @@ class _StudentsPageState extends State<StudentsPage>
         onFiltersChanged: _onFiltersChanged,
         page: _page,
         onPageChanged: _onPageChanged,
+        listing: _listing,
       ),
       desktop: (_) => StudentsDesktopView(
         filters: _filters,
@@ -75,6 +81,7 @@ class _StudentsPageState extends State<StudentsPage>
         onSelect: (id) => setState(() => _selectedStudentId = id),
         page: _page,
         onPageChanged: _onPageChanged,
+        listing: _listing,
       ),
     );
   }
