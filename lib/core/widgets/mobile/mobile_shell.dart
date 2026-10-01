@@ -8,9 +8,13 @@ import '../../theme/app_colors.dart';
 /// Mobile app shell: the routed page above a bottom navigation bar with
 /// the primary destinations plus "Más" (§19, §107).
 class MobileShell extends StatelessWidget {
-  const MobileShell({super.key, required this.child});
+  const MobileShell({super.key, required this.child, this.bottomBanner});
 
   final Widget child;
+
+  /// Shown right above the bottom navigation on every screen (e.g. an
+  /// import in progress); it collapses itself when it has nothing to say.
+  final Widget? bottomBanner;
 
   @override
   Widget build(BuildContext context) {
@@ -24,15 +28,21 @@ class MobileShell extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(bottom: false, child: child),
-      bottomNavigationBar: MobileBottomNav(
-        selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-        onSelected: (index) {
-          if (index == primaryNavItems.length) {
-            context.push(RoutePaths.more);
-          } else {
-            context.go(primaryNavItems[index].path);
-          }
-        },
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ?bottomBanner,
+          MobileBottomNav(
+            selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+            onSelected: (index) {
+              if (index == primaryNavItems.length) {
+                context.push(RoutePaths.more);
+              } else {
+                context.go(primaryNavItems[index].path);
+              }
+            },
+          ),
+        ],
       ),
     );
   }

@@ -91,16 +91,16 @@ class ExamResultsChanged extends DomainEvent {
   final bool newSheets;
 }
 
-/// Students were withdrawn, deleted or imported. [studentId] is null when
-/// the change is not about a single student (an import).
+/// Students were withdrawn or deleted. [studentId] is null when the change
+/// is not about a single student.
 class StudentsChanged extends DomainEvent {
   const StudentsChanged({this.studentId});
 
   final int? studentId;
 }
 
-/// Everything cached may be outdated (a school-setup import, or the app
-/// was in the background for a long time). Caches are marked stale, not
+/// Everything cached may be outdated (any finished Excel import, or the
+/// app was in the background for a long time). Caches are marked stale, not
 /// cleared: screens keep what they show and re-read what they need.
 class SessionDataReset extends DomainEvent {
   const SessionDataReset();

@@ -11,8 +11,8 @@ import '../../data/repositories/import_repository.dart';
 import '../../domain/entities/import_batch_entity.dart';
 
 /// Where an upload is: sending the file, waiting on the server, done, or
-/// no longer followed ([timedOut]: still running after
-/// [ImportsProvider.pollTimeout]; [lost]: its state couldn't be read).
+/// no longer followed ([timedOut]: no progress for
+/// [ImportsProvider.stallTimeout]; [lost]: its state couldn't be read).
 enum ImportPhase { uploading, queued, processing, finished, timedOut, lost }
 
 /// The latest upload of one [ImportType], as its card shows it.
@@ -39,6 +39,11 @@ class ImportRun {
       phase == ImportPhase.uploading ||
       phase == ImportPhase.queued ||
       phase == ImportPhase.processing;
+
+  /// No longer followed before it finished ([ImportPhase.timedOut] or
+  /// [ImportPhase.lost]).
+  bool get isUnresolved =>
+      phase == ImportPhase.timedOut || phase == ImportPhase.lost;
 }
 
 /// Imports and their history. The backend processes an upload in the
@@ -47,16 +52,16 @@ class ImportRun {
 /// the session ending does (this provider is disposed). Only one import
 /// can run at a time (the backend answers 409 `IMPORT_IN_PROGRESS`).
 ///
-/// A finished import that changed data announces what it touched:
-/// students ([StudentsChanged]), one class ([ClassDataChanged.all]) or —
-/// the school-setup workbook, which can create anything — everything
-/// ([SessionDataReset]).
+/// Every finished import that got past reading the file announces
+/// [SessionDataReset]: any import can touch students, enrollments, classes,
+/// grades and attendance at once, so the whole session is re-read, as on
+/// signing in.
 class ImportsProvider extends SessionNotifier {
   ImportsProvider(
     this._repository,
     DomainEvents events, {
     this.pollInterval = AppConfig.batchPollInterval,
-    this.pollTimeout = const Duration(minutes: 5),
+    this.stallTimeout = const Duration(minutes: 3),
   }) : super(events);
 
   final ImportRepository _repository;
@@ -64,9 +69,10 @@ class ImportsProvider extends SessionNotifier {
   /// How often a running import is re-read.
   final Duration pollInterval;
 
-  /// After this long an import is no longer polled; the history shows how
-  /// it ended.
-  final Duration pollTimeout;
+  /// After this long without progress (same status, row and sheet) an
+  /// import is no longer polled; the history shows how it ended. A large
+  /// import that keeps advancing is followed to the end.
+  final Duration stallTimeout;
 
   /// The latest imports (first page).
   late final _history = cachedValue<ApiPage<ImportBatchEntity>>();
@@ -74,9 +80,14 @@ class ImportsProvider extends SessionNotifier {
   ListViewState<ImportBatchEntity> get historyState => _history.view;
 
   /// Reads the history if needed, then follows an import still running
-  /// (e.g. after reloading the page).
+  /// (e.g. after reloading the page). With an import no longer followed it
+  /// re-reads it, to find out how that one ended.
   Future<void> ensureHistory() async {
-    await _history.ensure(_repository.getHistory);
+    if (_runs.values.any((r) => r.isUnresolved)) {
+      await _history.refresh(_repository.getHistory);
+    } else {
+      await _history.ensure(_repository.getHistory);
+    }
     _resumeActive();
   }
 
@@ -93,11 +104,20 @@ class ImportsProvider extends SessionNotifier {
   /// An upload is being sent or processed: the backend accepts no other.
   bool get hasActiveImport => _runs.values.any((r) => r.isActive);
 
+  /// The upload being sent or processed, if any (only one at a time).
+  ({ImportType type, ImportRun run})? get activeImport {
+    for (final MapEntry(:key, :value) in _runs.entries) {
+      if (value.isActive) return (type: key, run: value);
+    }
+    return null;
+  }
+
   Timer? _pollTimer;
   int? _watchedId;
   ImportType? _watchedType;
-  int? _watchedClassId;
-  int _polls = 0;
+
+  /// Polls in a row that found the import where it was.
+  int _stalledPolls = 0;
 
   /// Bumped on every [_watch]/[_stopWatching] so a request still in flight
   /// from an earlier watch can't start a second polling loop.
@@ -159,7 +179,7 @@ class ImportsProvider extends SessionNotifier {
         ),
       };
       _history.update((page) => _withBatch(page, batch));
-      _watch(batch, type, teachingPeriodId: teachingPeriodId);
+      _watch(batch, type);
       return null;
     } on AppException catch (e) {
       _runs.remove(type);
@@ -179,22 +199,34 @@ class ImportsProvider extends SessionNotifier {
 
   void _resumeActive() {
     if (_watchedId != null) return;
-    final active = _history.data?.content.where((b) => b.isActive).firstOrNull;
+    final history = _history.data?.content ?? const <ImportBatchEntity>[];
+    final active = history.where((b) => b.isActive).firstOrNull;
     final type = active?.type;
-    if (active == null || type == null) return;
-    _watch(active, type);
+    if (active != null && type != null) {
+      _watch(active, type);
+      return;
+    }
+    // One given up on that has since finished: one more read shows its
+    // result and announces it.
+    for (final MapEntry(key: type, value: run) in _runs.entries) {
+      final id = run.batch?.id;
+      if (!run.isUnresolved || id == null) continue;
+      final ended = history.where((b) => b.id == id && b.isFinished);
+      if (ended.isNotEmpty) {
+        _watch(ended.first, type);
+        return;
+      }
+    }
   }
 
-  void _watch(
-    ImportBatchEntity batch,
-    ImportType type, {
-    int? teachingPeriodId,
-  }) {
+  void _watch(ImportBatchEntity batch, ImportType type) {
     _stopWatching();
     _watchedId = batch.id;
     _watchedType = type;
-    _watchedClassId = teachingPeriodId;
-    _runs[type] = ImportRun(phase: _phaseOf(batch), batch: batch);
+    _runs[type] = ImportRun(
+      phase: batch.isFinished ? ImportPhase.processing : _phaseOf(batch),
+      batch: batch,
+    );
     notifyListeners();
     _schedule(_generation);
   }
@@ -207,7 +239,7 @@ class ImportsProvider extends SessionNotifier {
     final id = _watchedId;
     final type = _watchedType;
     if (id == null || type == null) return;
-    _polls++;
+    _stalledPolls++;
     try {
       final result = await _repository.getImport(id);
       if (generation != _generation) return;
@@ -219,11 +251,12 @@ class ImportsProvider extends SessionNotifier {
           batch: batch,
           result: result,
         );
-        _announce(type, batch, _watchedClassId);
+        _announce(batch);
         _stopWatching();
         notifyListeners();
         return;
       }
+      if (_advanced(_runs[type]?.batch, batch)) _stalledPolls = 0;
       _runs[type] = ImportRun(phase: _phaseOf(batch), batch: batch);
       notifyListeners();
     } on AppException catch (e) {
@@ -234,7 +267,7 @@ class ImportsProvider extends SessionNotifier {
         return;
       }
     }
-    if (pollInterval * _polls >= pollTimeout) {
+    if (pollInterval * _stalledPolls >= stallTimeout) {
       _giveUp(type, ImportPhase.timedOut);
       return;
     }
@@ -252,26 +285,18 @@ class ImportsProvider extends SessionNotifier {
       ? ImportPhase.queued
       : ImportPhase.processing;
 
-  /// What a finished import changed. Nothing when no row was imported.
-  void _announce(ImportType type, ImportBatchEntity batch, int? classId) {
-    if ((batch.successfulRows ?? 0) == 0) return;
-    switch (type) {
-      case ImportType.students:
-        publish(const StudentsChanged());
-      case ImportType.teachingPeriod:
-        // Unknown when the import was picked up from the history (e.g.
-        // after reloading the page): any class may have changed.
-        if (classId == null) {
-          publish(const SessionDataReset());
-        } else {
-          publish(ClassDataChanged.all(classId));
-          publish(const StudentsChanged());
-        }
-      case ImportType.schoolSetup:
-        // Periods, levels, subjects, courses, classes, students, grades and
-        // attendance may all have changed.
-        publish(const SessionDataReset());
-    }
+  /// The import moved since it was last read.
+  static bool _advanced(ImportBatchEntity? before, ImportBatchEntity now) =>
+      before == null ||
+      before.status != now.status ||
+      before.processedRows != now.processedRows ||
+      before.currentStep != now.currentStep;
+
+  /// Re-reads the whole session after an import. A file rejected as a
+  /// whole changed nothing.
+  void _announce(ImportBatchEntity batch) {
+    if (batch.failedWholeFile) return;
+    publish(const SessionDataReset());
   }
 
   /// [page] with [batch] replaced, or added first (newest first, like the
@@ -297,8 +322,7 @@ class ImportsProvider extends SessionNotifier {
     _pollTimer = null;
     _watchedId = null;
     _watchedType = null;
-    _watchedClassId = null;
-    _polls = 0;
+    _stalledPolls = 0;
   }
 
   @override

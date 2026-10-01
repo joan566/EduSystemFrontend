@@ -17,6 +17,7 @@ import '../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../imports/domain/entities/import_batch_entity.dart';
 import '../../../imports/presentation/providers/imports_provider.dart';
+import '../../../imports/presentation/shared/import_activity.dart';
 
 class DataTemplateOption extends StatelessWidget {
   final String title;
@@ -111,8 +112,10 @@ class RecommendedChip extends StatelessWidget {
   }
 }
 
-/// An upload being sent or processed in the background. The screen stays
-/// usable and can be left; the result shows up when it finishes.
+/// An upload being sent or processed in the background, like a graded PDF
+/// batch: which sheet, how many rows of how many, and the percentage. The
+/// screen stays usable and can be left; the result shows up when it
+/// finishes.
 class ImportProgressPanel extends StatelessWidget {
   const ImportProgressPanel({super.key, required this.run});
 
@@ -122,11 +125,6 @@ class ImportProgressPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final fileName = run.batch?.fileName;
-    final (label, value) = switch (run.phase) {
-      ImportPhase.uploading => ('Subiendo archivo…', run.uploadProgress),
-      ImportPhase.queued => ('En cola…', null),
-      _ => ('Importando…', null),
-    };
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -144,11 +142,16 @@ class ImportProgressPanel extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ],
-          AppProgressBar(value: value, label: label),
+          AppProgressBar(
+            value: importRunProgress(run),
+            label: importRunLabel(run),
+          ),
           const SizedBox(height: 10),
           Text(
-            'Puedes salir de esta pantalla; la importación sigue en el '
-            'servidor.',
+            run.phase == ImportPhase.queued
+                ? 'En cola: empezará en cuanto el servidor la tome.'
+                : 'Puedes salir de esta pantalla; la importación continúa y '
+                      'verás su avance al volver.',
             style: textTheme.bodySmall,
           ),
         ],
@@ -303,8 +306,7 @@ String importTypeLabel(ImportType? type) => switch (type) {
 /// The history row's second line: what, when, and how it went.
 String _historySubtitle(ImportBatchEntity batch) {
   final outcome = switch (batch.status) {
-    ImportStatus.queued => 'En cola…',
-    ImportStatus.processing => 'Importando…',
+    ImportStatus.queued || ImportStatus.processing => _activeOutcome(batch),
     _ when batch.failedWholeFile && batch.errorMessage != null =>
       batch.errorMessage!,
     _ when batch.totalRows != null =>
@@ -316,6 +318,13 @@ String _historySubtitle(ImportBatchEntity batch) {
     Formatters.dateTime(batch.createdAt),
     ?outcome,
   ].join(' · ');
+}
+
+/// A running import's progress for the history row.
+String _activeOutcome(ImportBatchEntity batch) {
+  final percent = batch.progress;
+  final label = importProgressLabel(batch);
+  return percent == null ? label : '$label · ${(percent * 100).round()}%';
 }
 
 class ImportHistoryList extends StatelessWidget {
@@ -477,7 +486,16 @@ class _ImportBatchDetailState extends State<ImportBatchDetail> {
 
   @override
   Widget build(BuildContext context) {
-    final batch = widget.batch;
+    // The history keeps the polled import current, so a running one shows
+    // its progress live while this is open.
+    final batch =
+        context
+            .watch<ImportsProvider>()
+            .historyState
+            .items
+            .where((b) => b.id == widget.batch.id)
+            .firstOrNull ??
+        widget.batch;
     final textTheme = Theme.of(context).textTheme;
     final reason = batch.errorMessage ?? _failureReason;
 
@@ -515,9 +533,8 @@ class _ImportBatchDetailState extends State<ImportBatchDetail> {
           if (batch.isActive) ...[
             const SizedBox(height: 16),
             AppProgressBar(
-              label: batch.status == ImportStatus.queued
-                  ? 'En cola…'
-                  : 'Importando…',
+              value: batch.progress,
+              label: importProgressLabel(batch),
             ),
           ] else if (batch.hasErrorReport) ...[
             const SizedBox(height: 16),

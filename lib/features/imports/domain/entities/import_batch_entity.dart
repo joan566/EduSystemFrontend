@@ -32,6 +32,9 @@ class ImportBatchEntity {
     required this.createdAt,
     this.type,
     this.totalRows,
+    this.processedRows,
+    this.progressPercent,
+    this.currentStep,
     this.successfulRows,
     this.failedRows,
     this.errorCode,
@@ -45,8 +48,20 @@ class ImportBatchEntity {
   final String fileName;
   final ImportStatus status;
 
-  /// Null until the file has been processed.
+  /// Set once the backend has read the file (while it runs), null before.
   final int? totalRows;
+
+  /// Rows already gone through while it runs ([totalRows] once finished).
+  /// Null from a backend that doesn't report progress.
+  final int? processedRows;
+
+  /// 0..100; 100 once finished. Null from a backend that doesn't report it.
+  final int? progressPercent;
+
+  /// The sheet being imported ("Estudiantes", "Grupos"...), in Spanish.
+  /// Null when queued, finished, or not reported.
+  final String? currentStep;
+
   final int? successfulRows;
   final int? failedRows;
 
@@ -66,6 +81,15 @@ class ImportBatchEntity {
       status == ImportStatus.queued || status == ImportStatus.processing;
 
   bool get isFinished => !isActive;
+
+  /// 0..1 while processing with a known total; null while queued or when
+  /// the backend doesn't report progress (an indeterminate bar).
+  double? get progress {
+    if (status != ImportStatus.processing) return null;
+    final percent = progressPercent;
+    if (percent == null || (totalRows ?? 0) == 0) return null;
+    return percent / 100;
+  }
 
   /// The file itself was rejected, as opposed to a FAILED where every row
   /// had errors (which reads like a partial result).

@@ -21,19 +21,53 @@ void main() {
       ),
     );
     expect(find.text('En cola…'), findsOneWidget);
-    expect(
-      find.textContaining('Puedes salir de esta pantalla'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('En cola: empezará'), findsOneWidget);
 
+    // A backend that doesn't report progress: indeterminate.
+    final running = ImportBatchModel.fromJson(importJson(1, 'PROCESSING'));
     await tester.pumpWidget(
       _wrap(
         ImportProgressPanel(
-          run: ImportRun(phase: ImportPhase.processing, batch: queued),
+          run: ImportRun(phase: ImportPhase.processing, batch: running),
         ),
       ),
     );
     expect(find.text('Importando…'), findsOneWidget);
+    expect(
+      find.textContaining('Puedes salir de esta pantalla'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a running import shows its sheet, rows and percentage', (
+    tester,
+  ) async {
+    final batch = ImportBatchModel.fromJson(
+      importJson(
+        1,
+        'PROCESSING',
+        total: 450,
+        processed: 120,
+        percent: 26,
+        step: 'Estudiantes',
+      ),
+    );
+    await tester.pumpWidget(
+      _wrap(
+        ImportProgressPanel(
+          run: ImportRun(phase: ImportPhase.processing, batch: batch),
+        ),
+      ),
+    );
+    expect(
+      find.text('Importando Estudiantes · 120 de 450 filas'),
+      findsOneWidget,
+    );
+    expect(find.text('26%'), findsOneWidget);
+    final bar = tester.widget<LinearProgressIndicator>(
+      find.byType(LinearProgressIndicator),
+    );
+    expect(bar.value, 0.26);
   });
 
   testWidgets('a rejected file shows the backend message, no counts', (

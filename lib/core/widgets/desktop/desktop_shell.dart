@@ -40,9 +40,13 @@ Future<void> _handleLogout(BuildContext context) async {
 // ---------------------------------------------------------------------------
 
 class DesktopShell extends StatefulWidget {
-  const DesktopShell({super.key, required this.child});
+  const DesktopShell({super.key, required this.child, this.headerStatus});
 
   final Widget child;
+
+  /// Shown in the header next to the user menu on every screen (e.g. an
+  /// import in progress); it collapses itself when it has nothing to say.
+  final Widget? headerStatus;
 
   @override
   State<DesktopShell> createState() => _DesktopShellState();
@@ -73,7 +77,7 @@ class _DesktopShellState extends State<DesktopShell> {
             Expanded(
               child: Column(
                 children: [
-                  const _Header(),
+                  _Header(status: widget.headerStatus),
                   Expanded(child: widget.child),
                 ],
               ),
@@ -565,7 +569,9 @@ class _UserCard extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  const _Header({this.status});
+
+  final Widget? status;
 
   @override
   Widget build(BuildContext context) {
@@ -595,6 +601,7 @@ class _Header extends StatelessWidget {
           if (currentLabel != null)
             Text(currentLabel, style: Theme.of(context).textTheme.titleMedium),
           const Spacer(),
+          if (status != null) ...[status!, const SizedBox(width: 16)],
           PopupMenuButton<String>(
             offset: const Offset(0, 44),
             shape: RoundedRectangleBorder(
@@ -669,9 +676,13 @@ class _Header extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class TabletShell extends StatelessWidget {
-  const TabletShell({super.key, required this.child});
+  const TabletShell({super.key, required this.child, this.railStatus});
 
   final Widget child;
+
+  /// Shown at the foot of the rail, above "Más" (e.g. an import in
+  /// progress); it collapses itself when it has nothing to say.
+  final Widget? railStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -695,10 +706,16 @@ class TabletShell extends StatelessWidget {
                   alignment: Alignment.bottomCenter,
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: IconButton(
-                      tooltip: 'Más',
-                      icon: const Icon(Icons.more_horiz),
-                      onPressed: () => context.push(RoutePaths.more),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ?railStatus,
+                        IconButton(
+                          tooltip: 'Más',
+                          icon: const Icon(Icons.more_horiz),
+                          onPressed: () => context.push(RoutePaths.more),
+                        ),
+                      ],
                     ),
                   ),
                 ),

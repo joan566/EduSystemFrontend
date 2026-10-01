@@ -29,6 +29,28 @@ void main() {
       expect(batch.isActive, isTrue);
       expect(batch.totalRows, isNull);
       expect(batch.startedAt, isNull);
+      expect(batch.progress, isNull);
+    });
+
+    test('a running import carries its progress', () {
+      final batch = ImportBatchModel.fromJson(
+        importJson(
+          42,
+          'PROCESSING',
+          total: 450,
+          processed: 120,
+          percent: 26,
+          step: 'Estudiantes',
+        ),
+      );
+      expect(batch.processedRows, 120);
+      expect(batch.currentStep, 'Estudiantes');
+      expect(batch.progress, 0.26);
+      // An older backend reports no progress: an indeterminate bar.
+      expect(
+        ImportBatchModel.fromJson(importJson(1, 'PROCESSING')).progress,
+        isNull,
+      );
     });
 
     test('a finished import carries its row errors', () {
@@ -105,7 +127,7 @@ void main() {
       ImportStatus.completedWithErrors,
     );
     await pumpEventQueue();
-    expect(seen.whereType<StudentsChanged>(), hasLength(1));
+    expect(seen.whereType<SessionDataReset>(), hasLength(1));
 
     // Stopped polling once finished.
     final polls = backend.count('GET', '/imports/{id}');
@@ -113,7 +135,7 @@ void main() {
     expect(backend.count('GET', '/imports/{id}'), polls);
   });
 
-  test('a class import announces that class', () async {
+  test('any finished import re-reads the whole session', () async {
     backend.on(
       'POST',
       '/imports/teaching-periods/{id}',
@@ -141,10 +163,7 @@ void main() {
     await untilImportSettles(s.imports, ImportType.teachingPeriod);
     await pumpEventQueue();
 
-    final classEvents = seen.whereType<ClassDataChanged>().toList();
-    expect(classEvents.single.teachingPeriodId, 5);
-    expect(seen.whereType<StudentsChanged>(), hasLength(1));
-    expect(seen.whereType<SessionDataReset>(), isEmpty);
+    expect(seen.whereType<SessionDataReset>(), hasLength(1));
   });
 
   test('a rejected file shows its message and changes nothing', () async {
@@ -220,16 +239,89 @@ void main() {
     expect(s.imports.run(ImportType.students)!.phase, ImportPhase.finished);
   });
 
-  test('polling gives up after the timeout', () async {
-    final imports = ImportsProvider(
-      ImportRepository(
-        ImportRemoteDataSource(s.api),
-        AuditRemoteDataSource(s.api),
-      ),
-      s.events,
-      pollInterval: const Duration(milliseconds: 1),
-      pollTimeout: const Duration(milliseconds: 5),
+  test('progress is followed while it advances', () async {
+    var processed = 0;
+    backend.on('POST', '/imports/students', (_) => importJson(6, 'QUEUED'));
+    backend.on('GET', '/imports/{id}', (_) {
+      processed++;
+      if (processed > 12) {
+        return importJson(6, 'COMPLETED', total: 12, successful: 12);
+      }
+      return importJson(
+        6,
+        'PROCESSING',
+        total: 12,
+        processed: processed,
+        percent: processed * 100 ~/ 12,
+        step: 'Estudiantes',
+      );
+    });
+    final imports = _provider(s, stallTimeout: const Duration(milliseconds: 5));
+
+    await imports.upload(
+      ImportType.students,
+      fileName: 'a.xlsx',
+      bytes: const [1],
     );
+    final seenProgress = <double?>[];
+    imports.addListener(() {
+      final run = imports.run(ImportType.students);
+      if (run?.phase == ImportPhase.processing) {
+        seenProgress.add(run!.batch!.progress);
+        expect(imports.activeImport?.type, ImportType.students);
+      }
+    });
+    await untilImportSettles(imports, ImportType.students);
+
+    // Longer than the stall timeout overall, but never stalled.
+    expect(imports.run(ImportType.students)!.phase, ImportPhase.finished);
+    expect(seenProgress.first, closeTo(1 / 12, 0.01));
+    expect(seenProgress.last, 1.0);
+    expect(imports.activeImport, isNull);
+    imports.dispose();
+  });
+
+  test('an import given up on is announced once it is seen finished', () async {
+    var finished = false;
+    backend.on('POST', '/imports/students', (_) => importJson(6, 'QUEUED'));
+    backend.on(
+      'GET',
+      '/imports/{id}',
+      (_) => finished
+          ? importJson(6, 'COMPLETED', total: 1, successful: 1)
+          : importJson(6, 'PROCESSING'),
+    );
+    backend.on(
+      'GET',
+      '/imports',
+      (r) => pageOf([
+        finished
+            ? importJson(6, 'COMPLETED', total: 1, successful: 1)
+            : importJson(6, 'PROCESSING'),
+      ], r),
+    );
+    final imports = _provider(s, stallTimeout: const Duration(milliseconds: 5));
+    final seen = recordEvents(s.events);
+
+    await imports.upload(
+      ImportType.students,
+      fileName: 'a.xlsx',
+      bytes: const [1],
+    );
+    await untilImportSettles(imports, ImportType.students);
+    expect(imports.run(ImportType.students)!.phase, ImportPhase.timedOut);
+
+    finished = true;
+    await imports.ensureHistory(); // e.g. back on the import screen
+    await untilImportSettles(imports, ImportType.students);
+    await pumpEventQueue();
+    expect(imports.run(ImportType.students)!.phase, ImportPhase.finished);
+    expect(seen.whereType<SessionDataReset>(), hasLength(1));
+    imports.dispose();
+  });
+
+  test('polling gives up when the import stops advancing', () async {
+    final imports = _provider(s, stallTimeout: const Duration(milliseconds: 5));
     backend.on('POST', '/imports/students', (_) => importJson(6, 'QUEUED'));
     backend.on('GET', '/imports/{id}', (_) => importJson(6, 'PROCESSING'));
 
@@ -240,7 +332,9 @@ void main() {
     );
     await untilImportSettles(imports, ImportType.students);
     expect(imports.run(ImportType.students)!.phase, ImportPhase.timedOut);
-    expect(backend.count('GET', '/imports/{id}'), 5);
+    // The first read (QUEUED -> PROCESSING) is progress; 5 more find it
+    // where it was.
+    expect(backend.count('GET', '/imports/{id}'), 6);
     imports.dispose();
   });
 
@@ -260,3 +354,14 @@ void main() {
     expect(backend.count('GET', '/imports/{id}'), lessThanOrEqualTo(polls + 1));
   });
 }
+
+ImportsProvider _provider(SessionFixture s, {required Duration stallTimeout}) =>
+    ImportsProvider(
+      ImportRepository(
+        ImportRemoteDataSource(s.api),
+        AuditRemoteDataSource(s.api),
+      ),
+      s.events,
+      pollInterval: const Duration(milliseconds: 1),
+      stallTimeout: stallTimeout,
+    );
