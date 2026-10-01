@@ -22,6 +22,11 @@ import 'features/academic_periods/presentation/providers/academic_periods_provid
 import 'features/activities/data/datasources/activity_remote_datasource.dart';
 import 'features/activities/data/repositories/activity_repository.dart';
 import 'features/activities/presentation/providers/activities_provider.dart';
+import 'features/app_version/data/datasources/app_version_remote_datasource.dart';
+import 'features/app_version/data/datasources/installed_version_datasource.dart';
+import 'features/app_version/data/repositories/app_version_repository.dart';
+import 'features/app_version/presentation/pages/app_version_gate.dart';
+import 'features/app_version/presentation/providers/app_version_provider.dart';
 import 'features/attendance/data/datasources/attendance_remote_datasource.dart';
 import 'features/attendance/data/repositories/attendance_repository.dart';
 import 'features/attendance/presentation/providers/attendance_provider.dart';
@@ -240,6 +245,19 @@ class EduSistemApp extends StatelessWidget {
             return authProvider;
           },
         ),
+
+        // --- Version policy (public, independent of the session) -------
+        // Not lazy: the check starts now, alongside the session restore,
+        // and never holds the splash.
+        ChangeNotifierProvider<AppVersionProvider>(
+          lazy: false,
+          create: (context) => AppVersionProvider(
+            repository: AppVersionRepository(
+              AppVersionRemoteDataSource(context.read<ApiClient>()),
+              const InstalledVersionDataSource(),
+            ),
+          )..check(),
+        ),
       ],
       child: const _AppRoot(),
     );
@@ -277,6 +295,7 @@ class _AppRootState extends State<_AppRoot> {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: ThemeMode.light,
+            builder: _versionGate,
             home: const _SplashScreen(),
           );
         }
@@ -301,6 +320,7 @@ class _AppRootState extends State<_AppRoot> {
                 theme: AppTheme.light,
                 darkTheme: AppTheme.dark,
                 themeMode: ThemeMode.light,
+                builder: _versionGate,
                 routerConfig: router,
               ),
             );
@@ -310,6 +330,10 @@ class _AppRootState extends State<_AppRoot> {
     );
   }
 }
+
+/// Every screen, splash included, sits behind the version policy.
+Widget _versionGate(BuildContext context, Widget? child) =>
+    AppVersionGate(child: child ?? const SizedBox.shrink());
 
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();

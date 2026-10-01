@@ -23,6 +23,21 @@ class AppConfig {
 
   static bool get isProduction => environmentName == 'production';
 
+  /// Whether the app checks the backend's version policy (`/app/version`)
+  /// at launch. Off only for local setups whose backend lacks the endpoint.
+  static const bool versionCheckEnabled = bool.fromEnvironment(
+    'VERSION_CHECK_ENABLED',
+    defaultValue: true,
+  );
+
+  /// Optional override for where "Actualizar" sends the user on Android.
+  /// Empty: the Google Play listing of the installed package.
+  static const String updateUrl = String.fromEnvironment('UPDATE_URL');
+
+  /// How old a successful version check may get before returning to the
+  /// foreground checks again.
+  static const Duration versionRecheckAfter = Duration(hours: 6);
+
   /// Connection/receive timeouts for the HTTP client.
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 30);

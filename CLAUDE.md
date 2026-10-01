@@ -127,6 +127,25 @@ data is missing, stale, expired, or on an explicit refresh.
   `ext.edusystem.httpReport` (counts and timings per route, no ids,
   queries, bodies or headers).
 
+## App version policy
+
+`features/app_version/`: `AppVersionProvider` (app-level, outside
+`SessionScope`) checks the public `GET /app/version` at launch, in parallel
+with the session restore (never holding the splash), and again on resume
+after a failure, while blocked or after `versionRecheckAfter`.
+`AppVersionGate` wraps every `MaterialApp` (`builder:`).
+
+- `installed < minimumVersion` → `updateRequired`: a hard block. The gate
+  replaces the router; no "Continuar", no route, no session state lifts
+  it, and a failed re-check never clears it.
+- `minimum <= installed < latest` → optional notice, once per launch.
+- Could not check (network, HTTP error, malformed or invalid policy —
+  `latest < minimum` is rejected, never corrected) → fail-open,
+  `status == null`.
+- Versions are strict `X.Y.Z` (`SemanticVersion`, build number dropped).
+  "Actualizar" goes through `core/utils/app_update_launcher.dart` (Play on
+  Android, reload on web, none on Linux): the seam for In-App Updates.
+
 ## Commands
 
 ```bash

@@ -15,6 +15,9 @@ class ApiEndpoints {
   static const resetPassword = '/auth/reset-password';
   static const account = '/auth/account';
 
+  // App version policy (public)
+  static const appVersion = '/app/version';
+
   // Users
   static const usersMe = '/users/me';
 

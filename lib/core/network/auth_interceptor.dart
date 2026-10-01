@@ -6,7 +6,8 @@ import '../config/app_config.dart';
 import '../storage/token_storage.dart';
 
 /// Endpoints that never carry an Authorization header and never trigger a
-/// refresh-and-retry cycle on 401 (they ARE the auth flow).
+/// refresh-and-retry cycle on 401 (the auth flow itself, and the public
+/// app version policy, checked before and regardless of any session).
 const _publicPaths = <String>[
   '/auth/register',
   '/auth/login',
@@ -14,6 +15,7 @@ const _publicPaths = <String>[
   '/auth/forgot-password',
   '/auth/verify-code',
   '/auth/reset-password',
+  '/app/version',
 ];
 
 /// Attaches the current access token to every authenticated request and

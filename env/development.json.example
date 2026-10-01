@@ -1,4 +1,6 @@
 {
   "API_HOST": "http://localhost:8080",
-  "ENVIRONMENT": "development"
+  "ENVIRONMENT": "development",
+  "VERSION_CHECK_ENABLED": true,
+  "UPDATE_URL": ""
 }

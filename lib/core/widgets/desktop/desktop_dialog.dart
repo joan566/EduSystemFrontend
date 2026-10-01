@@ -35,11 +35,16 @@ class DesktopDialogFrame extends StatelessWidget {
     required this.title,
     required this.child,
     this.actions = const [],
+    this.onClose,
   });
 
   final String title;
   final Widget child;
   final List<Widget> actions;
+
+  /// What the close button does; pops the dialog's route by default. For a
+  /// frame shown outside a navigator route.
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +64,7 @@ class DesktopDialogFrame extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).maybePop(),
+                onPressed: onClose ?? () => Navigator.of(context).maybePop(),
               ),
             ],
           ),
