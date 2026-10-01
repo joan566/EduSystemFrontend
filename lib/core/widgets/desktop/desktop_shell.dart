@@ -7,6 +7,7 @@ import '../../router/nav_items.dart';
 import '../../router/route_paths.dart';
 import '../../theme/app_colors.dart';
 import '../shared/app_confirm_dialog.dart';
+import '../shared/brand_logo.dart';
 
 /// Real page context for the header (§ "¿sé dónde estoy?") — derived from
 /// the actual route, not decorative. Dashboard gets no label since its own
@@ -236,26 +237,7 @@ class _Brand extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
-    final mark = Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.accentBlue, AppColors.primaryMedium],
-        ),
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accentBlue.withValues(alpha: 0.28),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
-    );
+    const mark = BrandLogo(size: 36);
     final toggle = IconButton(
       tooltip: collapsed ? 'Expandir menú' : 'Contraer menú',
       onPressed: onToggleCollapse,

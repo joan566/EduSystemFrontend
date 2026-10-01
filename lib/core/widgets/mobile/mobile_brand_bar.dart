@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../router/route_paths.dart';
 import '../../theme/app_colors.dart';
+import '../shared/brand_logo.dart';
 
 /// Top bar of the mobile home-level screens (Inicio, Clases): brand mark +
 /// app name on the left, the user's avatar (-> profile) on the right.
@@ -19,30 +20,7 @@ class MobileBrandBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.accentBlue, AppColors.primaryMedium],
-              ),
-              borderRadius: BorderRadius.circular(11),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.accentBlue.withValues(alpha: 0.28),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.school_rounded,
-              color: Colors.white,
-              size: 22,
-            ),
-          ),
+          const BrandLogo(size: 38),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

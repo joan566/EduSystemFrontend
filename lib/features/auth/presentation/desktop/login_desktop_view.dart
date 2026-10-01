@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/shared/brand_logo.dart';
 import '../shared/auth_widgets.dart';
 
 /// Desktop login: brand panel on the left, credentials card on the right.
@@ -165,11 +166,8 @@ class _BrandingPanel extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
               ),
-              child: const Icon(
-                Icons.school_outlined,
-                color: Colors.white,
-                size: 22,
-              ),
+              padding: const EdgeInsets.all(7),
+              child: const BrandLogo.symbol(size: 26),
             ),
             const SizedBox(width: 12),
             const Text(
