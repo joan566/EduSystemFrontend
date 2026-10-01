@@ -76,6 +76,10 @@ class AppErrorCode {
   static const String tooManyRegistrations = 'TOO_MANY_REGISTRATIONS';
   static const String tooManyPasswordResetRequests =
       'TOO_MANY_PASSWORD_RESET_REQUESTS';
+  static const String emailNotVerified = 'EMAIL_NOT_VERIFIED';
+  static const String invalidVerificationCode = 'INVALID_VERIFICATION_CODE';
+  static const String tooManyEmailVerificationRequests =
+      'TOO_MANY_EMAIL_VERIFICATION_REQUESTS';
   static const String invalidCurrentPassword = 'INVALID_CURRENT_PASSWORD';
   static const String gradeHasGroups = 'GRADE_HAS_GROUPS';
   static const String groupHasDependents = 'GROUP_HAS_DEPENDENTS';

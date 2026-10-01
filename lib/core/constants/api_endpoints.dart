@@ -13,6 +13,8 @@ class ApiEndpoints {
   static const forgotPassword = '/auth/forgot-password';
   static const verifyCode = '/auth/verify-code';
   static const resetPassword = '/auth/reset-password';
+  static const verifyEmail = '/auth/verify-email';
+  static const resendVerification = '/auth/resend-verification';
   static const account = '/auth/account';
 
   // App version policy (public)

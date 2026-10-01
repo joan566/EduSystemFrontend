@@ -47,7 +47,12 @@ extension AppContext on BuildContext {
       case AppErrorCode.tooManyLoginAttempts:
       case AppErrorCode.tooManyRegistrations:
       case AppErrorCode.tooManyPasswordResetRequests:
+      case AppErrorCode.tooManyEmailVerificationRequests:
         return tooManyAttemptsMessage(e.retryAfterSeconds);
+      case AppErrorCode.emailNotVerified:
+        return 'Debes verificar tu correo antes de iniciar sesión.';
+      case AppErrorCode.invalidVerificationCode:
+        return 'El código no es válido o ya expiró.';
       case AppErrorCode.invalidCurrentPassword:
         return 'La contraseña actual es incorrecta.';
       case AppErrorCode.gradeHasGroups:

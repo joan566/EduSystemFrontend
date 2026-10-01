@@ -45,7 +45,11 @@ class _RegisterFormState extends State<RegisterForm> {
       password: _passwordController.text,
     );
     if (!mounted) return;
-    if (!ok && auth.error != null) context.showApiError(auth.error!);
+    if (ok) {
+      context.go(RoutePaths.verifyEmail);
+    } else if (auth.error != null) {
+      context.showApiError(auth.error!);
+    }
   }
 
   @override

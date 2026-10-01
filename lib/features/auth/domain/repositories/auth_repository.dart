@@ -2,7 +2,9 @@ import '../../../../core/storage/token_storage.dart';
 import '../entities/user_entity.dart';
 
 abstract class AuthRepository {
-  Future<(AuthTokens, UserEntity)> register({
+  /// Creates an unverified account (no session): the user must verify the
+  /// email with [verifyEmail] and then [login].
+  Future<UserEntity> register({
     required String firstName,
     required String lastName,
     required String email,
@@ -22,6 +24,11 @@ abstract class AuthRepository {
     required String currentPassword,
     required String newPassword,
   });
+
+  Future<void> verifyEmail({required String email, required String code});
+
+  /// Sends a new verification code; the previous one stops working.
+  Future<void> resendVerification(String email);
 
   Future<void> forgotPassword(String email);
 

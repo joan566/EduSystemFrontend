@@ -26,11 +26,17 @@ class AuthProvider extends ChangeNotifier {
   UserEntity? _user;
   AppException? _error;
   bool _sessionExpired = false;
+  String? _pendingVerificationEmail;
 
   AuthStatus get status => _status;
   UserEntity? get user => _user;
   AppException? get error => _error;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
+
+  /// Email of an account that still has to be verified: set after
+  /// registering or after a login rejected with `EMAIL_NOT_VERIFIED`, read
+  /// by the verify-email screen.
+  String? get pendingVerificationEmail => _pendingVerificationEmail;
 
   /// True right after the session was force-closed by a failed refresh —
   /// the login screen reads this once to show "Tu sesión ha expirado.".
@@ -71,9 +77,17 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> login({required String email, required String password}) =>
       _guard(() async {
-        final (_, user) = await _repository.login(email: email, password: password);
-        _user = user;
-        _status = AuthStatus.authenticated;
+        try {
+          final (_, user) =
+              await _repository.login(email: email, password: password);
+          _user = user;
+          _status = AuthStatus.authenticated;
+        } on AppException catch (e) {
+          if (e.code == AppErrorCode.emailNotVerified) {
+            _pendingVerificationEmail = email;
+          }
+          rethrow;
+        }
       });
 
   Future<bool> register({
@@ -82,15 +96,30 @@ class AuthProvider extends ChangeNotifier {
     required String email,
     required String password,
   }) => _guard(() async {
-    final (_, user) = await _repository.register(
+    // The account starts unverified and without a session.
+    final user = await _repository.register(
       firstName: firstName,
       lastName: lastName,
       email: email,
       password: password,
     );
-    _user = user;
-    _status = AuthStatus.authenticated;
+    _pendingVerificationEmail = user.email;
+    _status = AuthStatus.unauthenticated;
   });
+
+  /// On success the account is verified; the user still has to log in.
+  Future<bool> verifyEmail(String code) => _guard(() async {
+    await _repository.verifyEmail(
+      email: _pendingVerificationEmail!,
+      code: code,
+    );
+    _pendingVerificationEmail = null;
+  }, keepStatus: true);
+
+  Future<bool> resendVerification() => _guard(
+    () => _repository.resendVerification(_pendingVerificationEmail!),
+    keepStatus: true,
+  );
 
   Future<void> logout() async {
     _status = AuthStatus.authenticating;

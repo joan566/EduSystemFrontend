@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/utils/validators.dart';
@@ -40,6 +41,9 @@ class _LoginFormState extends State<LoginForm> {
     if (!mounted) return;
     if (!ok && auth.error != null) {
       context.showApiError(auth.error!);
+      if (auth.error!.code == AppErrorCode.emailNotVerified) {
+        context.push(RoutePaths.verifyEmail);
+      }
     }
   }
 

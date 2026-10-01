@@ -10,6 +10,7 @@ import '../../features/audit/presentation/pages/audit_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/verify_email_page.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/courses/presentation/pages/courses_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
@@ -69,6 +70,10 @@ class AppRouter {
       GoRoute(
         path: RoutePaths.forgotPassword,
         builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: RoutePaths.verifyEmail,
+        builder: (context, state) => const VerifyEmailPage(),
       ),
       ShellRoute(
         observers: [shellRouteObserver],
@@ -276,7 +281,8 @@ class AppRouter {
     final onAuthScreen =
         state.matchedLocation == RoutePaths.login ||
         state.matchedLocation == RoutePaths.register ||
-        state.matchedLocation == RoutePaths.forgotPassword;
+        state.matchedLocation == RoutePaths.forgotPassword ||
+        state.matchedLocation == RoutePaths.verifyEmail;
 
     final authenticated = status == AuthStatus.authenticated;
 

@@ -15,6 +15,8 @@ const _publicPaths = <String>[
   '/auth/forgot-password',
   '/auth/verify-code',
   '/auth/reset-password',
+  '/auth/verify-email',
+  '/auth/resend-verification',
   '/app/version',
 ];
 

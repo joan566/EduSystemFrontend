@@ -15,21 +15,17 @@ class AuthRepositoryImpl implements AuthRepository {
   final ApiClient _apiClient;
 
   @override
-  Future<(AuthTokens, UserEntity)> register({
+  Future<UserEntity> register({
     required String firstName,
     required String lastName,
     required String email,
     required String password,
-  }) async {
-    final result = await _remote.register(
-      firstName: firstName,
-      lastName: lastName,
-      email: email,
-      password: password,
-    );
-    await _apiClient.setSession(result.tokens);
-    return (result.tokens, result.user);
-  }
+  }) => _remote.register(
+    firstName: firstName,
+    lastName: lastName,
+    email: email,
+    password: password,
+  );
 
   @override
   Future<(AuthTokens, UserEntity)> login({
@@ -65,6 +61,14 @@ class AuthRepositoryImpl implements AuthRepository {
     await _apiClient.setSession(result.tokens);
     return (result.tokens, result.user);
   }
+
+  @override
+  Future<void> verifyEmail({required String email, required String code}) =>
+      _remote.verifyEmail(email: email, code: code);
+
+  @override
+  Future<void> resendVerification(String email) =>
+      _remote.resendVerification(email);
 
   @override
   Future<void> forgotPassword(String email) => _remote.forgotPassword(email);

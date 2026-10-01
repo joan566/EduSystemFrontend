@@ -9,7 +9,9 @@ class AuthRemoteDataSource {
 
   final ApiClient _client;
 
-  Future<AuthResponseModel> register({
+  /// Creates an unverified account; no session is returned until the email
+  /// is verified and the user logs in.
+  Future<UserEntity> register({
     required String firstName,
     required String lastName,
     required String email,
@@ -24,7 +26,19 @@ class AuthRemoteDataSource {
         'password': password,
       },
     );
-    return AuthResponseModel.fromJson(response.data as Map<String, dynamic>);
+    final body = response.data as Map<String, dynamic>;
+    return UserModel.fromJson(body['user'] as Map<String, dynamic>);
+  }
+
+  Future<void> verifyEmail({required String email, required String code}) async {
+    await _client.post(
+      ApiEndpoints.verifyEmail,
+      data: {'email': email, 'code': code},
+    );
+  }
+
+  Future<void> resendVerification(String email) async {
+    await _client.post(ApiEndpoints.resendVerification, data: {'email': email});
   }
 
   Future<AuthResponseModel> login({
