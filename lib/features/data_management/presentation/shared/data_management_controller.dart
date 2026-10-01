@@ -6,6 +6,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/widgets/shared/app_download.dart';
 import '../../../../core/widgets/shared/picked_file.dart';
 import '../../../exports/data/export_datasource.dart';
+import '../../../imports/domain/entities/import_batch_entity.dart';
 import '../../../imports/presentation/providers/imports_provider.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
 
@@ -122,61 +123,57 @@ class DataManagementController extends ChangeNotifier {
     );
   }
 
-  Future<void> uploadStudents(BuildContext context) async {
-    final file = _studentsPicked;
-    if (file == null) return;
-    final provider = context.read<ImportsProvider>();
-    await provider.upload(fileName: file.name, bytes: file.bytes);
-    if (!context.mounted) return;
-    if (provider.uploadStatus == UploadStatus.error &&
-        provider.uploadError != null) {
-      context.showApiError(provider.uploadError!);
-    }
-  }
+  Future<void> uploadStudents(BuildContext context) => _upload(
+    context,
+    ImportType.students,
+    _studentsPicked,
+    onQueued: () => pickStudents(null),
+  );
 
   Future<void> uploadPeriod(BuildContext context) async {
-    final file = _periodPicked;
     final period = _period;
-    if (file == null || period == null) return;
-    final provider = context.read<ImportsProvider>();
-    await provider.uploadTeachingPeriod(
+    if (period == null) return;
+    await _upload(
+      context,
+      ImportType.teachingPeriod,
+      _periodPicked,
       teachingPeriodId: period.id,
+      onQueued: () => pickPeriod(null),
+    );
+  }
+
+  Future<void> uploadSchoolSetup(BuildContext context) => _upload(
+    context,
+    ImportType.schoolSetup,
+    _schoolSetupPicked,
+    onQueued: () => pickSchoolSetup(null),
+  );
+
+  /// Sends [file]; once it is queued the picked file is cleared and the
+  /// card follows the import. A rejected upload keeps the file to retry.
+  Future<void> _upload(
+    BuildContext context,
+    ImportType type,
+    PickedFile? file, {
+    int? teachingPeriodId,
+    required VoidCallback onQueued,
+  }) async {
+    if (file == null) return;
+    final error = await context.read<ImportsProvider>().upload(
+      type,
       fileName: file.name,
       bytes: file.bytes,
+      teachingPeriodId: teachingPeriodId,
     );
-    if (!context.mounted) return;
-    if (provider.periodUploadStatus == UploadStatus.error &&
-        provider.periodUploadError != null) {
-      context.showApiError(provider.periodUploadError!);
+    if (error == null) {
+      onQueued();
+    } else if (context.mounted) {
+      context.showApiError(error);
     }
   }
 
-  Future<void> uploadSchoolSetup(BuildContext context) async {
-    final file = _schoolSetupPicked;
-    if (file == null) return;
-    final provider = context.read<ImportsProvider>();
-    await provider.uploadSchoolSetup(fileName: file.name, bytes: file.bytes);
-    if (!context.mounted) return;
-    if (provider.schoolSetupUploadStatus == UploadStatus.error &&
-        provider.schoolSetupUploadError != null) {
-      context.showApiError(provider.schoolSetupUploadError!);
-    }
-  }
-
-  void dismissStudentsResult(BuildContext context) {
-    context.read<ImportsProvider>().resetUpload();
-    pickStudents(null);
-  }
-
-  void dismissPeriodResult(BuildContext context) {
-    context.read<ImportsProvider>().resetPeriodUpload();
-    pickPeriod(null);
-  }
-
-  void dismissSchoolSetupResult(BuildContext context) {
-    context.read<ImportsProvider>().resetSchoolSetupUpload();
-    pickSchoolSetup(null);
-  }
+  void dismissResult(BuildContext context, ImportType type) =>
+      context.read<ImportsProvider>().dismiss(type);
 
   @override
   void dispose() {

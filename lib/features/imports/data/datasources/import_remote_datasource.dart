@@ -14,20 +14,26 @@ class ImportRemoteDataSource {
   Future<BinaryDownload> downloadTemplate() =>
       _client.getBinary(ApiEndpoints.importStudentsTemplate);
 
-  Future<ImportResultEntity> uploadStudents({
+  /// Uploads go into a background queue: the answer (202) is the import in
+  /// `QUEUED`; its result is read later with [getImport]. File-level
+  /// validation (empty, not .xlsx, too large, import already running)
+  /// still fails right here.
+  Future<ImportBatchEntity> uploadStudents({
     required String fileName,
     required List<int> bytes,
-  }) async {
-    final formData = FormData.fromMap({
-      'file': MultipartFile.fromBytes(bytes, filename: fileName),
-    });
-    final response = await _client.postMultipart(
-      ApiEndpoints.importStudents,
-      formData: formData,
-    );
+    ProgressCallback? onSendProgress,
+  }) => _upload(
+    ApiEndpoints.importStudents,
+    fileName: fileName,
+    bytes: bytes,
+    onSendProgress: onSendProgress,
+  );
+
+  /// One import with its first row errors; polled until it finishes.
+  Future<ImportResultEntity> getImport(int id) async {
+    final response = await _client.get(ApiEndpoints.importById(id));
     return ImportBatchModel.resultFromJson(
       response.data as Map<String, dynamic>,
-      fallbackFileName: fileName,
     );
   }
 
@@ -47,25 +53,18 @@ class ImportRemoteDataSource {
 
   /// Uploads the combined Students/Grades/Attendance workbook for a
   /// teaching period. Sheets are all optional server-side — a workbook
-  /// with just one of them only touches that part. Response shape matches
-  /// `uploadStudents` (same `ImportResultResponse` envelope).
-  Future<ImportResultEntity> uploadTeachingPeriod({
+  /// with just one of them only touches that part.
+  Future<ImportBatchEntity> uploadTeachingPeriod({
     required int teachingPeriodId,
     required String fileName,
     required List<int> bytes,
-  }) async {
-    final formData = FormData.fromMap({
-      'file': MultipartFile.fromBytes(bytes, filename: fileName),
-    });
-    final response = await _client.postMultipart(
-      ApiEndpoints.importTeachingPeriod(teachingPeriodId),
-      formData: formData,
-    );
-    return ImportBatchModel.resultFromJson(
-      response.data as Map<String, dynamic>,
-      fallbackFileName: fileName,
-    );
-  }
+    ProgressCallback? onSendProgress,
+  }) => _upload(
+    ApiEndpoints.importTeachingPeriod(teachingPeriodId),
+    fileName: fileName,
+    bytes: bytes,
+    onSendProgress: onSendProgress,
+  );
 
   /// The school-wide bootstrap template (9 sheets: periods, grades,
   /// subjects, groups, classes, students, activities, grades, attendance).
@@ -74,20 +73,31 @@ class ImportRemoteDataSource {
   Future<BinaryDownload> downloadSchoolSetupTemplate() =>
       _client.getBinary(ApiEndpoints.importSchoolSetupTemplate);
 
-  Future<ImportResultEntity> uploadSchoolSetup({
+  Future<ImportBatchEntity> uploadSchoolSetup({
     required String fileName,
     required List<int> bytes,
+    ProgressCallback? onSendProgress,
+  }) => _upload(
+    ApiEndpoints.importSchoolSetup,
+    fileName: fileName,
+    bytes: bytes,
+    onSendProgress: onSendProgress,
+  );
+
+  Future<ImportBatchEntity> _upload(
+    String path, {
+    required String fileName,
+    required List<int> bytes,
+    ProgressCallback? onSendProgress,
   }) async {
     final formData = FormData.fromMap({
       'file': MultipartFile.fromBytes(bytes, filename: fileName),
     });
     final response = await _client.postMultipart(
-      ApiEndpoints.importSchoolSetup,
+      path,
       formData: formData,
+      onSendProgress: onSendProgress,
     );
-    return ImportBatchModel.resultFromJson(
-      response.data as Map<String, dynamic>,
-      fallbackFileName: fileName,
-    );
+    return ImportBatchModel.fromJson(response.data as Map<String, dynamic>);
   }
 }

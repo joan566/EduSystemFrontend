@@ -1,5 +1,6 @@
 import 'package:edusistem_front/core/events/domain_events.dart';
 import 'package:edusistem_front/core/state/list_state.dart';
+import 'package:edusistem_front/features/imports/domain/entities/import_batch_entity.dart';
 import 'package:edusistem_front/features/attendance/domain/entities/attendance_entity.dart';
 import 'package:edusistem_front/features/audit/presentation/providers/audit_provider.dart';
 import 'package:edusistem_front/features/schedule/domain/entities/schedule_entities.dart';
@@ -471,27 +472,38 @@ void main() {
   });
 
   group('imports', () {
-    test('school setup marks every cache stale', () async {
+    test('a finished school setup marks every cache stale', () async {
       serveClasses();
       backend.on('GET', '/subjects', (r) => pageOf([subjectJson(1, 'A')], r));
       backend.on('GET', '/imports', (r) => pageOf(const [], r));
       backend.on(
         'POST',
         '/imports/school-setup',
-        (_) => {
-          'id': 1,
-          'status': 'COMPLETED',
-          'totalRows': 1,
-          'successfulRows': 1,
-          'failedRows': 0,
-          'errors': const [],
-        },
+        (_) => importJson(1, 'QUEUED', type: 'SCHOOL_SETUP'),
+      );
+      backend.on(
+        'GET',
+        '/imports/{id}',
+        (_) => importJson(
+          1,
+          'COMPLETED',
+          type: 'SCHOOL_SETUP',
+          total: 1,
+          successful: 1,
+        ),
       );
       await s.subjects.ensure();
       await s.teaching.ensureAllPeriodsLoaded();
       final seen = recordEvents(s.events);
 
-      await s.imports.uploadSchoolSetup(fileName: 'x.xlsx', bytes: const [1]);
+      await s.imports.upload(
+        ImportType.schoolSetup,
+        fileName: 'x.xlsx',
+        bytes: const [1],
+      );
+      // Queued: nothing changed yet.
+      expect(seen.whereType<SessionDataReset>(), isEmpty);
+      await untilImportSettles(s.imports, ImportType.schoolSetup);
       expect(seen.whereType<SessionDataReset>(), hasLength(1));
 
       await s.subjects.ensure();

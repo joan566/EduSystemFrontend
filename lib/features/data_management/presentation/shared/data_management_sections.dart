@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_card.dart';
 import '../../../../core/widgets/shared/app_download.dart';
@@ -65,12 +66,13 @@ class SchoolSetupCard extends StatelessWidget {
             picked: controller.schoolSetupPicked,
             intake: intake,
             onPicked: controller.pickSchoolSetup,
-            uploading:
-                provider.schoolSetupUploadStatus == UploadStatus.uploading,
+            run: provider.run(ImportType.schoolSetup),
+            otherImportRunning:
+                provider.hasActiveImport &&
+                provider.run(ImportType.schoolSetup)?.isActive != true,
             onUpload: () => controller.uploadSchoolSetup(context),
-            done: provider.schoolSetupUploadStatus == UploadStatus.done,
-            result: provider.schoolSetupLastResult,
-            onDismissResult: () => controller.dismissSchoolSetupResult(context),
+            onDismissResult: () =>
+                controller.dismissResult(context, ImportType.schoolSetup),
           ),
         ],
       ),
@@ -158,13 +160,15 @@ class PeriodUploadCard extends StatelessWidget {
             picked: controller.periodPicked,
             intake: intake,
             onPicked: controller.pickPeriod,
-            uploading: provider.periodUploadStatus == UploadStatus.uploading,
+            run: provider.run(ImportType.teachingPeriod),
+            otherImportRunning:
+                provider.hasActiveImport &&
+                provider.run(ImportType.teachingPeriod)?.isActive != true,
             onUpload: controller.period == null
                 ? null
                 : () => controller.uploadPeriod(context),
-            done: provider.periodUploadStatus == UploadStatus.done,
-            result: provider.periodLastResult,
-            onDismissResult: () => controller.dismissPeriodResult(context),
+            onDismissResult: () =>
+                controller.dismissResult(context, ImportType.teachingPeriod),
           ),
         ],
       ),
@@ -214,11 +218,13 @@ class StudentsUploadCard extends StatelessWidget {
             picked: controller.studentsPicked,
             intake: intake,
             onPicked: controller.pickStudents,
-            uploading: provider.uploadStatus == UploadStatus.uploading,
+            run: provider.run(ImportType.students),
+            otherImportRunning:
+                provider.hasActiveImport &&
+                provider.run(ImportType.students)?.isActive != true,
             onUpload: () => controller.uploadStudents(context),
-            done: provider.uploadStatus == UploadStatus.done,
-            result: provider.lastResult,
-            onDismissResult: () => controller.dismissStudentsResult(context),
+            onDismissResult: () =>
+                controller.dismissResult(context, ImportType.students),
           ),
         ],
       ),
@@ -284,34 +290,40 @@ class SeparateExportsCard extends StatelessWidget {
   }
 }
 
-/// Intake -> selected file + "Importar" -> result summary, the same
-/// sequence for every upload card.
+/// Intake -> selected file + "Importar" -> upload and background
+/// processing -> result summary, the same sequence for every upload card.
 class _UploadBlock extends StatelessWidget {
   const _UploadBlock({
     required this.picked,
     required this.intake,
     required this.onPicked,
-    required this.uploading,
+    required this.run,
+    required this.otherImportRunning,
     required this.onUpload,
-    required this.done,
-    required this.result,
     required this.onDismissResult,
   });
 
   final PickedFile? picked;
   final FileIntakeBuilder intake;
   final ValueChanged<PickedFile?> onPicked;
-  final bool uploading;
+
+  /// This card's latest upload, if any.
+  final ImportRun? run;
+
+  /// Another card's import is running; the backend takes one at a time.
+  final bool otherImportRunning;
+
   final VoidCallback? onUpload;
-  final bool done;
-  final ImportResultEntity? result;
   final VoidCallback onDismissResult;
 
   @override
   Widget build(BuildContext context) {
     final picked = this.picked;
-    final result = this.result;
+    final run = this.run;
 
+    if (run != null && run.isActive) return ImportProgressPanel(run: run);
+
+    final result = run?.result;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -322,11 +334,19 @@ class _UploadBlock extends StatelessWidget {
           const SizedBox(height: 16),
           AppButton(
             label: 'Importar',
-            isLoading: uploading,
-            onPressed: onUpload,
+            onPressed: otherImportRunning ? null : onUpload,
           ),
+          if (otherImportRunning) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Ya tienes una importación en curso; espera a que termine.',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.warning),
+            ),
+          ],
         ],
-        if (done && result != null) ...[
+        if (run != null && result != null) ...[
           const SizedBox(height: 20),
           ImportResultSummary(
             result: result,
@@ -341,6 +361,9 @@ class _UploadBlock extends StatelessWidget {
                 : null,
             onDismiss: onDismissResult,
           ),
+        ] else if (run != null) ...[
+          const SizedBox(height: 20),
+          ImportUnresolvedNotice(run: run, onDismiss: onDismissResult),
         ],
       ],
     );

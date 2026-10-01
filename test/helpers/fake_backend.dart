@@ -355,3 +355,33 @@ Map<String, Object?> studentJson(int id, {String lastName = 'Pérez'}) => {
   'lastName': lastName,
   'active': true,
 };
+
+/// An import as `POST /imports/...` (202) and `GET /imports/{id}` return
+/// it; counts stay null until [total] is given.
+Map<String, Object?> importJson(
+  int id,
+  String status, {
+  String? type = 'STUDENTS',
+  int? total,
+  int? successful,
+  String? errorCode,
+  String? errorMessage,
+  List<Map<String, Object?>> errors = const [],
+  bool errorsTruncated = false,
+}) => {
+  'id': id,
+  'type': type,
+  'fileName': 'archivo.xlsx',
+  'status': status,
+  'totalRows': total,
+  'successfulRows': successful,
+  'failedRows': total == null ? null : total - (successful ?? 0),
+  'hasErrorReport': total != null && total > (successful ?? 0),
+  'errorCode': errorCode,
+  'errorMessage': errorMessage,
+  'createdAt': '2026-10-01T14:03:11',
+  'startedAt': status == 'QUEUED' ? null : '2026-10-01T14:03:11',
+  'completedAt': null,
+  'errors': errors,
+  'errorsTruncated': errorsTruncated,
+};

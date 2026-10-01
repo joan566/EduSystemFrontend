@@ -26,6 +26,7 @@ import 'package:edusistem_front/features/grades/presentation/providers/gradebook
 import 'package:edusistem_front/features/grades/presentation/providers/grading_provider.dart';
 import 'package:edusistem_front/features/imports/data/datasources/import_remote_datasource.dart';
 import 'package:edusistem_front/features/imports/data/repositories/import_repository.dart';
+import 'package:edusistem_front/features/imports/domain/entities/import_batch_entity.dart';
 import 'package:edusistem_front/features/imports/presentation/providers/imports_provider.dart';
 import 'package:edusistem_front/features/schedule/data/datasources/schedule_remote_datasource.dart';
 import 'package:edusistem_front/features/schedule/data/repositories/schedule_repository.dart';
@@ -104,6 +105,7 @@ class SessionFixture {
   late final imports = ImportsProvider(
     ImportRepository(ImportRemoteDataSource(api), AuditRemoteDataSource(api)),
     events,
+    pollInterval: const Duration(milliseconds: 1),
   );
 
   /// Creates every provider now (they subscribe to the bus on creation, as
@@ -126,4 +128,17 @@ class SessionFixture {
       imports,
     ]) {}
   }
+}
+
+/// Waits (real time; the fixture polls every millisecond) until the
+/// upload of [type] is no longer running.
+Future<void> untilImportSettles(
+  ImportsProvider imports,
+  ImportType type,
+) async {
+  for (var i = 0; i < 500; i++) {
+    if (!(imports.run(type)?.isActive ?? false)) return;
+    await Future<void>.delayed(const Duration(milliseconds: 2));
+  }
+  throw StateError('The import of $type never settled.');
 }

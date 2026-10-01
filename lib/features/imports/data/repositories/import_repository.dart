@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../../../../core/network/api_client.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../audit/data/datasources/audit_remote_datasource.dart';
@@ -12,10 +14,17 @@ class ImportRepository {
 
   Future<BinaryDownload> downloadTemplate() => _remote.downloadTemplate();
 
-  Future<ImportResultEntity> uploadStudents({
+  Future<ImportBatchEntity> uploadStudents({
     required String fileName,
     required List<int> bytes,
-  }) => _remote.uploadStudents(fileName: fileName, bytes: bytes);
+    ProgressCallback? onSendProgress,
+  }) => _remote.uploadStudents(
+    fileName: fileName,
+    bytes: bytes,
+    onSendProgress: onSendProgress,
+  );
+
+  Future<ImportResultEntity> getImport(int id) => _remote.getImport(id);
 
   Future<ApiPage<ImportBatchEntity>> getHistory({int page = 0}) =>
       _remote.getHistory(page: page);
@@ -23,29 +32,34 @@ class ImportRepository {
   Future<BinaryDownload> downloadErrorReport(int id) =>
       _remote.downloadErrorReport(id);
 
-  Future<ImportResultEntity> uploadTeachingPeriod({
+  Future<ImportBatchEntity> uploadTeachingPeriod({
     required int teachingPeriodId,
     required String fileName,
     required List<int> bytes,
+    ProgressCallback? onSendProgress,
   }) => _remote.uploadTeachingPeriod(
     teachingPeriodId: teachingPeriodId,
     fileName: fileName,
     bytes: bytes,
+    onSendProgress: onSendProgress,
   );
 
   Future<BinaryDownload> downloadSchoolSetupTemplate() =>
       _remote.downloadSchoolSetupTemplate();
 
-  Future<ImportResultEntity> uploadSchoolSetup({
+  Future<ImportBatchEntity> uploadSchoolSetup({
     required String fileName,
     required List<int> bytes,
-  }) => _remote.uploadSchoolSetup(fileName: fileName, bytes: bytes);
+    ProgressCallback? onSendProgress,
+  }) => _remote.uploadSchoolSetup(
+    fileName: fileName,
+    bytes: bytes,
+    onSendProgress: onSendProgress,
+  );
 
-  /// The specific reason a batch failed *before* any row could be
-  /// evaluated (wrong file type, missing columns, too many rows...).
-  /// [ImportBatchEntity] has no failure-reason field for that path — the
-  /// backend only records it in the audit trail — so this is a second call
-  /// against `/audit-logs`, not something the batch/history endpoints carry.
+  /// Why an *old* batch failed before any row was evaluated. Imports now
+  /// carry [ImportBatchEntity.errorMessage]; batches from before that only
+  /// recorded the reason in the audit trail, so this reads `/audit-logs`.
   Future<String?> getFailureReason(int batchId) async {
     final page = await _audit.getPage(
       entityType: 'ImportBatch',

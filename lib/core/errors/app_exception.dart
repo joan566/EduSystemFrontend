@@ -87,5 +87,6 @@ class AppErrorCode {
       'SUBJECT_HAS_TEACHING_ASSIGNMENTS';
   static const String academicPeriodInUse = 'ACADEMIC_PERIOD_IN_USE';
   static const String errorReportNotFound = 'ERROR_REPORT_NOT_FOUND';
+  static const String importInProgress = 'IMPORT_IN_PROGRESS';
   static const String internalError = 'INTERNAL_ERROR';
 }
