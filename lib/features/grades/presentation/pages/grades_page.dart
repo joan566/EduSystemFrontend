@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/providers/teaching_provider.dart';
+import '../../../teaching/presentation/shared/class_picker.dart';
 import '../desktop/grades_desktop_view.dart';
 import '../mobile/grades_mobile_view.dart';
 import '../providers/grading_provider.dart';
@@ -44,13 +44,12 @@ class _GradesPageState extends State<GradesPage>
   }
 
   Future<void> _pickInitialClass() async {
-    final teaching = context.read<TeachingProvider>();
-    await teaching.ensureAllPeriodsLoaded();
-    if (!mounted || _period != null || teaching.allPeriods.isEmpty) return;
-    final preferred = teaching.allPeriods
-        .where((p) => p.id == widget.initialTeachingPeriodId)
-        .firstOrNull;
-    _onPeriodChanged(preferred ?? teaching.allPeriods.first);
+    final period = await initialClass(
+      context,
+      preferredId: widget.initialTeachingPeriodId,
+    );
+    if (!mounted || _period != null) return;
+    _onPeriodChanged(period);
   }
 
   void _onPeriodChanged(TeachingPeriodEntity? period) {

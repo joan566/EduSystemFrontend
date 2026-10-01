@@ -2,41 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/subject_visuals.dart';
 import '../../../../core/widgets/mobile/mobile_brand_bar.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
 import '../../../../core/widgets/mobile/mobile_header_action.dart';
 import '../../../../core/widgets/mobile/mobile_select_field.dart';
-import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
-import '../../../../core/widgets/shared/app_status_chip.dart';
+import '../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../academic_periods/domain/entities/academic_period_entity.dart';
 import '../../../academic_periods/presentation/providers/academic_periods_provider.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
-import '../../../subjects/domain/entities/subject_entity.dart';
 import '../../../subjects/presentation/providers/subjects_provider.dart';
-import '../../domain/entities/teaching_assignment_entity.dart';
-import '../../domain/entities/teaching_period_entity.dart';
 import '../providers/teaching_provider.dart';
+import '../shared/class_grouping.dart';
 import '../shared/class_lookup.dart';
 import '../shared/teaching_actions.dart';
 import '../shared/teaching_forms.dart';
-import 'widgets/class_list_card.dart';
+import 'widgets/course_classes_card.dart';
 
-/// Mobile "Clases": brand bar, title with counts, search + status filter,
-/// period and subject pickers, then "Mis clases" (assignments) and "Por
-/// periodo" (classes of the chosen academic period) as card lists.
+/// Mobile "Clases": the teacher's courses, each with the subjects taught in
+/// it, for one academic period. Search, a subject filter (chips) and an
+/// active-state filter narrow the list; a subject opens its class.
 class TeachingMobileView extends StatelessWidget {
   const TeachingMobileView({
     super.key,
-    required this.tabController,
     required this.filters,
     required this.onFiltersChanged,
     required this.academicPeriodId,
@@ -45,7 +39,6 @@ class TeachingMobileView extends StatelessWidget {
     required this.onSearchChanged,
   });
 
-  final TabController tabController;
   final AssignmentFilters filters;
   final ValueChanged<AssignmentFilters> onFiltersChanged;
   final int? academicPeriodId;
@@ -53,49 +46,72 @@ class TeachingMobileView extends StatelessWidget {
   final String search;
   final ValueChanged<String> onSearchChanged;
 
-  Future<void> _createAssignment(BuildContext context) async {
-    final inputs = await TeachingActions.assignmentFormInputs(context);
+  Future<void> _addClasses(BuildContext context, {int? groupId}) async {
+    final inputs = await TeachingActions.addClassesFormInputs(context);
     if (inputs == null || !context.mounted) return;
-    final data = await showMobileForm<AssignmentFormResult>(
+    final data = await showMobileForm<AddClassesResult>(
       context,
-      child: AssignmentForm(subjects: inputs.subjects, courses: inputs.courses),
-    );
-    if (data == null || !context.mounted) return;
-    await TeachingActions.createAssignment(context, data);
-  }
-
-  Future<void> _createPeriod(BuildContext context) async {
-    final inputs = await TeachingActions.periodFormInputs(context);
-    if (inputs == null || !context.mounted) return;
-    final data = await showMobileForm<TeachingPeriodFormResult>(
-      context,
-      child: TeachingPeriodForm(
+      child: AddClassesForm(
+        courses: inputs.courses,
+        subjects: inputs.subjects,
+        academicPeriods: inputs.academicPeriods,
         assignments: inputs.assignments,
-        periods: inputs.periods,
+        initialGroupId: groupId,
+        initialAcademicPeriodId: academicPeriodId,
       ),
     );
     if (data == null || !context.mounted) return;
-    await TeachingActions.createPeriod(context, data);
+    await TeachingActions.addClasses(context, data);
   }
 
-  Future<void> _openCreateMenu(BuildContext context) async {
+  Future<void> _openActions(
+    BuildContext context,
+    ClassEntry entry,
+    AcademicPeriodEntity? academicPeriod,
+  ) async {
+    final a = entry.assignment;
+    final period = entry.period;
     final choice = await showMobileSheet<int>(
       context,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.groups_outlined),
-              title: const Text('Nueva asignación'),
-              subtitle: const Text('Una materia en un curso'),
-              onTap: () => Navigator.of(context).pop(0),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                a.title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
+            if (period == null && academicPeriod != null)
+              ListTile(
+                leading: const Icon(Icons.add),
+                title: Text('Crear clase en ${academicPeriod.name}'),
+                onTap: () => Navigator.of(context).pop(0),
+              ),
             ListTile(
-              leading: const Icon(Icons.calendar_month_outlined),
-              title: const Text('Nueva clase por periodo'),
-              subtitle: const Text('Una asignación en un periodo académico'),
+              leading: Icon(
+                a.active ? Icons.toggle_off_outlined : Icons.toggle_on,
+              ),
+              title: Text(
+                a.active ? 'Marcar como inactiva' : 'Marcar como activa',
+              ),
               onTap: () => Navigator.of(context).pop(1),
+            ),
+            if (period != null)
+              ListTile(
+                leading: const Icon(Icons.event_busy_outlined),
+                title: Text('Eliminar clase de ${period.academicPeriodName}'),
+                onTap: () => Navigator.of(context).pop(2),
+              ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: const Text('Quitar materia del curso'),
+              onTap: () => Navigator.of(context).pop(3),
             ),
           ],
         ),
@@ -104,9 +120,17 @@ class TeachingMobileView extends StatelessWidget {
     if (!context.mounted) return;
     switch (choice) {
       case 0:
-        await _createAssignment(context);
+        await TeachingActions.createClassFor(
+          context,
+          assignment: a,
+          academicPeriod: academicPeriod!,
+        );
       case 1:
-        await _createPeriod(context);
+        await TeachingActions.setAssignmentActive(context, a, !a.active);
+      case 2:
+        await TeachingActions.deletePeriod(context, period!);
+      case 3:
+        await TeachingActions.deleteAssignment(context, a);
     }
   }
 
@@ -121,7 +145,7 @@ class TeachingMobileView extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Text(
-                'Estado de la asignación',
+                'Estado',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -155,8 +179,56 @@ class TeachingMobileView extends StatelessWidget {
         .state
         .items;
     final subjects = context.watch<SubjectsProvider>().state.items;
-    final classes = _classesInPeriod(teaching.allPeriods);
+    final weekly = context
+        .watch<ScheduleProvider>()
+        .week
+        .data
+        ?.occurrencesByTeachingPeriod;
+    final academicPeriod = academicPeriods
+        .where((p) => p.id == academicPeriodId)
+        .firstOrNull;
     final textTheme = Theme.of(context).textTheme;
+
+    String? description(int subjectId) =>
+        subjects.where((s) => s.id == subjectId).firstOrNull?.description;
+
+    final grouping = groupClasses(
+      assignments: teaching.allAssignments,
+      periods: teaching.allPeriods,
+      academicPeriodId: academicPeriodId,
+      include: (entry, courseLabel) =>
+          (filters.subjectId == null || entry.subjectId == filters.subjectId) &&
+          (filters.active == null ||
+              entry.assignment.active == filters.active) &&
+          matchesSearch(search, [
+            entry.subjectName,
+            courseLabel,
+            entry.assignment.gradeName,
+            description(entry.subjectId),
+          ]),
+    );
+    final taughtSubjects =
+        {
+          for (final a in teaching.allAssignments) a.subjectId: a.subjectName,
+        }.entries.toList()..sort(
+          (a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()),
+        );
+    final loading = switch (teaching.assignmentsState.status) {
+      ViewStatus.initial || ViewStatus.loading => true,
+      _ =>
+        teaching.allPeriods.isEmpty &&
+            switch (teaching.periodsState.status) {
+              ViewStatus.initial || ViewStatus.loading => true,
+              _ => false,
+            },
+    };
+    final single = grouping.singleSubjectName;
+    final summary = loading
+        ? ''
+        : single != null
+        ? '$single  ·  ${_count(grouping.courseCount, 'curso', 'cursos')}'
+        : '${_count(grouping.courseCount, 'curso', 'cursos')}  ·  '
+              '${_count(grouping.classCount, 'clase', 'clases')}';
 
     return Scaffold(
       body: Column(
@@ -176,8 +248,7 @@ class TeachingMobileView extends StatelessWidget {
                         style: textTheme.headlineLarge?.copyWith(fontSize: 26),
                       ),
                       Text(
-                        '${teaching.assignments(subjectId: filters.subjectId, active: filters.active).totalElements} asignaciones'
-                        '  ·  ${classes.length} clases por periodo',
+                        summary,
                         style: textTheme.bodyMedium?.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -187,8 +258,8 @@ class TeachingMobileView extends StatelessWidget {
                 ),
                 MobileHeaderAction(
                   icon: Icons.add,
-                  tooltip: 'Crear',
-                  onPressed: () => _openCreateMenu(context),
+                  tooltip: 'Agregar materias a un curso',
+                  onPressed: () => _addClasses(context),
                 ),
               ],
             ),
@@ -199,7 +270,7 @@ class TeachingMobileView extends StatelessWidget {
               children: [
                 Expanded(
                   child: AppSearchField(
-                    hint: 'Buscar materia, grado o clase...',
+                    hint: 'Buscar curso o materia...',
                     initialValue: search,
                     onChanged: onSearchChanged,
                   ),
@@ -213,113 +284,202 @@ class TeachingMobileView extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: MobileSelectField<AcademicPeriodEntity?>(
-                    icon: Icons.calendar_month_outlined,
-                    label: 'Periodo',
-                    value: academicPeriods
-                        .where((p) => p.id == academicPeriodId)
-                        .firstOrNull,
-                    options: [null, ...academicPeriods],
-                    itemLabel: (p) => p?.name ?? 'Todos',
-                    onChanged: (p) => onAcademicPeriodChanged(p?.id),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: MobileSelectField<SubjectEntity?>(
-                    icon: Icons.menu_book_outlined,
-                    label: 'Materia',
-                    value: subjects
-                        .where((s) => s.id == filters.subjectId)
-                        .firstOrNull,
-                    options: [null, ...subjects],
-                    itemLabel: (s) => s?.name ?? 'Todas',
-                    onChanged: (s) => onFiltersChanged(
-                      AssignmentFilters(
-                        subjectId: s?.id,
-                        active: filters.active,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: MobileSelectField<AcademicPeriodEntity?>(
+              icon: Icons.calendar_month_outlined,
+              label: 'Periodo',
+              value: academicPeriod,
+              options: [null, ...academicPeriods],
+              itemLabel: (p) => p?.name ?? 'Todos los periodos',
+              onChanged: (p) => onAcademicPeriodChanged(p?.id),
+            ),
+          ),
+          if (taughtSubjects.length > 1)
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                children: [
+                  for (final (id, name) in [
+                    (null, 'Todas'),
+                    for (final s in taughtSubjects) (s.key, s.value),
+                  ]) ...[
+                    ChoiceChip(
+                      label: Text(name),
+                      selected: filters.subjectId == id,
+                      showCheckmark: false,
+                      selectedColor: AppColors.accentBlue.withValues(
+                        alpha: 0.12,
+                      ),
+                      labelStyle: textTheme.labelLarge?.copyWith(
+                        color: filters.subjectId == id
+                            ? AppColors.accentBlue
+                            : null,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                      onSelected: (_) => onFiltersChanged(
+                        AssignmentFilters(
+                          subjectId: id,
+                          active: filters.active,
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                    const SizedBox(width: 8),
+                  ],
+                ],
+              ),
             ),
-          ),
-          TabBar(
-            controller: tabController,
-            labelColor: AppColors.textPrimary,
-            indicatorColor: AppColors.accentBlue,
-            indicatorWeight: 3,
-            dividerColor: Theme.of(context).colorScheme.outline,
-            labelStyle: textTheme.labelLarge,
-            tabs: const [
-              Tab(text: 'Mis clases'),
-              Tab(text: 'Por periodo'),
-            ],
-          ),
+          const SizedBox(height: 4),
           Expanded(
-            child: TabBarView(
-              controller: tabController,
-              children: [
-                _AssignmentsTab(
-                  classes: teaching.allPeriods,
-                  academicPeriod: academicPeriods
-                      .where((p) => p.id == academicPeriodId)
-                      .firstOrNull,
-                  subjects: subjects,
-                  search: search,
-                  filters: filters,
-                  onCreate: () => _createAssignment(context),
-                ),
-                _ClassesTab(
-                  loading: switch (teaching.periodsState.status) {
-                    ViewStatus.initial || ViewStatus.loading => true,
-                    _ => false,
+            child: loading
+                ? const _CoursesSkeleton()
+                : switch (teaching.assignmentsState.status) {
+                    ViewStatus.error => AppErrorState(
+                      exception: teaching.assignmentsState.error!,
+                      onRetry: () =>
+                          context.read<TeachingProvider>().refreshAssignments(),
+                    ),
+                    ViewStatus.empty => AppEmptyState(
+                      title: 'Aún no tienes clases',
+                      message:
+                          'Agrega las materias que dictas en cada curso para '
+                          'empezar.',
+                      icon: Icons.groups_outlined,
+                      actionLabel: 'Agregar materias',
+                      onAction: () => _addClasses(context),
+                    ),
+                    _ when grouping.isEmpty => const AppEmptyState(
+                      title: 'Sin resultados',
+                      message:
+                          'Ningún curso o materia coincide con los filtros.',
+                      icon: Icons.search_off,
+                    ),
+                    _ => _CourseList(
+                      grouping: grouping,
+                      academicPeriod: academicPeriod,
+                      weekly: weekly,
+                      onOpen: (entry) => context.push(
+                        RoutePaths.teachingPeriodDetail(entry.period!.id),
+                      ),
+                      onCreateClass: (entry) => TeachingActions.createClassFor(
+                        context,
+                        assignment: entry.assignment,
+                        academicPeriod: academicPeriod!,
+                      ),
+                      onActions: (entry) =>
+                          _openActions(context, entry, academicPeriod),
+                      onAddSubject: (groupId) =>
+                          _addClasses(context, groupId: groupId),
+                    ),
                   },
-                  classes: _filtered(classes, subjects),
-                  subjects: subjects,
-                  onCreate: () => _createPeriod(context),
-                ),
-              ],
-            ),
           ),
         ],
       ),
     );
   }
-
-  List<TeachingPeriodEntity> _classesInPeriod(List<TeachingPeriodEntity> all) =>
-      academicPeriodId == null
-      ? all
-      : all.where((p) => p.academicPeriodId == academicPeriodId).toList();
-
-  List<TeachingPeriodEntity> _filtered(
-    List<TeachingPeriodEntity> classes,
-    List<SubjectEntity> subjects,
-  ) =>
-      classes
-          .where(
-            (p) =>
-                filters.subjectId == null || p.subjectId == filters.subjectId,
-          )
-          .where(
-            (p) => matchesSearch(search, [
-              p.subjectName,
-              p.courseLabel,
-              p.academicPeriodName,
-              _subjectDescription(subjects, p.subjectId),
-            ]),
-          )
-          .toList()
-        ..sort((a, b) => a.displayName.compareTo(b.displayName));
 }
 
-String? _subjectDescription(List<SubjectEntity> subjects, int subjectId) =>
-    subjects.where((s) => s.id == subjectId).firstOrNull?.description;
+String _count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
+
+class _CourseList extends StatelessWidget {
+  const _CourseList({
+    required this.grouping,
+    required this.academicPeriod,
+    required this.weekly,
+    required this.onOpen,
+    required this.onCreateClass,
+    required this.onActions,
+    required this.onAddSubject,
+  });
+
+  final ClassGrouping grouping;
+  final AcademicPeriodEntity? academicPeriod;
+  final Map<int, int>? weekly;
+  final ValueChanged<ClassEntry> onOpen;
+  final ValueChanged<ClassEntry> onCreateClass;
+  final ValueChanged<ClassEntry> onActions;
+  final ValueChanged<int> onAddSubject;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = grouping.singleSubjectName != null;
+    // A grade header only helps when it groups several courses.
+    final gradeHeaders = grouping.sections.any((s) => s.courses.length > 1);
+    final textTheme = Theme.of(context).textTheme;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+      children: [
+        for (final section in grouping.sections) ...[
+          if (gradeHeaders)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+              child: Text(
+                section.gradeName,
+                style: textTheme.labelLarge?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          for (final course in section.courses) ...[
+            CourseClassesCard(
+              course: course,
+              academicPeriod: academicPeriod,
+              weeklySessions: weekly,
+              compact: compact,
+              onOpen: onOpen,
+              onCreateClass: onCreateClass,
+              onActions: onActions,
+              onAddSubject: () => onAddSubject(course.groupId),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+/// Course cards being read: a header line and two subject rows each.
+class _CoursesSkeleton extends StatelessWidget {
+  const _CoursesSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeleton(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          for (var i = 0; i < 3; i++) ...[
+            SkeletonSurface(
+              radius: 14,
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SkeletonBox(width: 90.0 + i * 20, height: 16),
+                  const SizedBox(height: 16),
+                  for (var j = 0; j < 2; j++) ...[
+                    if (j > 0) const SizedBox(height: 14),
+                    SkeletonTile(
+                      leading: SkeletonLeading.square,
+                      leadingSize: 40,
+                      titleFactor: SkeletonRepeat.factor(i + j),
+                      subtitleFactor: 0.4,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class _StatusFilterButton extends StatelessWidget {
   const _StatusFilterButton({required this.active, required this.onPressed});
@@ -346,263 +506,6 @@ class _StatusFilterButton extends StatelessWidget {
         ),
         icon: const Icon(Icons.tune),
       ),
-    );
-  }
-}
-
-/// "Mis clases": the teacher's assignments. Counts and the tap target come
-/// from the assignment's class in the chosen academic period.
-class _AssignmentsTab extends StatelessWidget {
-  const _AssignmentsTab({
-    required this.classes,
-    required this.academicPeriod,
-    required this.subjects,
-    required this.search,
-    required this.filters,
-    required this.onCreate,
-  });
-
-  final List<TeachingPeriodEntity> classes;
-  final AcademicPeriodEntity? academicPeriod;
-  final List<SubjectEntity> subjects;
-  final String search;
-  final AssignmentFilters filters;
-  final VoidCallback onCreate;
-
-  Future<void> _openActions(
-    BuildContext context,
-    TeachingAssignmentEntity item,
-  ) async {
-    final choice = await showMobileSheet<int>(
-      context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(
-                item.active ? Icons.toggle_off_outlined : Icons.toggle_on,
-              ),
-              title: Text(
-                item.active ? 'Desactivar asignación' : 'Activar asignación',
-              ),
-              onTap: () => Navigator.of(context).pop(0),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.delete_outline,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              title: const Text('Eliminar asignación'),
-              onTap: () => Navigator.of(context).pop(1),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (!context.mounted) return;
-    switch (choice) {
-      case 0:
-        await TeachingActions.setAssignmentActive(context, item, !item.active);
-      case 1:
-        await TeachingActions.deleteAssignment(context, item);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = context.watch<TeachingProvider>().assignments(
-      subjectId: filters.subjectId,
-      active: filters.active,
-    );
-    final weekly = context
-        .watch<ScheduleProvider>()
-        .week
-        .data
-        ?.occurrencesByTeachingPeriod;
-
-    switch (state.status) {
-      case ViewStatus.initial:
-      case ViewStatus.loading:
-        return const MobileListSkeleton(
-          padding: EdgeInsets.fromLTRB(16, 14, 16, 24),
-          leading: SkeletonLeading.square,
-          leadingSize: 56,
-          trailingWidth: 60,
-          meta: true,
-        );
-      case ViewStatus.error:
-        return AppErrorState(
-          exception: state.error!,
-          onRetry: () => context.read<TeachingProvider>().refreshAssignments(),
-        );
-      case ViewStatus.empty:
-        return AppEmptyState(
-          title: 'No tienes asignaciones',
-          message:
-              'Asigna una materia a un curso para empezar a dictar clases.',
-          icon: Icons.groups_outlined,
-          actionLabel: 'Nueva asignación',
-          onAction: onCreate,
-        );
-      case ViewStatus.success:
-        final items = state.items
-            .where(
-              (a) => matchesSearch(search, [
-                a.subjectName,
-                a.gradeName,
-                a.groupName,
-                '${a.gradeName} ${a.groupName}',
-                _subjectDescription(subjects, a.subjectId),
-              ]),
-            )
-            .toList();
-        if (items.isEmpty) {
-          return const AppEmptyState(
-            title: 'Sin resultados',
-            message: 'Ninguna asignación coincide con la búsqueda.',
-            icon: Icons.search_off,
-          );
-        }
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-          itemCount: items.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final item = items[index];
-            final period = classForAssignment(
-              item,
-              classes,
-              academicPeriodId: academicPeriod?.id,
-            );
-            return ClassListCard(
-              title:
-                  '${item.subjectName} — ${item.gradeName} ${item.groupName}',
-              subtitle: _subjectDescription(subjects, item.subjectId),
-              color: subjectAccent(item.subjectId),
-              status: AppStatusChip(
-                label: item.active ? 'Activa' : 'Inactiva',
-                kind: item.active
-                    ? AppStatusKind.success
-                    : AppStatusKind.neutral,
-              ),
-              students: period?.studentCount,
-              weeklySessions: period == null || weekly == null
-                  ? null
-                  : weekly[period.id] ?? 0,
-              footnote: academicPeriod == null
-                  ? 'Sin clases por periodo'
-                  : 'Sin clase en ${academicPeriod!.name}',
-              onTap: () {
-                if (period != null) {
-                  context.push(RoutePaths.teachingPeriodDetail(period.id));
-                } else {
-                  context.showInfo(
-                    academicPeriod == null
-                        ? 'Esta asignación aún no tiene clases por periodo.'
-                        : 'Esta asignación no tiene clase en '
-                              '${academicPeriod!.name}. Créala desde el botón +.',
-                  );
-                }
-              },
-              onLongPress: () => _openActions(context, item),
-            );
-          },
-        );
-    }
-  }
-}
-
-/// "Por periodo": the classes of the chosen academic period.
-class _ClassesTab extends StatelessWidget {
-  const _ClassesTab({
-    required this.loading,
-    required this.classes,
-    required this.subjects,
-    required this.onCreate,
-  });
-
-  /// The class catalog is still being read: not the same as no classes.
-  final bool loading;
-  final List<TeachingPeriodEntity> classes;
-  final List<SubjectEntity> subjects;
-  final VoidCallback onCreate;
-
-  Future<void> _openActions(
-    BuildContext context,
-    TeachingPeriodEntity item,
-  ) async {
-    final delete = await showMobileSheet<bool>(
-      context,
-      builder: (context) => SafeArea(
-        child: ListTile(
-          leading: Icon(
-            Icons.delete_outline,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          title: const Text('Eliminar clase'),
-          onTap: () => Navigator.of(context).pop(true),
-        ),
-      ),
-    );
-    if (delete == true && context.mounted) {
-      await TeachingActions.deletePeriod(context, item);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final weekly = context
-        .watch<ScheduleProvider>()
-        .week
-        .data
-        ?.occurrencesByTeachingPeriod;
-    final now = DateTime.now();
-
-    if (loading) {
-      return const MobileListSkeleton(
-        padding: EdgeInsets.fromLTRB(16, 14, 16, 24),
-        leading: SkeletonLeading.square,
-        leadingSize: 56,
-        trailingWidth: 60,
-        meta: true,
-      );
-    }
-    if (classes.isEmpty) {
-      return AppEmptyState(
-        title: 'Sin clases en este periodo',
-        message:
-            'Vincula una asignación con un periodo académico para empezar.',
-        icon: Icons.calendar_month_outlined,
-        actionLabel: 'Nueva clase',
-        onAction: onCreate,
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-      itemCount: classes.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final item = classes[index];
-        final (label, kind) = switch (classPeriodStatus(item, now)) {
-          ClassPeriodStatus.active => ('En curso', AppStatusKind.success),
-          ClassPeriodStatus.upcoming => ('Próxima', AppStatusKind.info),
-          ClassPeriodStatus.finished => ('Finalizada', AppStatusKind.neutral),
-        };
-        return ClassListCard(
-          title: '${item.subjectName} — ${item.courseLabel}',
-          subtitle:
-              _subjectDescription(subjects, item.subjectId) ??
-              item.academicPeriodName,
-          color: subjectAccent(item.subjectId),
-          status: AppStatusChip(label: label, kind: kind),
-          students: item.studentCount,
-          weeklySessions: weekly == null ? null : weekly[item.id] ?? 0,
-          onTap: () => context.push(RoutePaths.teachingPeriodDetail(item.id)),
-          onLongPress: () => _openActions(context, item),
-        );
-      },
     );
   }
 }

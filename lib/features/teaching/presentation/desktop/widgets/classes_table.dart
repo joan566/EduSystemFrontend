@@ -10,10 +10,12 @@ import '../../../domain/entities/teaching_assignment_entity.dart';
 import '../../../domain/entities/teaching_period_entity.dart';
 import '../../shared/class_lookup.dart';
 
-/// One table row: an assignment and its class in the chosen period.
+/// One table row: a subject taught in a course and its class in the
+/// chosen period.
 class ClassRowData {
   const ClassRowData({
     required this.assignment,
+    required this.courseLabel,
     required this.period,
     required this.description,
     required this.weeklySessions,
@@ -21,12 +23,30 @@ class ClassRowData {
 
   final TeachingAssignmentEntity assignment;
 
+  /// "6° A", with the year only when another course reads the same.
+  final String courseLabel;
+
   /// Its class in the chosen academic period; null when it has none.
   final TeachingPeriodEntity? period;
   final String? description;
 
   /// Sessions in the coming week; null while unknown.
   final int? weeklySessions;
+}
+
+/// A course and its rows, under a header row with its name and students.
+class ClassTableGroup {
+  const ClassTableGroup({
+    required this.groupId,
+    required this.label,
+    required this.studentCount,
+    required this.rows,
+  });
+
+  final int groupId;
+  final String label;
+  final int? studentCount;
+  final List<ClassRowData> rows;
 }
 
 /// Callbacks of the table's row actions.
@@ -53,19 +73,26 @@ const _flexStudents = 2;
 const _activeWidth = 76.0;
 const _menuWidth = 44.0;
 
-/// Dense, hoverable table of the teacher's classes. Click selects, double
-/// click (or Enter) opens, ↑/↓ move the selection.
+/// Dense, hoverable table of the teacher's classes: a header row per
+/// course, then a row per subject taught in it. Click selects, double
+/// click (or Enter) opens, ↑/↓ move the selection across courses.
+///
+/// With [compact] (every row is of the same subject, named in the screen's
+/// header) there are no course headers: each row is a course.
 class ClassesTable extends StatelessWidget {
   const ClassesTable({
     super.key,
-    required this.rows,
+    required this.groups,
+    required this.compact,
     required this.selectedAssignmentId,
     required this.academicPeriod,
     required this.actions,
     required this.clickOpens,
+    required this.onAddSubject,
   });
 
-  final List<ClassRowData> rows;
+  final List<ClassTableGroup> groups;
+  final bool compact;
   final int? selectedAssignmentId;
   final AcademicPeriodEntity? academicPeriod;
   final ClassRowActions actions;
@@ -74,10 +101,16 @@ class ClassesTable extends StatelessWidget {
   /// class instead of just selecting it.
   final bool clickOpens;
 
+  /// Adds subjects to the course with this group id.
+  final ValueChanged<int> onAddSubject;
+
+  List<ClassRowData> get _rows => [for (final g in groups) ...g.rows];
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
+    final rows = _rows;
     if (rows.isEmpty) return KeyEventResult.ignored;
     final index = rows.indexWhere(
       (r) => r.assignment.id == selectedAssignmentId,
@@ -101,6 +134,9 @@ class ClassesTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final items = <Object>[
+      for (final g in groups) ...[if (!compact) g, ...g.rows],
+    ];
 
     return Focus(
       onKeyEvent: _onKey,
@@ -121,17 +157,25 @@ class ClassesTable extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
-              const _HeaderRow(),
+              _HeaderRow(compact: compact),
               Divider(height: 1, color: colors.outline),
               Expanded(
                 child: ListView.separated(
-                  itemCount: rows.length,
+                  itemCount: items.length,
                   separatorBuilder: (_, _) =>
                       Divider(height: 1, color: colors.outline),
                   itemBuilder: (context, index) {
-                    final row = rows[index];
+                    final item = items[index];
+                    if (item is ClassTableGroup) {
+                      return _CourseRow(
+                        group: item,
+                        onAddSubject: () => onAddSubject(item.groupId),
+                      );
+                    }
+                    final row = item as ClassRowData;
                     return _Row(
                       row: row,
+                      compact: compact,
                       selected: row.assignment.id == selectedAssignmentId,
                       academicPeriod: academicPeriod,
                       actions: actions,
@@ -153,8 +197,64 @@ class ClassesTable extends StatelessWidget {
   }
 }
 
+/// A course's header row: its name, its students under "Alumnos", and a
+/// shortcut to add subjects to it.
+class _CourseRow extends StatelessWidget {
+  const _CourseRow({required this.group, required this.onAddSubject});
+
+  final ClassTableGroup group;
+  final VoidCallback onAddSubject;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final students = group.studentCount;
+    return Container(
+      color: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+      padding: const EdgeInsets.fromLTRB(20, 6, 8, 6),
+      child: Row(
+        children: [
+          Expanded(
+            flex: _flexClass + _flexPeriod + _flexSchedule,
+            child: Text(
+              group.label,
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: _flexStudents,
+            child: Text(
+              students == null ? '' : '$students',
+              style: textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: _activeWidth),
+          SizedBox(
+            width: _menuWidth,
+            child: IconButton(
+              tooltip: 'Agregar materia a ${group.label}',
+              icon: const Icon(Icons.add, size: 18),
+              color: AppColors.accentBlue,
+              visualDensity: VisualDensity.compact,
+              onPressed: onAddSubject,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HeaderRow extends StatelessWidget {
-  const _HeaderRow();
+  const _HeaderRow({required this.compact});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -173,7 +273,7 @@ class _HeaderRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
-          cell('Clase', _flexClass),
+          cell(compact ? 'Curso' : 'Materia', _flexClass),
           cell('En el periodo', _flexPeriod),
           cell('Horario', _flexSchedule),
           cell('Alumnos', _flexStudents),
@@ -191,6 +291,7 @@ class _HeaderRow extends StatelessWidget {
 class _Row extends StatefulWidget {
   const _Row({
     required this.row,
+    required this.compact,
     required this.selected,
     required this.academicPeriod,
     required this.actions,
@@ -198,6 +299,9 @@ class _Row extends StatefulWidget {
   });
 
   final ClassRowData row;
+
+  /// The row is a course (its subject is the screen's only one).
+  final bool compact;
   final bool selected;
   final AcademicPeriodEntity? academicPeriod;
   final ClassRowActions actions;
@@ -263,14 +367,14 @@ class _RowState extends State<_Row> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${a.subjectName} — ${a.gradeName} ${a.groupName}',
+                              widget.compact ? row.courseLabel : a.subjectName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: textTheme.bodyLarge?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            if (row.description != null)
+                            if (!widget.compact && row.description != null)
                               Text(
                                 row.description!,
                                 maxLines: 1,
@@ -310,8 +414,13 @@ class _RowState extends State<_Row> {
                 ),
                 Expanded(
                   flex: _flexStudents,
+                  // Grouped, the course header row carries them.
                   child: Text(
-                    period == null ? '—' : '${period.studentCount}',
+                    !widget.compact
+                        ? ''
+                        : period == null
+                        ? '—'
+                        : '${period.studentCount}',
                     style: textTheme.bodyMedium,
                   ),
                 ),
@@ -433,11 +542,11 @@ class _RowMenu extends StatelessWidget {
           value: 2,
           child: Text(
             row.assignment.active
-                ? 'Desactivar asignación'
-                : 'Activar asignación',
+                ? 'Marcar como inactiva'
+                : 'Marcar como activa',
           ),
         ),
-        const PopupMenuItem(value: 3, child: Text('Eliminar asignación')),
+        const PopupMenuItem(value: 3, child: Text('Quitar materia del curso')),
       ],
     );
   }

@@ -142,6 +142,71 @@ void main() {
       expect(provider.assignments(subjectId: 102).items.single.id, 2);
       expect(backend.count('GET', '/teaching-assignments'), 1);
     });
+
+    test('addClasses creates only what is missing, then nothing', () async {
+      var nextId = 50;
+      backend.on(
+        'GET',
+        '/teaching-assignments',
+        (r) => pageOf([assignmentJson(1)], r),
+      );
+      backend.on('GET', '/teaching-periods', (r) => pageOf(const [], r));
+      backend.on('POST', '/teaching-assignments', (r) {
+        final body = r.data as Map;
+        return {
+          ...assignmentJson(nextId++),
+          'groupId': body['groupId'],
+          'subjectId': body['subjectId'],
+        };
+      });
+      backend.on('POST', '/teaching-periods', (r) {
+        final body = r.data as Map;
+        return {
+          ...periodJson(nextId++),
+          'teachingAssignmentId': body['teachingAssignmentId'],
+          'academicPeriodId': body['academicPeriodId'],
+        };
+      });
+      final provider = teaching();
+      await provider.ensureAssignments();
+      await provider.ensureAllPeriodsLoaded();
+      final seen = recordEvents(events);
+
+      // Subject 101 is already taught in group 11; 102 is new.
+      final first = await provider.addClasses(
+        groupId: 11,
+        subjectIds: [101, 102],
+        academicPeriodId: 1,
+      );
+      expect(first.error, isNull);
+      expect(first.created, 2, reason: 'one class per subject');
+      expect(backend.count('POST', '/teaching-assignments'), 1);
+      expect(backend.count('POST', '/teaching-periods'), 2);
+      expect(provider.allAssignments, hasLength(2));
+      expect(provider.allPeriods, hasLength(2));
+      expect(seen.whereType<CatalogChanged>(), hasLength(2));
+
+      final again = await provider.addClasses(
+        groupId: 11,
+        subjectIds: [101, 102],
+        academicPeriodId: 1,
+      );
+      expect(again.created, 0);
+      expect(backend.count('POST', '/teaching-assignments'), 1);
+      expect(backend.count('POST', '/teaching-periods'), 2);
+      expect(backend.count('GET', '/teaching-assignments'), 1);
+    });
+
+    test('the last class used is forgotten when it is deleted', () async {
+      backend.on('GET', '/teaching-periods', (r) => pageOf([periodJson(3)], r));
+      backend.on('DELETE', '/teaching-periods/{id}', (_) => null);
+      final provider = teaching();
+      await provider.ensureAllPeriodsLoaded();
+      provider.rememberClass(3);
+      expect(provider.lastClassId, 3);
+      await provider.deletePeriod(3);
+      expect(provider.lastClassId, isNull);
+    });
   });
 
   group('subjects', () {

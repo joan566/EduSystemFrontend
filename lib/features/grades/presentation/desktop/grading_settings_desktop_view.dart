@@ -16,7 +16,7 @@ import '../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/providers/teaching_provider.dart';
+import '../../../teaching/presentation/desktop/class_picker_field.dart';
 import '../../domain/entities/gradebook_entities.dart';
 import '../../domain/entities/grading_entities.dart';
 import '../providers/grading_provider.dart';
@@ -48,7 +48,6 @@ class GradingSettingsDesktopView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final classes = context.watch<TeachingProvider>().allPeriods;
     final period = this.period;
     final config = this.config;
 
@@ -81,15 +80,9 @@ class GradingSettingsDesktopView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                SizedBox(
-                  width: 340,
-                  child: AppDropdown<TeachingPeriodEntity>(
-                    label: 'Clase',
-                    value: classes.where((c) => c.id == period?.id).firstOrNull,
-                    items: classes,
-                    itemLabel: (c) => c.displayName,
-                    onChanged: onPeriodChanged,
-                  ),
+                DesktopClassPickerField(
+                  value: period,
+                  onChanged: onPeriodChanged,
                 ),
                 const SizedBox(width: 12),
                 AppButton(

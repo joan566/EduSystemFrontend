@@ -84,9 +84,9 @@ class GettingStartedCard extends StatelessWidget {
           ),
           _GettingStartedStep(
             number: 3,
-            title: 'Crea tus asignaciones de clase',
+            title: 'Agrega las materias que dictas',
             subtitle:
-                'Vincula una materia, un curso y un periodo para poder '
+                'Elige un curso, sus materias y el periodo para poder '
                 'evaluar.',
             actionLabel: 'Ir a Clases',
             onTap: () => context.push(RoutePaths.teaching),

@@ -1,3 +1,5 @@
+import '../../../../core/utils/course_naming.dart';
+
 class StudentEntity {
   const StudentEntity({
     required this.id,
@@ -47,7 +49,7 @@ class StudentEnrollmentEntity {
   final DateTime? withdrawnAt;
   final bool active;
 
-  String get courseLabel => '$gradeName $groupName';
+  String get courseLabel => courseName(gradeName, groupName);
 }
 
 class StudentDetailEntity {

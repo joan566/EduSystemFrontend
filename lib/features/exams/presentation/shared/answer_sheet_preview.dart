@@ -85,7 +85,7 @@ class AnswerSheetPreview extends StatelessWidget {
         ),
         if (period != null)
           Text(
-            '${period.subjectName} — ${period.courseLabel}',
+            period.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: tiny.copyWith(color: AppColors.textSecondary),

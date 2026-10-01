@@ -221,9 +221,7 @@ class _Header extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final period = this.period;
     final date = exam.evaluationDate;
-    final classLabel = period == null
-        ? null
-        : '${period.subjectName} — ${period.courseLabel}';
+    final classLabel = period?.title;
     final facts = [
       ?classLabel,
       date == null ? 'Sin fecha' : Formatters.dateTime(date),

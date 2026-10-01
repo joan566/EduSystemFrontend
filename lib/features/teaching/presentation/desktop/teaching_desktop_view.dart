@@ -18,6 +18,7 @@ import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../subjects/domain/entities/subject_entity.dart';
 import '../../../subjects/presentation/providers/subjects_provider.dart';
 import '../providers/teaching_provider.dart';
+import '../shared/class_grouping.dart';
 import '../shared/class_lookup.dart';
 import '../shared/teaching_actions.dart';
 import '../shared/teaching_forms.dart';
@@ -56,29 +57,23 @@ class TeachingDesktopView extends StatelessWidget {
   static const _previewMinWidth = 1100.0;
   static const _previewWidth = 360.0;
 
-  Future<void> _createAssignment(BuildContext context) async {
-    final inputs = await TeachingActions.assignmentFormInputs(context);
+  Future<void> _addClasses(BuildContext context, {int? groupId}) async {
+    final inputs = await TeachingActions.addClassesFormInputs(context);
     if (inputs == null || !context.mounted) return;
-    final data = await showDesktopDialog<AssignmentFormResult>(
+    final data = await showDesktopDialog<AddClassesResult>(
       context,
-      child: AssignmentForm(subjects: inputs.subjects, courses: inputs.courses),
-    );
-    if (data == null || !context.mounted) return;
-    await TeachingActions.createAssignment(context, data);
-  }
-
-  Future<void> _createPeriod(BuildContext context) async {
-    final inputs = await TeachingActions.periodFormInputs(context);
-    if (inputs == null || !context.mounted) return;
-    final data = await showDesktopDialog<TeachingPeriodFormResult>(
-      context,
-      child: TeachingPeriodForm(
+      width: 560,
+      child: AddClassesForm(
+        courses: inputs.courses,
+        subjects: inputs.subjects,
+        academicPeriods: inputs.academicPeriods,
         assignments: inputs.assignments,
-        periods: inputs.periods,
+        initialGroupId: groupId,
+        initialAcademicPeriodId: academicPeriodId,
       ),
     );
     if (data == null || !context.mounted) return;
-    await TeachingActions.createPeriod(context, data);
+    await TeachingActions.addClasses(context, data);
   }
 
   @override
@@ -97,47 +92,58 @@ class TeachingDesktopView extends StatelessWidget {
     final academicPeriod = academicPeriods
         .where((p) => p.id == academicPeriodId)
         .firstOrNull;
-    final assignmentsState = teaching.assignments(
-      subjectId: filters.subjectId,
-      active: filters.active,
-    );
+    final assignmentsState = teaching.assignmentsState;
 
     String? description(int subjectId) =>
         subjects.where((s) => s.id == subjectId).firstOrNull?.description;
 
-    final rows = [
-      for (final a in assignmentsState.items)
-        if (matchesSearch(search, [
-          a.subjectName,
-          '${a.gradeName} ${a.groupName}',
-          description(a.subjectId),
-        ]))
-          () {
-            final period = classForAssignment(
-              a,
-              teaching.allPeriods,
-              academicPeriodId: academicPeriodId,
-            );
-            return ClassRowData(
-              assignment: a,
-              period: period,
-              description: description(a.subjectId),
-              weeklySessions: period == null || weekly == null
-                  ? null
-                  : weekly[period.id] ?? 0,
-            );
-          }(),
+    final grouping = groupClasses(
+      assignments: teaching.allAssignments,
+      periods: teaching.allPeriods,
+      academicPeriodId: academicPeriodId,
+      include: (entry, courseLabel) =>
+          (filters.subjectId == null || entry.subjectId == filters.subjectId) &&
+          (filters.active == null ||
+              entry.assignment.active == filters.active) &&
+          matchesSearch(search, [
+            entry.subjectName,
+            courseLabel,
+            entry.assignment.gradeName,
+            description(entry.subjectId),
+          ]),
+    );
+    final groups = [
+      for (final course in grouping.courses)
+        ClassTableGroup(
+          groupId: course.groupId,
+          label: course.label,
+          studentCount: course.studentCount,
+          rows: [
+            for (final entry in course.entries)
+              ClassRowData(
+                assignment: entry.assignment,
+                courseLabel: course.label,
+                period: entry.period,
+                description: description(entry.subjectId),
+                weeklySessions: entry.period == null || weekly == null
+                    ? null
+                    : weekly[entry.period!.id] ?? 0,
+              ),
+          ],
+        ),
     ];
-    final selected = rows
-        .where((r) => r.assignment.id == selectedAssignmentId)
-        .firstOrNull;
-    final classesInPeriod = teaching.allPeriods
-        .where(
-          (p) =>
-              academicPeriodId == null ||
-              p.academicPeriodId == academicPeriodId,
-        )
-        .length;
+    final selected = [
+      for (final g in groups) ...g.rows,
+    ].where((r) => r.assignment.id == selectedAssignmentId).firstOrNull;
+    final loading = switch (assignmentsState.status) {
+      ViewStatus.initial || ViewStatus.loading => true,
+      _ =>
+        teaching.allPeriods.isEmpty &&
+            switch (teaching.periodsState.status) {
+              ViewStatus.initial || ViewStatus.loading => true,
+              _ => false,
+            },
+    };
 
     final actions = ClassRowActions(
       onSelect: (row) => onSelect(row.assignment.id),
@@ -173,11 +179,9 @@ class TeachingDesktopView extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _Header(
-              assignments: assignmentsState.totalElements,
-              classes: classesInPeriod,
+              grouping: loading ? null : grouping,
               academicPeriod: academicPeriod,
-              onCreateAssignment: () => _createAssignment(context),
-              onCreatePeriod: () => _createPeriod(context),
+              onAdd: () => _addClasses(context),
             ),
             const SizedBox(height: 18),
             _Toolbar(
@@ -196,11 +200,10 @@ class TeachingDesktopView extends StatelessWidget {
                 builder: (context, constraints) {
                   final showPreview = constraints.maxWidth >= _previewMinWidth;
                   final table = switch (assignmentsState.status) {
-                    ViewStatus.initial ||
-                    ViewStatus.loading => const DesktopListTableSkeleton(
+                    _ when loading => const DesktopListTableSkeleton(
                       columns: [
                         SkeletonColumn(
-                          'Clase',
+                          'Materia',
                           flex: 5,
                           cell: SkeletonCell.badge,
                         ),
@@ -224,25 +227,29 @@ class TeachingDesktopView extends StatelessWidget {
                           context.read<TeachingProvider>().refreshAssignments(),
                     ),
                     ViewStatus.empty => AppEmptyState(
-                      title: 'No tienes asignaciones',
+                      title: 'Aún no tienes clases',
                       message:
-                          'Asigna una materia a un curso para empezar a '
-                          'dictar clases.',
+                          'Agrega las materias que dictas en cada curso para '
+                          'empezar.',
                       icon: Icons.groups_outlined,
-                      actionLabel: 'Nueva asignación',
-                      onAction: () => _createAssignment(context),
+                      actionLabel: 'Agregar materias',
+                      onAction: () => _addClasses(context),
                     ),
-                    ViewStatus.success when rows.isEmpty => const AppEmptyState(
+                    _ when grouping.isEmpty => const AppEmptyState(
                       title: 'Sin resultados',
-                      message: 'Ninguna clase coincide con la búsqueda.',
+                      message:
+                          'Ningún curso o materia coincide con los filtros.',
                       icon: Icons.search_off,
                     ),
-                    ViewStatus.success => ClassesTable(
-                      rows: rows,
+                    _ => ClassesTable(
+                      groups: groups,
+                      compact: grouping.singleSubjectName != null,
                       selectedAssignmentId: selectedAssignmentId,
                       academicPeriod: academicPeriod,
                       actions: actions,
                       clickOpens: !showPreview,
+                      onAddSubject: (groupId) =>
+                          _addClasses(context, groupId: groupId),
                     ),
                   };
                   if (!showPreview) return table;
@@ -277,25 +284,31 @@ class TeachingDesktopView extends StatelessWidget {
 
 class _Header extends StatelessWidget {
   const _Header({
-    required this.assignments,
-    required this.classes,
+    required this.grouping,
     required this.academicPeriod,
-    required this.onCreateAssignment,
-    required this.onCreatePeriod,
+    required this.onAdd,
   });
 
-  final int assignments;
-  final int classes;
+  /// Null while the classes are being read.
+  final ClassGrouping? grouping;
   final AcademicPeriodEntity? academicPeriod;
-  final VoidCallback onCreateAssignment;
-  final VoidCallback onCreatePeriod;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final grouping = this.grouping;
     final scope = academicPeriod == null
         ? 'en todos los periodos'
         : 'en ${academicPeriod!.name}';
+    String count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
+    final single = grouping?.singleSubjectName;
+    final summary = grouping == null
+        ? ''
+        : single != null
+        ? '$single  ·  ${count(grouping.courseCount, 'curso', 'cursos')} $scope'
+        : '${count(grouping.courseCount, 'curso', 'cursos')}  ·  '
+              '${count(grouping.classCount, 'clase', 'clases')} $scope';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -307,7 +320,7 @@ class _Header extends StatelessWidget {
               Text('Clases', style: textTheme.headlineLarge),
               const SizedBox(height: 2),
               Text(
-                '$assignments asignaciones  ·  $classes clases $scope',
+                summary,
                 style: textTheme.bodyMedium?.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -315,18 +328,7 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-        AppButton(
-          label: 'Nueva asignación',
-          icon: Icons.add,
-          variant: AppButtonVariant.outlined,
-          onPressed: onCreateAssignment,
-        ),
-        const SizedBox(width: 10),
-        AppButton(
-          label: 'Nueva clase',
-          icon: Icons.add,
-          onPressed: onCreatePeriod,
-        ),
+        AppButton(label: 'Agregar materias', icon: Icons.add, onPressed: onAdd),
       ],
     );
   }
@@ -363,7 +365,7 @@ class _Toolbar extends StatelessWidget {
         SizedBox(
           width: 320,
           child: AppSearchField(
-            hint: 'Buscar materia, grado o clase...',
+            hint: 'Buscar curso o materia...',
             initialValue: search,
             onChanged: onSearchChanged,
           ),

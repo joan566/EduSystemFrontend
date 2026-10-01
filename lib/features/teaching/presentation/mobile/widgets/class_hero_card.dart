@@ -119,7 +119,7 @@ class ClassHeroCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '${period.subjectName} — ${period.courseLabel}',
+                        period.title,
                         style: textTheme.titleLarge?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,

@@ -14,7 +14,7 @@ import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/shared/teaching_period_selector.dart';
+import '../../../teaching/presentation/desktop/class_picker_field.dart';
 import '../../domain/entities/activity_entity.dart';
 import '../providers/activities_provider.dart';
 import '../shared/activity_actions.dart';
@@ -27,7 +27,6 @@ class ActivitiesDesktopView extends StatelessWidget {
     required this.onPeriodChanged,
     required this.page,
     required this.onPageChanged,
-    this.preferredPeriodId,
   });
 
   final TeachingPeriodEntity? period;
@@ -36,9 +35,6 @@ class ActivitiesDesktopView extends StatelessWidget {
   /// Page of the class's activities (owned by the page entry point).
   final int page;
   final ValueChanged<int> onPageChanged;
-
-  /// Class the selector picks on first load, if present.
-  final int? preferredPeriodId;
 
   Future<void> _create(BuildContext context) async {
     final period = this.period;
@@ -82,10 +78,12 @@ class ActivitiesDesktopView extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: TeachingPeriodSelector(
-              preferredId: preferredPeriodId,
-              value: period,
-              onChanged: onPeriodChanged,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: DesktopClassPickerField(
+                value: period,
+                onChanged: onPeriodChanged,
+              ),
             ),
           ),
           const SizedBox(height: 8),

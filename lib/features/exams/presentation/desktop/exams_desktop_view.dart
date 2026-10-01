@@ -14,6 +14,7 @@ import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/desktop/class_picker_field.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/exam_entity.dart';
 import '../providers/exams_provider.dart';
@@ -98,7 +99,6 @@ class ExamsDesktopView extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             _Toolbar(
-              classes: classes,
               period: period,
               onPeriodChanged: onPeriodChanged,
               filters: filters,
@@ -230,8 +230,8 @@ class _Header extends StatelessWidget {
               Text(
                 period == null
                     ? 'Crea, prepara y califica los exámenes de tus clases.'
-                    : '${exams.length} exámenes en ${period.subjectName} — '
-                          '${period.courseLabel}  ·  $ready listos  ·  '
+                    : '${exams.length} exámenes en ${period.title}'
+                          '  ·  $ready listos  ·  '
                           '${exams.length - ready} incompletos',
                 style: textTheme.bodyMedium?.copyWith(
                   color: AppColors.textSecondary,
@@ -248,14 +248,12 @@ class _Header extends StatelessWidget {
 
 class _Toolbar extends StatelessWidget {
   const _Toolbar({
-    required this.classes,
     required this.period,
     required this.onPeriodChanged,
     required this.filters,
     required this.onFiltersChanged,
   });
 
-  final List<TeachingPeriodEntity> classes;
   final TeachingPeriodEntity? period;
   final ValueChanged<TeachingPeriodEntity?> onPeriodChanged;
   final ExamListFilters filters;
@@ -268,16 +266,7 @@ class _Toolbar extends StatelessWidget {
       runSpacing: 12,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        SizedBox(
-          width: 320,
-          child: AppDropdown<TeachingPeriodEntity>(
-            label: 'Clase',
-            value: classes.where((c) => c.id == period?.id).firstOrNull,
-            items: classes,
-            itemLabel: (c) => c.displayName,
-            onChanged: onPeriodChanged,
-          ),
-        ),
+        DesktopClassPickerField(value: period, onChanged: onPeriodChanged),
         SizedBox(
           width: 280,
           child: AppSearchField(

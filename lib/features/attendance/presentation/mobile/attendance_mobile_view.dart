@@ -14,6 +14,7 @@ import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/mobile/class_picker_sheet.dart';
 import '../../domain/entities/attendance_entity.dart';
 import '../providers/attendance_provider.dart';
 import '../shared/attendance_day_controller.dart';
@@ -56,7 +57,7 @@ class AttendanceMobileView extends StatelessWidget {
   }
 
   Future<void> _pickClass(BuildContext context) async {
-    final picked = await showClassPickerSheet(context, selected: period);
+    final picked = await showMobileClassPicker(context, selected: period);
     if (picked != null) onPeriodChanged(picked);
   }
 

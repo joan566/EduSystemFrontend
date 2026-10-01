@@ -138,9 +138,9 @@ class _NoClass extends StatelessWidget {
     final periodName = academicPeriod?.name;
     return _Placeholder(
       icon: subjectIcon(a.subjectName),
-      title: '${a.subjectName} — ${a.gradeName} ${a.groupName}',
+      title: a.title,
       message: periodName == null
-          ? 'Esta asignación aún no tiene clases por periodo.'
+          ? 'Esta materia aún no tiene clases en ningún periodo.'
           : 'No tiene clase en $periodName. Créala para programar su '
                 'horario, tomar asistencia y evaluar.',
       action: periodName == null
@@ -255,7 +255,7 @@ class _ClassPreviewState extends State<_ClassPreview>
                       ],
                     ),
                     Text(
-                      '${period.subjectName} — ${period.courseLabel}',
+                      period.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.titleMedium?.copyWith(

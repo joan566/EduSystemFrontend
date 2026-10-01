@@ -12,6 +12,7 @@ import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../../../teaching/presentation/shared/class_counts.dart';
+import '../../shared/dashboard_data.dart';
 import '../../shared/dashboard_error_notice.dart';
 
 /// "Tus clases": a two-column grid of class cards.
@@ -23,6 +24,7 @@ class ClassesGridCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<TeachingProvider>().periodsState;
+    final (:classes, :academicPeriodId) = watchDashboardClasses(context);
     final weekly = context
         .watch<ScheduleProvider>()
         .week
@@ -47,11 +49,12 @@ class ClassesGridCard extends StatelessWidget {
               spacing: gap,
               runSpacing: gap,
               children: [
-                for (final period in state.items.take(_maxCards))
+                for (final period in classes.take(_maxCards))
                   SizedBox(
                     width: width,
                     child: _ClassTile(
                       period: period,
+                      showPeriod: academicPeriodId == null,
                       weeklySessions: weekly == null
                           ? null
                           : weekly[period.id] ?? 0,
@@ -64,8 +67,8 @@ class ClassesGridCard extends StatelessWidget {
         ViewStatus.initial ||
         ViewStatus.loading => const SkeletonTileList(count: 2, leadingSize: 42),
         _ => Text(
-          'Aún no tienes clases. Crea una asignación y vincúlala a un '
-          'periodo académico.',
+          'Aún no tienes clases. Agrega las materias que dictas en cada '
+          'curso desde Clases.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
       },
@@ -74,9 +77,16 @@ class ClassesGridCard extends StatelessWidget {
 }
 
 class _ClassTile extends StatelessWidget {
-  const _ClassTile({required this.period, required this.weeklySessions});
+  const _ClassTile({
+    required this.period,
+    required this.showPeriod,
+    required this.weeklySessions,
+  });
 
   final TeachingPeriodEntity period;
+
+  /// Classes of several periods are listed: say which one.
+  final bool showPeriod;
   final int? weeklySessions;
 
   @override
@@ -109,7 +119,9 @@ class _ClassTile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${period.courseLabel} · ${period.academicPeriodName}',
+                  showPeriod
+                      ? '${period.courseLabel} · ${period.academicPeriodName}'
+                      : period.courseLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.bodySmall,

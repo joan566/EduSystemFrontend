@@ -7,7 +7,7 @@ import '../../../../core/widgets/mobile/mobile_page_header.dart';
 import '../../../../core/widgets/shared/app_card.dart';
 import '../../../../core/widgets/shared/picked_file.dart';
 import '../../../imports/presentation/providers/imports_provider.dart';
-import '../../../teaching/presentation/shared/teaching_period_selector.dart';
+import '../../../teaching/presentation/mobile/class_picker_sheet.dart';
 import '../shared/data_management_controller.dart';
 import '../shared/data_management_sections.dart';
 import '../shared/data_management_widgets.dart';
@@ -40,10 +40,15 @@ class DataManagementMobileView extends StatelessWidget {
           const SizedBox(height: 20),
           Text('Datos de una clase específica', style: textTheme.titleMedium),
           const SizedBox(height: 8),
-          TeachingPeriodSelector(
+          MobileClassPickerCard(
             value: controller.period,
             onChanged: controller.selectPeriod,
-            label: 'Clase (opcional para estudiantes, requerida para el resto)',
+            showLabel: true,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Opcional para estudiantes, requerida para el resto.',
+            style: textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
           AppCard(

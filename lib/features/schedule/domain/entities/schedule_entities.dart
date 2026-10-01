@@ -1,3 +1,5 @@
+import '../../../../core/utils/course_naming.dart';
+
 /// A wall-clock time without a date ("07:00"), as the schedule API sends it.
 class ClockTime implements Comparable<ClockTime> {
   const ClockTime(this.hour, this.minute);
@@ -88,7 +90,7 @@ class ScheduledClassEntity {
   final ClockTime endTime;
   final String? room;
 
-  String get courseLabel => '$gradeName $groupName';
+  String get courseLabel => courseName(gradeName, groupName);
 
   /// Status at [now] for an occurrence on [date]. Pass the server's time,
   /// not the device's, so status doesn't depend on the phone's clock.

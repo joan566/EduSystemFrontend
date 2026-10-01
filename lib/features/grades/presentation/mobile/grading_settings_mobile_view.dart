@@ -15,6 +15,7 @@ import '../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/mobile/class_picker_sheet.dart';
 import '../../domain/entities/grading_entities.dart';
 import '../providers/grading_provider.dart';
 import '../shared/category_visuals.dart';
@@ -22,7 +23,6 @@ import '../shared/grade_labels.dart';
 import '../shared/grading_configuration_controller.dart';
 import '../shared/grading_configuration_state_view.dart';
 import '../shared/grading_scale_form.dart';
-import 'widgets/class_picker_card.dart';
 
 /// Mobile "Configuración de notas": class, how much each component weighs
 /// (with the evaluations it covers), the running total, then the scale and
@@ -132,7 +132,7 @@ class GradingSettingsMobileView extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-            child: ClassPickerCard(
+            child: MobileClassPickerCard(
               value: period,
               onChanged: onPeriodChanged,
               showLabel: true,

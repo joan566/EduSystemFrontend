@@ -1,3 +1,5 @@
+import '../../../../core/utils/course_naming.dart';
+
 /// A "grupo" (course section), e.g. "10-A" for academic year 2026,
 /// belonging to a [gradeId] level.
 class CourseEntity {
@@ -15,5 +17,5 @@ class CourseEntity {
   final String name;
   final int academicYear;
 
-  String get displayName => '$gradeName $name';
+  String get displayName => courseName(gradeName, name);
 }

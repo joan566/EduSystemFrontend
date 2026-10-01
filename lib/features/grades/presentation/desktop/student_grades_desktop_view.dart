@@ -139,9 +139,7 @@ class _Header extends StatelessWidget {
         .allPeriods
         .where((p) => p.id == report.teachingPeriodId)
         .firstOrNull;
-    final classLabel = period == null
-        ? null
-        : '${period.subjectName} — ${period.courseLabel}';
+    final classLabel = period?.title;
 
     final actions = Wrap(
       spacing: 10,

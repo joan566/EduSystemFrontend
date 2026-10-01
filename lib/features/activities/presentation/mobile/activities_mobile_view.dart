@@ -14,7 +14,7 @@ import '../../../../core/widgets/shared/app_list_tile.dart';
 import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/shared/teaching_period_selector.dart';
+import '../../../teaching/presentation/mobile/class_picker_sheet.dart';
 import '../../domain/entities/activity_entity.dart';
 import '../providers/activities_provider.dart';
 import '../shared/activity_actions.dart';
@@ -27,7 +27,6 @@ class ActivitiesMobileView extends StatelessWidget {
     required this.onPeriodChanged,
     required this.page,
     required this.onPageChanged,
-    this.preferredPeriodId,
   });
 
   final TeachingPeriodEntity? period;
@@ -36,9 +35,6 @@ class ActivitiesMobileView extends StatelessWidget {
   /// Page of the class's activities (owned by the page entry point).
   final int page;
   final ValueChanged<int> onPageChanged;
-
-  /// Class the selector picks on first load, if present.
-  final int? preferredPeriodId;
 
   Future<void> _create(BuildContext context) async {
     final period = this.period;
@@ -77,8 +73,7 @@ class ActivitiesMobileView extends StatelessWidget {
           const MobilePageHeader(title: 'Actividades'),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TeachingPeriodSelector(
-              preferredId: preferredPeriodId,
+            child: MobileClassPickerCard(
               value: period,
               onChanged: onPeriodChanged,
             ),

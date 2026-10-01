@@ -41,9 +41,7 @@ class ExamInfoCard extends StatelessWidget {
               child: _Fact(
                 icon: Icons.class_outlined,
                 value: Text(
-                  period == null
-                      ? '—'
-                      : '${period.subjectName} — ${period.courseLabel}',
+                  period == null ? '—' : period.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

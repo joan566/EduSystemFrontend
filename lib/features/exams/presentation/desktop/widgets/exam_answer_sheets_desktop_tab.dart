@@ -305,8 +305,7 @@ class _WholeClassCard extends StatelessWidget {
             period == null
                 ? 'Un solo PDF con las hojas de todos los estudiantes activos.'
                 : 'Un solo PDF con ${period.studentCount} hojas, una por cada '
-                      'estudiante activo de ${period.subjectName} — '
-                      '${period.courseLabel}.',
+                      'estudiante activo de ${period.title}.',
             style: textTheme.bodySmall,
           ),
           const SizedBox(height: 16),

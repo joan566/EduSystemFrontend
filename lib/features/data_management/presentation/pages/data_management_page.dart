@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../imports/presentation/providers/imports_provider.dart';
-import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../desktop/data_management_desktop_view.dart';
 import '../mobile/data_management_mobile_view.dart';
+import '../../../teaching/presentation/shared/class_picker.dart';
 import '../shared/data_management_controller.dart';
 
 /// Single screen for every Excel import/export flow (the backend unified
@@ -27,7 +27,13 @@ class _DataManagementPageState extends State<DataManagementPage>
   void ensureData() {
     context.read<ImportsProvider>().ensureHistory();
     // The class import and exports pick from the teacher's classes.
-    context.read<TeachingProvider>().ensureAllPeriodsLoaded();
+    if (_controller.period == null) _pickInitialClass();
+  }
+
+  Future<void> _pickInitialClass() async {
+    final period = await initialClass(context);
+    if (!mounted || _controller.period != null || period == null) return;
+    _controller.selectPeriod(period);
   }
 
   @override

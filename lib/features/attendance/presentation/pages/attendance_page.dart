@@ -6,7 +6,7 @@ import '../../../../core/layout/responsive.dart';
 import '../../../../core/widgets/shared/app_confirm_dialog.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/providers/teaching_provider.dart';
+import '../../../teaching/presentation/shared/class_picker.dart';
 import '../desktop/attendance_desktop_view.dart';
 import '../mobile/attendance_mobile_view.dart';
 import '../providers/attendance_provider.dart';
@@ -66,24 +66,18 @@ class _AttendancePageState extends State<AttendancePage>
   }
 
   /// The requested class, else the one in progress or next today, else the
-  /// first one.
+  /// last one used ([initialClass]).
   Future<void> _pickInitialClass() async {
-    final teaching = context.read<TeachingProvider>();
     final schedule = context.read<ScheduleProvider>();
-    await Future.wait([
-      teaching.ensureAllPeriodsLoaded(),
-      schedule.ensureToday(),
-    ]);
-    if (!mounted || _period != null || teaching.allPeriods.isEmpty) return;
-    final periods = teaching.allPeriods;
-    final nextId = schedule.today.data?.nextClass?.teachingPeriodId;
-    _setPeriod(
-      periods
-              .where((p) => p.id == widget.initialTeachingPeriodId)
-              .firstOrNull ??
-          periods.where((p) => p.id == nextId).firstOrNull ??
-          periods.first,
+    await schedule.ensureToday();
+    if (!mounted) return;
+    final period = await initialClass(
+      context,
+      preferredId: widget.initialTeachingPeriodId,
+      suggestedId: schedule.today.data?.nextClass?.teachingPeriodId,
     );
+    if (!mounted || _period != null || period == null) return;
+    _setPeriod(period);
   }
 
   /// Asks before dropping marks that weren't saved.

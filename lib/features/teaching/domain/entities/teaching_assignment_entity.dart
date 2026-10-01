@@ -1,3 +1,5 @@
+import '../../../../core/utils/course_naming.dart';
+
 /// A teacher's assignment to teach a [subjectName] in a [groupName]
 /// (§4: group + subject, scoped to the authenticated teacher).
 class TeachingAssignmentEntity {
@@ -21,7 +23,11 @@ class TeachingAssignmentEntity {
   final String subjectName;
   final bool active;
 
-  String get displayName => '$subjectName — $gradeName $groupName';
+  /// "6° A".
+  String get courseLabel => courseName(gradeName, groupName);
+
+  /// "Matemáticas · 6° A".
+  String get title => '$subjectName · $courseLabel';
 
   TeachingAssignmentEntity copyWith({bool? active}) => TeachingAssignmentEntity(
     id: id,

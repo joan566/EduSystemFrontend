@@ -4,6 +4,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../core/events/domain_events.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
+import '../../../../core/utils/course_naming.dart';
 import '../../data/repositories/teaching_repository.dart';
 import '../../domain/entities/teaching_assignment_entity.dart';
 import '../../domain/entities/teaching_period_entity.dart';
@@ -42,33 +43,40 @@ class TeachingProvider extends SessionNotifier {
 
   late final _summaries = keyedCache<int, TeachingPeriodSummaryEntity>();
 
-  // The API's orders, kept after local inserts.
+  // Newest first, then grade in natural order ("6°" before "10°"), group
+  // and subject; kept after local inserts.
   static int _assignmentOrder(
     TeachingAssignmentEntity a,
     TeachingAssignmentEntity b,
   ) {
     final byYear = b.academicYear.compareTo(a.academicYear);
     if (byYear != 0) return byYear;
-    for (final (x, y) in [
-      (a.gradeName, b.gradeName),
-      (a.groupName, b.groupName),
-      (a.subjectName, b.subjectName),
-    ]) {
-      final c = x.toLowerCase().compareTo(y.toLowerCase());
-      if (c != 0) return c;
-    }
-    return 0;
+    return _courseSubjectOrder(
+      (a.gradeName, a.groupName, a.subjectName),
+      (b.gradeName, b.groupName, b.subjectName),
+    );
   }
 
   static int _periodOrder(TeachingPeriodEntity a, TeachingPeriodEntity b) {
     final byStart = b.startDate.compareTo(a.startDate);
     if (byStart != 0) return byStart;
-    final byGroup = a.groupName.toLowerCase().compareTo(
-      b.groupName.toLowerCase(),
+    return _courseSubjectOrder(
+      (a.gradeName, a.groupName, a.subjectName),
+      (b.gradeName, b.groupName, b.subjectName),
     );
-    return byGroup != 0
-        ? byGroup
-        : a.subjectName.toLowerCase().compareTo(b.subjectName.toLowerCase());
+  }
+
+  static int _courseSubjectOrder(
+    (String, String, String) a,
+    (String, String, String) b,
+  ) {
+    final byGrade = compareGradeNames(a.$1, b.$1);
+    if (byGrade != 0) return byGrade;
+    for (final (x, y) in [(a.$2, b.$2), (a.$3, b.$3)]) {
+      final c = x.toLowerCase().compareTo(y.toLowerCase());
+      if (c != 0) return c;
+    }
+    return 0;
   }
 
   // --- Assignments ---------------------------------------------------------
@@ -93,23 +101,72 @@ class TeachingProvider extends SessionNotifier {
   Future<void> ensureAssignments() => _assignments.ensure();
   Future<void> refreshAssignments() => _assignments.refresh();
 
-  Future<AppException?> createAssignment({
+  /// Teaches [subjectIds] in course [groupId]: creates the assignments that
+  /// don't exist yet and, when [academicPeriodId] is given, each one's
+  /// class in that period. Stops at the first failure, keeping what was
+  /// already created; [created] counts the classes (or, without a period,
+  /// the assignments) that are new.
+  Future<({int created, AppException? error})> addClasses({
     required int groupId,
-    required int subjectId,
-  }) => _guard(() async {
-    _assignments.upsert(
-      await _repository.createAssignment(
-        groupId: groupId,
-        subjectId: subjectId,
-      ),
-    );
-    publish(
-      const CatalogChanged(
-        CatalogResource.teachingAssignments,
-        CatalogChange.created,
-      ),
-    );
-  });
+    required List<int> subjectIds,
+    int? academicPeriodId,
+  }) async {
+    var created = 0;
+    var newAssignments = false;
+    var newClasses = false;
+    AppException? error;
+    try {
+      for (final subjectId in subjectIds) {
+        var assignment = _assignments.items
+            .where((a) => a.groupId == groupId && a.subjectId == subjectId)
+            .firstOrNull;
+        if (assignment == null) {
+          assignment = await _repository.createAssignment(
+            groupId: groupId,
+            subjectId: subjectId,
+          );
+          _assignments.upsert(assignment);
+          newAssignments = true;
+          if (academicPeriodId == null) created++;
+        }
+        if (academicPeriodId == null) continue;
+        final id = assignment.id;
+        final exists = _periods.items.any(
+          (p) =>
+              p.teachingAssignmentId == id &&
+              p.academicPeriodId == academicPeriodId,
+        );
+        if (exists) continue;
+        _periods.upsert(
+          await _repository.createPeriod(
+            teachingAssignmentId: id,
+            academicPeriodId: academicPeriodId,
+          ),
+        );
+        newClasses = true;
+        created++;
+      }
+    } on AppException catch (e) {
+      error = e;
+    }
+    if (newAssignments) {
+      publish(
+        const CatalogChanged(
+          CatalogResource.teachingAssignments,
+          CatalogChange.created,
+        ),
+      );
+    }
+    if (newClasses) {
+      publish(
+        const CatalogChanged(
+          CatalogResource.teachingPeriods,
+          CatalogChange.created,
+        ),
+      );
+    }
+    return (created: created, error: error);
+  }
 
   /// Optimistic: the switch flips at once and flips back if the API
   /// refuses.
@@ -211,6 +268,7 @@ class TeachingProvider extends SessionNotifier {
     _periods.remove(id);
     _periodDetails.remove(id);
     _summaries.remove(id);
+    if (_lastClassId == id) _lastClassId = null;
     publish(
       const CatalogChanged(
         CatalogResource.teachingPeriods,
@@ -218,6 +276,16 @@ class TeachingProvider extends SessionNotifier {
       ),
     );
   });
+
+  // --- Last class used --------------------------------------------------
+
+  /// The class last picked in any module this session (memory only), so
+  /// Asistencia, Actividades, Calificaciones... open on it.
+  int? get lastClassId => _lastClassId;
+  int? _lastClassId;
+
+  /// Not a change anyone watches: no notification.
+  void rememberClass(int teachingPeriodId) => _lastClassId = teachingPeriodId;
 
   // --- Class summary ------------------------------------------------------
 

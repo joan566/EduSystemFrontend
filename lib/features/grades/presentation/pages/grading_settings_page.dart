@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../../../core/layout/responsive.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/providers/teaching_provider.dart';
+import '../../../teaching/presentation/shared/class_picker.dart';
 import '../desktop/grading_settings_desktop_view.dart';
 import '../mobile/grading_settings_mobile_view.dart';
 import '../shared/grading_configuration_controller.dart';
@@ -29,13 +28,12 @@ class _GradingSettingsPageState extends State<GradingSettingsPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final teaching = context.read<TeachingProvider>();
-      await teaching.ensureAllPeriodsLoaded();
-      if (!mounted || _period != null || teaching.allPeriods.isEmpty) return;
-      final preferred = teaching.allPeriods
-          .where((p) => p.id == widget.initialTeachingPeriodId)
-          .firstOrNull;
-      _onPeriodChanged(preferred ?? teaching.allPeriods.first);
+      final period = await initialClass(
+        context,
+        preferredId: widget.initialTeachingPeriodId,
+      );
+      if (!mounted || _period != null) return;
+      _onPeriodChanged(period);
     });
   }
 

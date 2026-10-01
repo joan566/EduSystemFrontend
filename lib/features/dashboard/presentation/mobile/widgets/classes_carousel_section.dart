@@ -12,6 +12,7 @@ import '../../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../../../teaching/presentation/shared/class_counts.dart';
+import '../../shared/dashboard_data.dart';
 import '../../shared/dashboard_error_notice.dart';
 
 /// "Tus clases": the teacher's classes as a horizontal, swipeable row of
@@ -22,6 +23,7 @@ class ClassesCarouselSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<TeachingProvider>().periodsState;
+    final (:classes, :academicPeriodId) = watchDashboardClasses(context);
     // Null while the week hasn't loaded (or failed): the card then omits
     // the count instead of claiming zero sessions.
     final weekly = context
@@ -50,12 +52,13 @@ class ClassesCarouselSection extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(right: 16),
-            itemCount: state.items.length,
+            itemCount: classes.length,
             separatorBuilder: (_, _) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
-              final period = state.items[index];
+              final period = classes[index];
               return _ClassCard(
                 period: period,
+                showPeriod: academicPeriodId == null,
                 weeklySessions: weekly == null ? null : weekly[period.id] ?? 0,
               );
             },
@@ -72,8 +75,8 @@ class ClassesCarouselSection extends StatelessWidget {
         _ => Padding(
           padding: const EdgeInsets.only(right: 16, bottom: 4),
           child: Text(
-            'Aún no tienes clases. Crea una asignación y vincúlala a un '
-            'periodo académico.',
+            'Aún no tienes clases. Agrega las materias que dictas en cada '
+            'curso desde Clases.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
@@ -83,9 +86,16 @@ class ClassesCarouselSection extends StatelessWidget {
 }
 
 class _ClassCard extends StatelessWidget {
-  const _ClassCard({required this.period, required this.weeklySessions});
+  const _ClassCard({
+    required this.period,
+    required this.showPeriod,
+    required this.weeklySessions,
+  });
 
   final TeachingPeriodEntity period;
+
+  /// Classes of several periods are listed: say which one.
+  final bool showPeriod;
 
   /// Sessions in the next 7 days; null when unknown.
   final int? weeklySessions;
@@ -132,7 +142,9 @@ class _ClassCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${period.courseLabel} · ${period.academicPeriodName}',
+                        showPeriod
+                            ? '${period.courseLabel} · ${period.academicPeriodName}'
+                            : period.courseLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.bodySmall,

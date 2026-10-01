@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/shared/class_picker.dart';
 import '../desktop/activities_desktop_view.dart';
 import '../mobile/activities_mobile_view.dart';
 import '../providers/activities_provider.dart';
@@ -32,7 +33,18 @@ class _ActivitiesPageState extends State<ActivitiesPage>
     final period = _period;
     if (period != null) {
       context.read<ActivitiesProvider>().ensureActivities(period.id);
+    } else {
+      _pickInitialClass();
     }
+  }
+
+  Future<void> _pickInitialClass() async {
+    final period = await initialClass(
+      context,
+      preferredId: widget.initialTeachingPeriodId,
+    );
+    if (!mounted || _period != null || period == null) return;
+    _onPeriodChanged(period);
   }
 
   void _onPeriodChanged(TeachingPeriodEntity? period) {
@@ -49,14 +61,12 @@ class _ActivitiesPageState extends State<ActivitiesPage>
   Widget build(BuildContext context) {
     return ResponsiveBuilder(
       mobile: (_) => ActivitiesMobileView(
-        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
         onPeriodChanged: _onPeriodChanged,
         page: _page,
         onPageChanged: _onPageChanged,
       ),
       desktop: (_) => ActivitiesDesktopView(
-        preferredPeriodId: widget.initialTeachingPeriodId,
         period: _period,
         onPeriodChanged: _onPeriodChanged,
         page: _page,

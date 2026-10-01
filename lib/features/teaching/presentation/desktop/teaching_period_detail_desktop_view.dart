@@ -14,6 +14,7 @@ import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../domain/entities/teaching_period_entity.dart';
 import '../providers/teaching_provider.dart';
+import '../shared/sibling_classes.dart';
 import '../shared/class_lookup.dart';
 import '../shared/teaching_actions.dart';
 import 'widgets/class_detail_rail.dart';
@@ -289,7 +290,7 @@ class _Header extends StatelessWidget {
                 ),
                 Flexible(
                   child: Text(
-                    '${period.subjectName} — ${period.courseLabel}',
+                    '${period.courseLabel}  ›  ${period.subjectName}',
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.bodySmall,
                   ),
@@ -318,7 +319,7 @@ class _Header extends StatelessWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              '${period.subjectName} — ${period.courseLabel}',
+                              period.subjectName,
                               overflow: TextOverflow.ellipsis,
                               style: textTheme.headlineLarge,
                             ),
@@ -329,12 +330,15 @@ class _Header extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
+                        '${period.courseLabel}  ·  '
                         '${period.academicPeriodName}  ·  '
                         '${period.studentCount} alumnos',
                         style: textTheme.bodyMedium?.copyWith(
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      SiblingClassesBar(period: period),
                     ],
                   ),
                 ),

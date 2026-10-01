@@ -3,11 +3,15 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/state/list_state.dart';
+import '../../../academic_periods/presentation/providers/academic_periods_provider.dart';
 import '../../../audit/presentation/providers/audit_provider.dart';
 import '../../../courses/presentation/providers/courses_provider.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../students/presentation/providers/students_provider.dart';
+import '../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
+import '../../../teaching/presentation/shared/class_grouping.dart';
+import '../../../teaching/presentation/shared/class_lookup.dart';
 
 // The dashboard owns no data: it shows what the students, courses,
 // classes, agenda and audit caches already hold, and only asks for what is
@@ -21,10 +25,34 @@ void ensureDashboardData(BuildContext context) {
   final teaching = context.read<TeachingProvider>();
   teaching.ensureAssignments();
   teaching.ensureAllPeriodsLoaded();
+  context.read<AcademicPeriodsProvider>().ensure();
   final schedule = context.read<ScheduleProvider>();
   schedule.ensureToday();
   schedule.ensureWeek();
   context.read<AuditProvider>().ensureFeed(AuditProvider.recentQuery);
+}
+
+/// "Tus clases": the classes of the running academic period, by course
+/// (all classes, newest first, while the periods aren't known or when the
+/// running one has none). [academicPeriodId] is the period shown, which
+/// the cards don't need to repeat.
+({List<TeachingPeriodEntity> classes, int? academicPeriodId})
+watchDashboardClasses(BuildContext context) {
+  final all = context.watch<TeachingProvider>().allPeriods;
+  final current = defaultAcademicPeriod(
+    context.watch<AcademicPeriodsProvider>().all,
+  );
+  final inCurrent = [
+    for (final p in all)
+      if (p.academicPeriodId == current?.id) p,
+  ];
+  if (inCurrent.isEmpty) return (classes: all, academicPeriodId: null);
+  return (
+    classes: [
+      for (final course in groupPeriodsByCourse(inCurrent)) ...course.classes,
+    ],
+    academicPeriodId: current!.id,
+  );
 }
 
 /// Pull-to-refresh: re-reads everything the dashboard shows.

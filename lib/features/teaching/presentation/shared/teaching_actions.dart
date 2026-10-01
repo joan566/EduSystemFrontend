@@ -19,17 +19,36 @@ import 'teaching_forms.dart';
 class TeachingActions {
   TeachingActions._();
 
-  /// Options for an [AssignmentForm] — the whole subject and course
-  /// catalogs, never a screen's filtered page — or null (after telling the
-  /// user why) when they can't be offered.
-  static Future<({List<SubjectEntity> subjects, List<CourseEntity> courses})?>
-  assignmentFormInputs(BuildContext context) async {
+  /// Options for an [AddClassesForm] — the whole course, subject and
+  /// period catalogs — or null (after telling the user why) when they
+  /// can't be offered.
+  static Future<
+    ({
+      List<CourseEntity> courses,
+      List<SubjectEntity> subjects,
+      List<AcademicPeriodEntity> academicPeriods,
+      List<TeachingAssignmentEntity> assignments,
+    })?
+  >
+  addClassesFormInputs(BuildContext context) async {
     final subjects = context.read<SubjectsProvider>();
     final courses = context.read<CoursesProvider>();
+    final academicPeriods = context.read<AcademicPeriodsProvider>();
+    final teaching = context.read<TeachingProvider>();
     // Usually already in memory; read now if this screen didn't need them.
-    await Future.wait([subjects.ensure(), courses.ensure()]);
+    await Future.wait([
+      subjects.ensure(),
+      courses.ensure(),
+      academicPeriods.ensure(),
+      teaching.ensureAssignments(),
+      teaching.ensureAllPeriodsLoaded(),
+    ]);
     if (!context.mounted) return null;
-    final failure = subjects.state.error ?? courses.state.error;
+    final failure =
+        subjects.state.error ??
+        courses.state.error ??
+        academicPeriods.state.error ??
+        teaching.assignmentsState.error;
     if (failure != null) {
       context.showApiError(failure);
       return null;
@@ -38,69 +57,34 @@ class TeachingActions {
       context.showWarning('Necesitas al menos una materia y un curso creados.');
       return null;
     }
-    return (subjects: subjects.all, courses: courses.all);
+    return (
+      courses: courses.all,
+      subjects: subjects.all,
+      academicPeriods: academicPeriods.all,
+      assignments: teaching.allAssignments,
+    );
   }
 
-  /// Options for a [TeachingPeriodForm] (every active assignment and every
-  /// academic period), or null (after telling the user why) when there
-  /// isn't an active assignment and an academic period yet.
-  static Future<
-    ({
-      List<TeachingAssignmentEntity> assignments,
-      List<AcademicPeriodEntity> periods,
-    })?
-  >
-  periodFormInputs(BuildContext context) async {
-    final academicPeriods = context.read<AcademicPeriodsProvider>();
-    final teaching = context.read<TeachingProvider>();
-    await Future.wait([academicPeriods.ensure(), teaching.ensureAssignments()]);
-    if (!context.mounted) return null;
-    final failure =
-        academicPeriods.state.error ?? teaching.assignmentsState.error;
-    if (failure != null) {
-      context.showApiError(failure);
-      return null;
-    }
-    final periods = academicPeriods.all;
-    final assignments = teaching.allAssignments.where((a) => a.active).toList();
-    if (assignments.isEmpty || periods.isEmpty) {
-      context.showWarning(
-        'Necesitas una asignación activa y un periodo académico creados.',
+  static Future<void> addClasses(
+    BuildContext context,
+    AddClassesResult data,
+  ) async {
+    final (:created, :error) = await context
+        .read<TeachingProvider>()
+        .addClasses(
+          groupId: data.groupId,
+          subjectIds: data.subjectIds,
+          academicPeriodId: data.academicPeriodId,
+        );
+    if (!context.mounted) return;
+    if (error != null) {
+      context.showApiError(error);
+    } else if (created == 0) {
+      context.showInfo('Ya dictas esas materias en ese curso y periodo.');
+    } else {
+      context.showSuccess(
+        created == 1 ? 'Clase agregada.' : '$created clases agregadas.',
       );
-      return null;
-    }
-    return (assignments: assignments, periods: periods);
-  }
-
-  static Future<void> createAssignment(
-    BuildContext context,
-    AssignmentFormResult data,
-  ) async {
-    final error = await context.read<TeachingProvider>().createAssignment(
-      groupId: data.groupId,
-      subjectId: data.subjectId,
-    );
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Asignación creada.');
-    }
-  }
-
-  static Future<void> createPeriod(
-    BuildContext context,
-    TeachingPeriodFormResult data,
-  ) async {
-    final error = await context.read<TeachingProvider>().createPeriod(
-      teachingAssignmentId: data.teachingAssignmentId,
-      academicPeriodId: data.academicPeriodId,
-    );
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Clase creada.');
     }
   }
 
@@ -137,15 +121,19 @@ class TeachingActions {
     if (context.mounted && error != null) context.showApiError(error);
   }
 
+  /// Stops teaching [item]'s subject in its course (the assignment and
+  /// its classes).
   static Future<void> deleteAssignment(
     BuildContext context,
     TeachingAssignmentEntity item,
   ) async {
     final confirmed = await showAppConfirmDialog(
       context,
-      title: 'Eliminar asignación',
-      message: 'Esta acción no se puede deshacer.',
-      confirmLabel: 'Eliminar',
+      title: 'Quitar ${item.subjectName} de ${item.courseLabel}',
+      message:
+          'Dejarás de dictar esta materia en el curso. Esta acción no se '
+          'puede deshacer.',
+      confirmLabel: 'Quitar',
     );
     if (!confirmed || !context.mounted) return;
     final error = await context.read<TeachingProvider>().deleteAssignment(
@@ -161,8 +149,10 @@ class TeachingActions {
   ) async {
     final confirmed = await showAppConfirmDialog(
       context,
-      title: 'Eliminar clase',
-      message: 'Esta acción no se puede deshacer.',
+      title: 'Eliminar clase de ${item.academicPeriodName}',
+      message:
+          'Se elimina la clase de ${item.title} en '
+          '${item.academicPeriodName}. Esta acción no se puede deshacer.',
       confirmLabel: 'Eliminar',
     );
     if (!confirmed || !context.mounted) return false;
@@ -177,8 +167,8 @@ class TeachingActions {
   }
 }
 
-/// Filters of the assignments tab. Lives in the page entry point so they
-/// survive a mobile <-> desktop switch.
+/// Filters of the Clases screen (subject and active state). Live in the
+/// page entry point so they survive a mobile <-> desktop switch.
 class AssignmentFilters {
   const AssignmentFilters({this.subjectId, this.active});
 

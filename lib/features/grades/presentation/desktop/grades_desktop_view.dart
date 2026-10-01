@@ -10,7 +10,7 @@ import '../../../../core/widgets/shared/app_dropdown.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/providers/teaching_provider.dart';
+import '../../../teaching/presentation/desktop/class_picker_field.dart';
 import '../../domain/entities/grading_entities.dart';
 import '../providers/grading_provider.dart';
 import '../shared/class_grades.dart';
@@ -84,7 +84,6 @@ class _GradesDesktopViewState extends State<GradesDesktopView>
   @override
   Widget build(BuildContext context) {
     final period = widget.period;
-    final classes = context.watch<TeachingProvider>().allPeriods;
     final textTheme = Theme.of(context).textTheme;
     final current = period == null
         ? null
@@ -129,15 +128,9 @@ class _GradesDesktopViewState extends State<GradesDesktopView>
             const SizedBox(height: 18),
             Row(
               children: [
-                SizedBox(
-                  width: 340,
-                  child: AppDropdown<TeachingPeriodEntity>(
-                    label: 'Clase',
-                    value: classes.where((c) => c.id == period?.id).firstOrNull,
-                    items: classes,
-                    itemLabel: (c) => c.displayName,
-                    onChanged: widget.onPeriodChanged,
-                  ),
+                DesktopClassPickerField(
+                  value: period,
+                  onChanged: widget.onPeriodChanged,
                 ),
                 const SizedBox(width: 20),
                 Expanded(

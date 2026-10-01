@@ -7,7 +7,7 @@ import '../../../../core/widgets/desktop/desktop_upload_zone.dart';
 import '../../../../core/widgets/shared/app_card.dart';
 import '../../../../core/widgets/shared/picked_file.dart';
 import '../../../imports/presentation/providers/imports_provider.dart';
-import '../../../teaching/presentation/shared/teaching_period_selector.dart';
+import '../../../teaching/presentation/desktop/class_picker_field.dart';
 import '../shared/data_management_controller.dart';
 import '../shared/data_management_sections.dart';
 import '../shared/data_management_widgets.dart';
@@ -52,11 +52,20 @@ class DataManagementDesktopView extends StatelessWidget {
                   style: textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
-                TeachingPeriodSelector(
-                  value: controller.period,
-                  onChanged: controller.selectPeriod,
-                  label:
-                      'Clase (opcional para estudiantes, requerida para el resto)',
+                Row(
+                  children: [
+                    DesktopClassPickerField(
+                      value: controller.period,
+                      onChanged: controller.selectPeriod,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'Opcional para estudiantes, requerida para el resto.',
+                        style: textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 AppCard(

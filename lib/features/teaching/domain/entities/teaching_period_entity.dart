@@ -1,3 +1,5 @@
+import '../../../../core/utils/course_naming.dart';
+
 /// A teaching assignment scoped to a specific academic period — the
 /// central id (`teachingPeriodId`) that exams, activities, attendance and
 /// grading all hang off (§4).
@@ -34,7 +36,13 @@ class TeachingPeriodEntity {
   /// Active students in the group.
   final int studentCount;
 
-  String get displayName =>
-      '$subjectName — $gradeName $groupName ($academicPeriodName)';
-  String get courseLabel => '$gradeName $groupName';
+  /// "6° A".
+  String get courseLabel => courseName(gradeName, groupName);
+
+  /// "Matemáticas · 6° A".
+  String get title => '$subjectName · $courseLabel';
+
+  /// [title] with its academic period, where classes of several periods
+  /// are listed together.
+  String get displayName => '$title ($academicPeriodName)';
 }

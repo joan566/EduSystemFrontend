@@ -22,14 +22,12 @@ class TeachingPage extends StatefulWidget {
 }
 
 class _TeachingPageState extends State<TeachingPage>
-    with SingleTickerProviderStateMixin, SyncedDataState<TeachingPage> {
-  // Tab, filters, period and search live here so they survive a
-  // mobile <-> desktop switch; whichever view is mounted attaches its
-  // TabBar to this controller.
-  late final TabController _tabController;
+    with SyncedDataState<TeachingPage> {
+  // Filters, period and search live here so they survive a mobile <->
+  // desktop switch.
   AssignmentFilters _filters = const AssignmentFilters();
 
-  /// Academic period the mobile list shows classes for; null = all.
+  /// Academic period the list shows classes for; null = all.
   int? _academicPeriodId;
   String _search = '';
 
@@ -37,13 +35,6 @@ class _TeachingPageState extends State<TeachingPage>
   int? _selectedAssignmentId;
 
   bool _academicPeriodPicked = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this)
-      ..addListener(() => setState(() {}));
-  }
 
   @override
   void ensureData() {
@@ -76,12 +67,6 @@ class _TeachingPageState extends State<TeachingPage>
     );
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
   // Filtering happens in memory over the whole assignment catalog.
   void _onFiltersChanged(AssignmentFilters filters) =>
       setState(() => _filters = filters);
@@ -90,7 +75,6 @@ class _TeachingPageState extends State<TeachingPage>
   Widget build(BuildContext context) {
     return ResponsiveBuilder(
       mobile: (_) => TeachingMobileView(
-        tabController: _tabController,
         filters: _filters,
         onFiltersChanged: _onFiltersChanged,
         academicPeriodId: _academicPeriodId,

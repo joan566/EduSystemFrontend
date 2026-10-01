@@ -624,7 +624,7 @@ class _InfoTab extends StatelessWidget {
               row('Nombre', report.student.fullName),
               row('Código', report.student.studentCode),
               if (period != null) ...[
-                row('Clase', '${period.subjectName} — ${period.courseLabel}'),
+                row('Clase', period.title),
                 row('Periodo', period.academicPeriodName),
               ],
               if (scale != null) row('Escala', scale.name),

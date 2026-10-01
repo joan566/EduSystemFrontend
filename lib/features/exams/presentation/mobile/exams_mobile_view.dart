@@ -15,6 +15,8 @@ import '../../../../core/widgets/shared/app_pagination.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/mobile/class_picker_sheet.dart';
+import '../../../teaching/presentation/shared/class_picker.dart';
 import '../../../teaching/presentation/providers/teaching_provider.dart';
 import '../../domain/entities/exam_entity.dart';
 import '../providers/exams_provider.dart';
@@ -172,46 +174,8 @@ class _ClassPicker extends StatelessWidget {
   final TeachingPeriodEntity? value;
   final ValueChanged<TeachingPeriodEntity?> onChanged;
 
-  Future<void> _open(
-    BuildContext context,
-    List<TeachingPeriodEntity> all,
-  ) async {
-    final picked = await showMobileSheet<TeachingPeriodEntity>(
-      context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(
-                'Clase',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  for (final period in all)
-                    ListTile(
-                      title: Text(
-                        '${period.subjectName} — ${period.courseLabel}',
-                      ),
-                      subtitle: Text(period.academicPeriodName),
-                      trailing: period.id == value?.id
-                          ? const Icon(Icons.check, color: AppColors.accentBlue)
-                          : null,
-                      onTap: () => Navigator.of(context).pop(period),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _open(BuildContext context) async {
+    final picked = await showMobileClassPicker(context, selected: value);
     if (picked != null) onChanged(picked);
   }
 
@@ -257,7 +221,7 @@ class _ClassPicker extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _open(context, all),
+        onTap: () => _open(context),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
           child: Row(
@@ -268,7 +232,7 @@ class _ClassPicker extends StatelessWidget {
                 child: Text(
                   value == null
                       ? 'Selecciona una clase'
-                      : '${value.subjectName} — ${value.courseLabel}',
+                      : classPickerLabel(context, value),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: textTheme.bodyLarge?.copyWith(

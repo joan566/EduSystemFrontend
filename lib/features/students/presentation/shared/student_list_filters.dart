@@ -1,4 +1,5 @@
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/shared/class_labels.dart';
 import '../../domain/entities/student_entity.dart';
 
 /// Enrollment status of a student's current course.
@@ -85,9 +86,9 @@ class CourseOption {
   final String label;
 }
 
-/// The teacher's courses from their classes, newest year first; the year
-/// is added only where two courses share a name (e.g. 5° A in 2025 and
-/// 2026).
+/// The teacher's courses from their classes, newest year first, then in
+/// natural grade order; the year is added only where two courses share a
+/// name (e.g. 5° A in 2025 and 2026).
 List<CourseOption> teacherCourses(List<TeachingPeriodEntity> classes) {
   final byGroup = <int, TeachingPeriodEntity>{
     for (final c in classes) c.groupId: c,
@@ -95,19 +96,21 @@ List<CourseOption> teacherCourses(List<TeachingPeriodEntity> classes) {
   final groups = byGroup.values.toList()
     ..sort((a, b) {
       final byYear = b.academicYear.compareTo(a.academicYear);
-      return byYear != 0 ? byYear : a.courseLabel.compareTo(b.courseLabel);
+      if (byYear != 0) return byYear;
+      final byGrade = compareGradeNames(a.gradeName, b.gradeName);
+      return byGrade != 0 ? byGrade : a.courseLabel.compareTo(b.courseLabel);
     });
-  final counts = <String, int>{};
-  for (final g in groups) {
-    counts[g.courseLabel] = (counts[g.courseLabel] ?? 0) + 1;
-  }
+  final labels = courseLabels([
+    for (final g in groups)
+      (
+        groupId: g.groupId,
+        gradeName: g.gradeName,
+        groupName: g.groupName,
+        academicYear: g.academicYear,
+      ),
+  ]);
   return [
     for (final g in groups)
-      CourseOption(
-        groupId: g.groupId,
-        label: counts[g.courseLabel]! > 1
-            ? '${g.courseLabel} (${g.academicYear})'
-            : g.courseLabel,
-      ),
+      CourseOption(groupId: g.groupId, label: labels[g.groupId]!),
   ];
 }

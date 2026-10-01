@@ -72,6 +72,24 @@ features/<feature>/presentation/
 - Actions (save, delete, download) keep their inline indicator
   (`AppButton.isLoading`); uploads/processing keep `AppProgressBar`.
 
+### Classes, courses and subjects
+
+- A course is grado + grupo ("6° A"); a class (`teachingPeriodId`) is a
+  subject taught in a course in one academic period. "Asignación" is not
+  shown to the teacher; the academic period is screen context, not part of
+  a class's name.
+- Name them with `courseLabel` / `title` on the entities
+  (`core/utils/course_naming.dart`), `courseLabels()` (adds the year only
+  on collisions) and `classLabel()` in `teaching/presentation/shared/` —
+  never by concatenating `subjectName`, `gradeName` and `groupName`.
+- List classes grouped by course (`groupClasses`, `groupPeriodsByCourse`),
+  grades in natural order (`compareGradeNames`), and name a dimension once
+  when every row shares it.
+- Modules pick a class with the shared picker (`ClassPickerContent` via
+  `showMobileClassPicker` / `showDesktopClassPicker`, or
+  `MobileClassPickerCard` / `DesktopClassPickerField`) and open on
+  `initialClass()` (requested → suggested → last used → running period).
+
 ## Data, cache and sessions
 
 Providers hold the teacher's data for the session, not "what a screen

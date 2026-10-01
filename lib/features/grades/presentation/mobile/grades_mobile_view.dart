@@ -9,13 +9,13 @@ import '../../../../core/widgets/mobile/mobile_skeletons.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
 import '../../../../core/widgets/shared/app_search_field.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/mobile/class_picker_sheet.dart';
 import '../../domain/entities/grading_entities.dart';
 import '../providers/grading_provider.dart';
 import '../shared/class_grades.dart';
 import '../shared/grades_navigation.dart';
 import '../shared/period_grades_state_view.dart';
 import 'widgets/class_grades_summary_mobile.dart';
-import 'widgets/class_picker_card.dart';
 import 'widgets/student_grade_card.dart';
 
 /// Mobile "Calificaciones": class picker, then Estudiantes (search, status
@@ -183,7 +183,7 @@ class _GradesMobileViewState extends State<GradesMobileView>
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-            child: ClassPickerCard(
+            child: MobileClassPickerCard(
               value: period,
               onChanged: widget.onPeriodChanged,
             ),

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/cache/synced_data_state.dart';
 import '../../../../core/layout/responsive.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
-import '../../../teaching/presentation/providers/teaching_provider.dart';
+import '../../../teaching/presentation/shared/class_picker.dart';
 import '../desktop/exams_desktop_view.dart';
 import '../mobile/exams_mobile_view.dart';
 import '../providers/exams_provider.dart';
@@ -40,13 +40,12 @@ class _ExamsPageState extends State<ExamsPage> with SyncedDataState<ExamsPage> {
     }
   }
 
-  /// Neither layout's class picker loads classes itself: the first class
-  /// is selected here.
+  /// Neither layout's class picker loads classes itself: the class to
+  /// open on ([initialClass]) is selected here.
   Future<void> _pickInitialClass() async {
-    final teaching = context.read<TeachingProvider>();
-    await teaching.ensureAllPeriodsLoaded();
-    if (!mounted || _period != null || teaching.allPeriods.isEmpty) return;
-    _onPeriodChanged(teaching.allPeriods.first);
+    final period = await initialClass(context);
+    if (!mounted || _period != null || period == null) return;
+    _onPeriodChanged(period);
   }
 
   void _onPeriodChanged(TeachingPeriodEntity? period) {

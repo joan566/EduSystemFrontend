@@ -11,6 +11,7 @@ import '../../../../core/widgets/shared/skeleton/skeleton.dart';
 import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../../teaching/domain/entities/teaching_period_entity.dart';
+import '../../../teaching/presentation/desktop/class_picker_field.dart';
 import '../../domain/entities/attendance_entity.dart';
 import '../providers/attendance_provider.dart';
 import '../shared/attendance_day_controller.dart';
@@ -84,8 +85,8 @@ class AttendanceDesktopView extends StatelessWidget {
                     spacing: 12,
                     runSpacing: 12,
                     children: [
-                      AttendanceClassMenu(
-                        period: period,
+                      DesktopClassPickerField(
+                        value: period,
                         onChanged: onPeriodChanged,
                       ),
                       if (period != null)

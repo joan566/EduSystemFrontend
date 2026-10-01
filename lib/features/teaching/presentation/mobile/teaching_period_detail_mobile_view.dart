@@ -15,6 +15,7 @@ import '../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../schedule/presentation/providers/schedule_provider.dart';
 import '../../domain/entities/teaching_period_entity.dart';
 import '../providers/teaching_provider.dart';
+import '../shared/sibling_classes.dart';
 import '../shared/teaching_actions.dart';
 import 'widgets/class_evaluations_tab.dart';
 import 'widgets/class_hero_card.dart';
@@ -204,14 +205,13 @@ class _Content extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${period.subjectName} — ${period.courseLabel}',
+                      period.subjectName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.titleLarge,
                     ),
                     Text(
                       [
-                        period.subjectName,
                         period.courseLabel,
                         period.academicPeriodName,
                       ].join('  ·  '),
@@ -244,6 +244,10 @@ class _Content extends StatelessWidget {
               _ => null,
             },
           ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: SiblingClassesBar(period: period),
         ),
         const SizedBox(height: 14),
         Padding(
