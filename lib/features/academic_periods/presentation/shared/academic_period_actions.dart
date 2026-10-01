@@ -12,7 +12,7 @@ import 'academic_period_form.dart';
 class AcademicPeriodActions {
   AcademicPeriodActions._();
 
-  static Future<void> save(
+  static Future<bool> save(
     BuildContext context, {
     AcademicPeriodEntity? initial,
     required AcademicPeriodFormResult data,
@@ -30,35 +30,37 @@ class AcademicPeriodActions {
             startDate: data.startDate,
             endDate: data.endDate,
           );
-    if (!context.mounted) return;
+    if (!context.mounted) return error == null;
     if (error != null) {
       context.showApiError(error);
-    } else {
-      context.showSuccess(
-        initial == null ? 'Periodo creado.' : 'Periodo actualizado.',
-      );
+      return false;
     }
+    context.showSuccess(
+      initial == null ? 'Periodo creado.' : 'Periodo actualizado.',
+    );
+    return true;
   }
 
   static Future<void> delete(
     BuildContext context,
     AcademicPeriodEntity period,
   ) async {
-    final confirmed = await showAppConfirmDialog(
+    await showAppConfirmDialog(
       context,
       title: 'Eliminar periodo',
       message: 'Esta acción no se puede deshacer. ¿Eliminar "${period.name}"?',
       confirmLabel: 'Eliminar',
+      onConfirm: () async {
+        final error = await context.read<AcademicPeriodsProvider>().delete(
+          period.id,
+        );
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess('Periodo eliminado.');
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<AcademicPeriodsProvider>().delete(
-      period.id,
-    );
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Periodo eliminado.');
-    }
   }
 }

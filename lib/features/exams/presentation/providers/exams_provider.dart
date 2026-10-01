@@ -141,8 +141,22 @@ class ExamsProvider extends SessionNotifier {
   Future<BinaryDownload> downloadAnswerSheet(int examId, int studentId) =>
       _repository.getAnswerSheet(examId, studentId);
 
-  Future<BinaryDownload> downloadAnswerSheets(int examId) =>
-      _repository.getAnswerSheets(examId);
+  /// Exams whose class-wide answer-sheet PDF is being generated (slow), so
+  /// every trigger for it shows the work and can't start a second one.
+  final Set<int> _generatingSheets = {};
+
+  bool isGeneratingSheets(int examId) => _generatingSheets.contains(examId);
+
+  Future<BinaryDownload> downloadAnswerSheets(int examId) async {
+    _generatingSheets.add(examId);
+    notifyListeners();
+    try {
+      return await _repository.getAnswerSheets(examId);
+    } finally {
+      _generatingSheets.remove(examId);
+      notifyListeners();
+    }
+  }
 
   // --- Helpers -------------------------------------------------------------
 

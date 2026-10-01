@@ -25,6 +25,8 @@ class GradebookActions {
     GradeDetailEntity detail,
     PickedFile file,
   ) async {
+    final provider = context.read<GradebookProvider>();
+    if (provider.isUploadingAttachment(detail)) return;
     if (file.bytes.length > maxAttachmentBytes) {
       context.showWarning('El archivo supera los 10 MB.');
       return;
@@ -42,7 +44,7 @@ class GradebookActions {
       );
       if (!confirmed || !context.mounted) return;
     }
-    final error = await context.read<GradebookProvider>().uploadAttachment(
+    final error = await provider.uploadAttachment(
       detail,
       bytes: file.bytes,
       fileName: file.name,
@@ -57,10 +59,7 @@ class GradebookActions {
     }
   }
 
-  static Future<void> download(
-    BuildContext context,
-    GradeDetailEntity detail,
-  ) {
+  static Future<void> download(BuildContext context, GradeDetailEntity detail) {
     final provider = context.read<GradebookProvider>();
     return fetchAndSaveFile(
       context,
@@ -73,43 +72,47 @@ class GradebookActions {
     BuildContext context,
     GradeDetailEntity detail,
   ) async {
-    final confirmed = await showAppConfirmDialog(
+    await showAppConfirmDialog(
       context,
       title: 'Quitar archivo',
       message: 'Se borrará "${detail.attachment!.fileName}" de esta nota.',
       confirmLabel: 'Quitar',
+      onConfirm: () async {
+        final error = await context.read<GradebookProvider>().deleteAttachment(
+          detail,
+        );
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess('Archivo quitado.');
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<GradebookProvider>().deleteAttachment(
-      detail,
-    );
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Archivo quitado.');
-    }
   }
 
   static Future<void> deleteRubric(
     BuildContext context,
     GradeDetailEntity detail,
   ) async {
-    final confirmed = await showAppConfirmDialog(
+    await showAppConfirmDialog(
       context,
       title: 'Quitar rúbrica',
       message:
           'Se borran los criterios y los puntajes de todos los estudiantes en '
           '"${detail.evaluation.name}". Las notas ya registradas se conservan.',
       confirmLabel: 'Quitar rúbrica',
+      onConfirm: () async {
+        final error = await context.read<GradebookProvider>().deleteRubric(
+          detail,
+        );
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess('Rúbrica quitada.');
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<GradebookProvider>().deleteRubric(detail);
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Rúbrica quitada.');
-    }
   }
 }

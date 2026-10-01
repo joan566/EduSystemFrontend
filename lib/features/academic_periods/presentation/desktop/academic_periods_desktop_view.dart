@@ -49,12 +49,14 @@ class AcademicPeriodsDesktopView extends StatelessWidget {
     BuildContext context, {
     AcademicPeriodEntity? initial,
   }) async {
-    final data = await showDesktopDialog<AcademicPeriodFormResult>(
+    await showDesktopDialog<void>(
       context,
-      child: AcademicPeriodForm(initial: initial),
+      child: AcademicPeriodForm(
+        initial: initial,
+        onSubmit: (data) =>
+            AcademicPeriodActions.save(context, initial: initial, data: data),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await AcademicPeriodActions.save(context, initial: initial, data: data);
   }
 
   @override
@@ -72,7 +74,8 @@ class AcademicPeriodsDesktopView extends StatelessWidget {
     );
 
     final Widget main = switch (state.status) {
-      ViewStatus.initial || ViewStatus.loading => const DesktopListTableSkeleton(
+      ViewStatus.initial ||
+      ViewStatus.loading => const DesktopListTableSkeleton(
         columns: [
           SkeletonColumn('Periodo', flex: 3, cell: SkeletonCell.badge),
           SkeletonColumn('Fechas', flex: 3),

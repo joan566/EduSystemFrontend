@@ -13,7 +13,7 @@ import 'academic_level_form.dart';
 class AcademicLevelActions {
   AcademicLevelActions._();
 
-  static Future<void> save(
+  static Future<bool> save(
     BuildContext context, {
     AcademicLevelEntity? initial,
     required AcademicLevelFormResult data,
@@ -27,33 +27,37 @@ class AcademicLevelActions {
             name: data.name,
             description: description,
           );
-    if (!context.mounted) return;
+    if (!context.mounted) return error == null;
     if (error != null) {
       context.showApiError(error);
-    } else {
-      context.showSuccess(
-        initial == null ? 'Grado creado.' : 'Grado actualizado.',
-      );
+      return false;
     }
+    context.showSuccess(
+      initial == null ? 'Grado creado.' : 'Grado actualizado.',
+    );
+    return true;
   }
 
   static Future<void> delete(
     BuildContext context,
     AcademicLevelEntity level,
   ) async {
-    final confirmed = await showAppConfirmDialog(
+    await showAppConfirmDialog(
       context,
       title: 'Eliminar grado',
       message: 'Esta acción no se puede deshacer. ¿Eliminar "${level.name}"?',
       confirmLabel: 'Eliminar',
+      onConfirm: () async {
+        final error = await context.read<AcademicLevelsProvider>().delete(
+          level.id,
+        );
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess('Grado eliminado.');
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<AcademicLevelsProvider>().delete(level.id);
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Grado eliminado.');
-    }
   }
 }

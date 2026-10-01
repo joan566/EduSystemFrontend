@@ -50,12 +50,15 @@ class CoursesDesktopView extends StatelessWidget {
   Future<void> _openForm(BuildContext context, {CourseEntity? initial}) async {
     final levels = CourseActions.levelsForForm(context);
     if (levels == null) return;
-    final data = await showDesktopDialog<CourseFormResult>(
+    await showDesktopDialog<void>(
       context,
-      child: CourseForm(initial: initial, levels: levels),
+      child: CourseForm(
+        initial: initial,
+        levels: levels,
+        onSubmit: (data) =>
+            CourseActions.save(context, initial: initial, data: data),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await CourseActions.save(context, initial: initial, data: data);
   }
 
   @override

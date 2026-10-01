@@ -13,7 +13,12 @@ typedef AcademicLevelFormResult = ({String name, String description});
 /// the desktop view opens it in a dialog, the mobile view as a full-screen
 /// route; [AppFormFrame] takes the chrome from whichever opened it.
 class AcademicLevelForm extends StatefulWidget {
-  const AcademicLevelForm({super.key, this.initial});
+  const AcademicLevelForm({super.key, required this.onSubmit, this.initial});
+
+  /// Saves the values; the form stays open with its button loading until
+  /// it completes and closes only on success, so a failed save keeps
+  /// what was typed.
+  final Future<bool> Function(AcademicLevelFormResult) onSubmit;
 
   final AcademicLevelEntity? initial;
 
@@ -22,6 +27,7 @@ class AcademicLevelForm extends StatefulWidget {
 }
 
 class _AcademicLevelFormState extends State<AcademicLevelForm> {
+  bool _saving = false;
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(
     text: widget.initial?.name,
@@ -37,12 +43,17 @@ class _AcademicLevelFormState extends State<AcademicLevelForm> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.of(context).pop<AcademicLevelFormResult>((
+    final AcademicLevelFormResult data = (
       name: _nameController.text.trim(),
       description: _descriptionController.text.trim(),
-    ));
+    );
+    setState(() => _saving = true);
+    final ok = await widget.onSubmit(data);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok) Navigator.of(context).pop();
   }
 
   @override
@@ -50,7 +61,9 @@ class _AcademicLevelFormState extends State<AcademicLevelForm> {
     final isEditing = widget.initial != null;
     return AppFormFrame(
       title: isEditing ? 'Editar grado' : 'Nuevo grado',
-      actions: [AppButton(label: 'Guardar', onPressed: _submit)],
+      actions: [
+        AppButton(label: 'Guardar', isLoading: _saving, onPressed: _submit),
+      ],
       child: Form(
         key: _formKey,
         child: Column(

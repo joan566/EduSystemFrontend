@@ -35,6 +35,7 @@ class _ForgotPasswordFlowState extends State<ForgotPasswordFlow> {
   final _passwordController = TextEditingController();
   _Step _step = _Step.email;
   bool _obscureNewPassword = true;
+  bool _resending = false;
 
   @override
   void dispose() {
@@ -50,8 +51,12 @@ class _ForgotPasswordFlowState extends State<ForgotPasswordFlow> {
     bool ok;
     switch (_step) {
       case _Step.email:
-        ok = await auth.forgotPassword(_emailController.text.trim());
-        if (ok && mounted) setState(() => _step = _Step.code);
+        final email = _emailController.text.trim();
+        ok = await auth.forgotPassword(email);
+        if (ok && mounted) {
+          setState(() => _step = _Step.code);
+          context.showSuccess('Te enviamos un código a $email.');
+        }
       case _Step.code:
         ok = await auth.verifyCode(
           email: _emailController.text.trim(),
@@ -72,7 +77,22 @@ class _ForgotPasswordFlowState extends State<ForgotPasswordFlow> {
     if (!ok && auth.error != null) context.showApiError(auth.error!);
   }
 
+  Future<void> _resend(AuthProvider auth) async {
+    setState(() => _resending = true);
+    final ok = await auth.forgotPassword(_emailController.text.trim());
+    if (!mounted) return;
+    setState(() => _resending = false);
+    if (ok) {
+      _codeController.clear();
+      context.showSuccess('Te enviamos un nuevo código.');
+    } else if (auth.error != null) {
+      context.showApiError(auth.error!);
+    }
+  }
+
   void _handleBack() {
+    // Stepping back mid-request would land the answer on the wrong step.
+    if (context.read<AuthProvider>().isBusy) return;
     switch (_step) {
       case _Step.code:
         setState(() => _step = _Step.email);
@@ -94,7 +114,8 @@ class _ForgotPasswordFlowState extends State<ForgotPasswordFlow> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final isLoading = auth.status == AuthStatus.authenticating;
+    final isBusy = auth.isBusy;
+    final isLoading = isBusy && !_resending;
 
     final content = _step == _Step.done
         ? _DoneContent(onGoToLogin: () => context.go('/login'))
@@ -120,8 +141,17 @@ class _ForgotPasswordFlowState extends State<ForgotPasswordFlow> {
                   label: _buttonLabel,
                   isLoading: isLoading,
                   expand: true,
-                  onPressed: () => _submit(auth),
+                  onPressed: _resending ? null : () => _submit(auth),
                 ),
+                if (_step == _Step.code) ...[
+                  const SizedBox(height: 8),
+                  AppButton(
+                    label: '¿No te llegó? Reenviar código',
+                    variant: AppButtonVariant.text,
+                    isLoading: _resending,
+                    onPressed: isBusy ? null : () => _resend(auth),
+                  ),
+                ],
               ],
             ),
           );

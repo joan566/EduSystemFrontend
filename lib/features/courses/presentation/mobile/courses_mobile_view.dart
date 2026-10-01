@@ -43,12 +43,15 @@ class CoursesMobileView extends StatelessWidget {
   Future<void> _openForm(BuildContext context, {CourseEntity? initial}) async {
     final levels = CourseActions.levelsForForm(context);
     if (levels == null) return;
-    final data = await showMobileForm<CourseFormResult>(
+    await showMobileForm<void>(
       context,
-      child: CourseForm(initial: initial, levels: levels),
+      child: CourseForm(
+        initial: initial,
+        levels: levels,
+        onSubmit: (data) =>
+            CourseActions.save(context, initial: initial, data: data),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await CourseActions.save(context, initial: initial, data: data);
   }
 
   @override
@@ -101,7 +104,8 @@ class CoursesMobileView extends StatelessWidget {
           ),
           Expanded(
             child: switch (state.status) {
-              ViewStatus.initial || ViewStatus.loading => const MobileListSkeleton(
+              ViewStatus.initial ||
+              ViewStatus.loading => const MobileListSkeleton(
                 leading: SkeletonLeading.square,
                 leadingSize: 48,
                 meta: true,

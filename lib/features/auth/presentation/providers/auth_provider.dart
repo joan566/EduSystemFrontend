@@ -27,11 +27,17 @@ class AuthProvider extends ChangeNotifier {
   AppException? _error;
   bool _sessionExpired = false;
   String? _pendingVerificationEmail;
+  bool _busy = false;
 
   AuthStatus get status => _status;
   UserEntity? get user => _user;
   AppException? get error => _error;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
+
+  /// True while an auth request (login, code, password...) is in flight.
+  /// Drives the buttons' loading state; kept apart from [status] so an
+  /// action never looks like a session change to the router.
+  bool get isBusy => _busy;
 
   /// Email of an account that still has to be verified: set after
   /// registering or after a login rejected with `EMAIL_NOT_VERIFIED`, read
@@ -114,12 +120,10 @@ class AuthProvider extends ChangeNotifier {
       code: code,
     );
     _pendingVerificationEmail = null;
-  }, keepStatus: true);
+  });
 
-  Future<bool> resendVerification() => _guard(
-    () => _repository.resendVerification(_pendingVerificationEmail!),
-    keepStatus: true,
-  );
+  Future<bool> resendVerification() =>
+      _guard(() => _repository.resendVerification(_pendingVerificationEmail!));
 
   Future<void> logout() async {
     _status = AuthStatus.authenticating;
@@ -148,18 +152,21 @@ class AuthProvider extends ChangeNotifier {
   });
 
   Future<bool> forgotPassword(String email) =>
-      _guard(() => _repository.forgotPassword(email), keepStatus: true);
+      _guard(() => _repository.forgotPassword(email));
 
   Future<bool> verifyCode({required String email, required String code}) =>
-      _guard(() => _repository.verifyCode(email: email, code: code), keepStatus: true);
+      _guard(() => _repository.verifyCode(email: email, code: code));
 
   Future<bool> resetPassword({
     required String email,
     required String code,
     required String newPassword,
   }) => _guard(
-    () => _repository.resetPassword(email: email, code: code, newPassword: newPassword),
-    keepStatus: true,
+    () => _repository.resetPassword(
+      email: email,
+      code: code,
+      newPassword: newPassword,
+    ),
   );
 
   /// On success the session is gone, so the router sends the user to
@@ -168,7 +175,7 @@ class AuthProvider extends ChangeNotifier {
     await _repository.deleteAccount(password);
     _user = null;
     _status = AuthStatus.unauthenticated;
-  }, keepStatus: true);
+  });
 
   void updateUser(UserEntity user) {
     _user = user;
@@ -180,28 +187,26 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> _guard(
-    Future<void> Function() action, {
-    bool keepStatus = false,
-  }) async {
+  /// Runs [action] with [isBusy] set. The session status only changes if
+  /// [action] changes it; a failure (wrong code, wrong current password)
+  /// keeps a signed-in session and otherwise leaves the user signed out.
+  Future<bool> _guard(Future<void> Function() action) async {
     final previousStatus = _status;
-    if (!keepStatus) _status = AuthStatus.authenticating;
+    _busy = true;
     _error = null;
     notifyListeners();
     try {
       await action();
-      notifyListeners();
       return true;
     } on AppException catch (e) {
-      // A failed action from inside a session (e.g. wrong current password
-      // on change-password) must not end that session.
-      final wasSignedIn = previousStatus == AuthStatus.authenticated;
-      _status = keepStatus || wasSignedIn
-          ? previousStatus
+      _status = previousStatus == AuthStatus.authenticated
+          ? AuthStatus.authenticated
           : AuthStatus.unauthenticated;
       _error = e;
-      notifyListeners();
       return false;
+    } finally {
+      _busy = false;
+      notifyListeners();
     }
   }
 }

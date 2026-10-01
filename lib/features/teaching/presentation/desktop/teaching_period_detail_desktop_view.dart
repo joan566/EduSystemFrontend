@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -212,7 +213,7 @@ class _Header extends StatelessWidget {
         onSelected: (value) => switch (value) {
           0 => context.push(RoutePaths.gradesForClass(period.id)),
           1 => context.push(RoutePaths.schedule),
-          2 => onRefresh(),
+          2 => context.refreshWithNotice(onRefresh),
           _ => _delete(context),
         },
         itemBuilder: (context) => const [

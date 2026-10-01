@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -192,6 +193,7 @@ class _Header extends StatelessWidget {
         label: 'Descargar hojas',
         icon: Icons.picture_as_pdf_outlined,
         variant: AppButtonVariant.outlined,
+        isLoading: context.watch<ExamsProvider>().isGeneratingSheets(exam.id),
         onPressed: exam.ready
             ? () => ExamActions.downloadAnswerSheets(context, exam.id)
             : null,
@@ -203,7 +205,9 @@ class _Header extends StatelessWidget {
           0 => context.push(
             RoutePaths.teachingPeriodDetail(exam.teachingPeriodId),
           ),
-          1 => context.read<ExamsProvider>().refreshDetail(exam.id),
+          1 => context.refreshWithNotice(
+            () => context.read<ExamsProvider>().refreshDetail(exam.id),
+          ),
           _ => ExamActions.delete(context, exam.id),
         },
         itemBuilder: (context) => const [

@@ -30,17 +30,18 @@ class SubmissionDetailDesktopView extends StatelessWidget {
     BuildContext context,
     SubmissionAnswer answer,
   ) async {
-    final result = await showDesktopDialog<String?>(
+    await showDesktopDialog<void>(
       context,
-      child: CorrectAnswerForm(answer: answer),
-    );
-    if (!context.mounted) return;
-    await SubmissionReviewActions.correctAnswer(
-      context,
-      examId: examId,
-      submissionId: submissionId,
-      answer: answer,
-      result: result,
+      child: CorrectAnswerForm(
+        answer: answer,
+        onSubmit: (selectedOption) => SubmissionReviewActions.correctAnswer(
+          context,
+          examId: examId,
+          submissionId: submissionId,
+          answer: answer,
+          selectedOption: selectedOption,
+        ),
+      ),
     );
   }
 
@@ -48,16 +49,17 @@ class SubmissionDetailDesktopView extends StatelessWidget {
     BuildContext context,
     SubmissionEntity submission,
   ) async {
-    final result = await showDesktopDialog<double?>(
+    await showDesktopDialog<void>(
       context,
-      child: FinalGradeForm(submission: submission),
-    );
-    if (!context.mounted) return;
-    await SubmissionReviewActions.setFinalGrade(
-      context,
-      examId: examId,
-      submissionId: submissionId,
-      result: result,
+      child: FinalGradeForm(
+        submission: submission,
+        onSubmit: (finalGrade) => SubmissionReviewActions.setFinalGrade(
+          context,
+          examId: examId,
+          submissionId: submissionId,
+          finalGrade: finalGrade,
+        ),
+      ),
     );
   }
 

@@ -39,12 +39,14 @@ class SubjectsMobileView extends StatelessWidget {
   final ValueChanged<int> onPageChanged;
 
   Future<void> _openForm(BuildContext context, {SubjectEntity? initial}) async {
-    final data = await showMobileForm<SubjectFormResult>(
+    await showMobileForm<void>(
       context,
-      child: SubjectForm(initial: initial),
+      child: SubjectForm(
+        initial: initial,
+        onSubmit: (data) =>
+            SubjectActions.save(context, initial: initial, data: data),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await SubjectActions.save(context, initial: initial, data: data);
   }
 
   @override

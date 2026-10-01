@@ -136,6 +136,7 @@ class _NoClass extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = row.assignment;
     final periodName = academicPeriod?.name;
+    final creating = context.watch<TeachingProvider>().isCreatingClassFor(a.id);
     return _Placeholder(
       icon: subjectIcon(a.subjectName),
       title: a.title,
@@ -146,9 +147,19 @@ class _NoClass extends StatelessWidget {
       action: periodName == null
           ? null
           : FilledButton.icon(
-              onPressed: onCreate,
-              icon: const Icon(Icons.add, size: 18),
-              label: Text('Crear clase en $periodName'),
+              onPressed: creating ? null : onCreate,
+              icon: creating
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.add, size: 18),
+              label: Text(
+                creating ? 'Creando clase…' : 'Crear clase en $periodName',
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.accentBlue,
               ),

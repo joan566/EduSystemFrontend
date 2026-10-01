@@ -12,7 +12,12 @@ typedef SubjectFormResult = ({String name, String description});
 /// Create/edit form for a subject. Platform-agnostic: each view opens it
 /// with its own presenter, which supplies the [AppFormFrame] chrome.
 class SubjectForm extends StatefulWidget {
-  const SubjectForm({super.key, this.initial});
+  const SubjectForm({super.key, required this.onSubmit, this.initial});
+
+  /// Saves the values; the form stays open with its button loading until
+  /// it completes and closes only on success, so a failed save keeps
+  /// what was typed.
+  final Future<bool> Function(SubjectFormResult) onSubmit;
 
   final SubjectEntity? initial;
 
@@ -21,6 +26,7 @@ class SubjectForm extends StatefulWidget {
 }
 
 class _SubjectFormState extends State<SubjectForm> {
+  bool _saving = false;
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(
     text: widget.initial?.name,
@@ -36,12 +42,17 @@ class _SubjectFormState extends State<SubjectForm> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.of(context).pop<SubjectFormResult>((
+    final SubjectFormResult data = (
       name: _nameController.text.trim(),
       description: _descriptionController.text.trim(),
-    ));
+    );
+    setState(() => _saving = true);
+    final ok = await widget.onSubmit(data);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok) Navigator.of(context).pop();
   }
 
   @override
@@ -49,7 +60,9 @@ class _SubjectFormState extends State<SubjectForm> {
     final isEditing = widget.initial != null;
     return AppFormFrame(
       title: isEditing ? 'Editar materia' : 'Nueva materia',
-      actions: [AppButton(label: 'Guardar', onPressed: _submit)],
+      actions: [
+        AppButton(label: 'Guardar', isLoading: _saving, onPressed: _submit),
+      ],
       child: Form(
         key: _formKey,
         child: Column(

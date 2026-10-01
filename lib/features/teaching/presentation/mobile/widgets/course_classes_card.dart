@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/subject_visuals.dart';
@@ -7,6 +8,7 @@ import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../academic_periods/domain/entities/academic_period_entity.dart';
 import '../../shared/class_counts.dart';
 import '../../shared/class_grouping.dart';
+import '../../providers/teaching_provider.dart';
 
 /// One course of the Clases list: its name and students, then a row per
 /// subject the teacher teaches in it. Tapping a subject opens its class.
@@ -138,6 +140,9 @@ class _EntryRow extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final period = entry.period;
     final active = entry.assignment.active;
+    final creating = context.watch<TeachingProvider>().isCreatingClassFor(
+      entry.assignment.id,
+    );
     final academicPeriod = card.academicPeriod;
     final weekly = period == null ? null : card.weeklySessions?[period.id];
     final students = this.students;
@@ -213,12 +218,17 @@ class _EntryRow extends StatelessWidget {
               ],
               if (period == null && academicPeriod != null && active)
                 TextButton(
-                  onPressed: () => card.onCreateClass(entry),
+                  onPressed: creating ? null : () => card.onCreateClass(entry),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.accentBlue,
                     visualDensity: VisualDensity.compact,
                   ),
-                  child: const Text('Crear'),
+                  child: creating
+                      ? const SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Crear'),
                 )
               else if (period != null)
                 Icon(

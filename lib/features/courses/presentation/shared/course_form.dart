@@ -14,7 +14,17 @@ typedef CourseFormResult = ({int gradeId, String name, int academicYear});
 /// Create/edit form for a course. Platform-agnostic: each view opens it
 /// with its own presenter, which supplies the [AppFormFrame] chrome.
 class CourseForm extends StatefulWidget {
-  const CourseForm({super.key, this.initial, required this.levels});
+  const CourseForm({
+    super.key,
+    required this.onSubmit,
+    this.initial,
+    required this.levels,
+  });
+
+  /// Saves the values; the form stays open with its button loading until
+  /// it completes and closes only on success, so a failed save keeps
+  /// what was typed.
+  final Future<bool> Function(CourseFormResult) onSubmit;
 
   final CourseEntity? initial;
   final List<AcademicLevelEntity> levels;
@@ -24,6 +34,7 @@ class CourseForm extends StatefulWidget {
 }
 
 class _CourseFormState extends State<CourseForm> {
+  bool _saving = false;
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(
     text: widget.initial?.name,
@@ -48,14 +59,19 @@ class _CourseFormState extends State<CourseForm> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_gradeId == null) return;
-    Navigator.of(context).pop<CourseFormResult>((
+    final CourseFormResult data = (
       gradeId: _gradeId!,
       name: _nameController.text.trim(),
       academicYear: int.parse(_yearController.text.trim()),
-    ));
+    );
+    setState(() => _saving = true);
+    final ok = await widget.onSubmit(data);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok) Navigator.of(context).pop();
   }
 
   @override
@@ -63,7 +79,9 @@ class _CourseFormState extends State<CourseForm> {
     final isEditing = widget.initial != null;
     return AppFormFrame(
       title: isEditing ? 'Editar curso' : 'Nuevo curso',
-      actions: [AppButton(label: 'Guardar', onPressed: _submit)],
+      actions: [
+        AppButton(label: 'Guardar', isLoading: _saving, onPressed: _submit),
+      ],
       child: Form(
         key: _formKey,
         child: Column(

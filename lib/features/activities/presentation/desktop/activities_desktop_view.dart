@@ -39,16 +39,18 @@ class ActivitiesDesktopView extends StatelessWidget {
   Future<void> _create(BuildContext context) async {
     final period = this.period;
     if (period == null) return;
-    final data = await showDesktopDialog<ActivityFormResult>(
+    final activityId = await showDesktopDialog<int>(
       context,
-      child: const ActivityForm(),
+      child: ActivityForm(
+        onSubmit: (data) => ActivityActions.create(
+          context,
+          teachingPeriodId: period.id,
+          data: data,
+        ),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await ActivityActions.create(
-      context,
-      teachingPeriodId: period.id,
-      data: data,
-    );
+    if (activityId == null || !context.mounted) return;
+    ActivityActions.openCreated(context, activityId);
   }
 
   @override

@@ -18,6 +18,19 @@ extension AppContext on BuildContext {
   void showWarning(String message) => _showNotif(this, _NotifKind.warning, message);
   void showInfo(String message) => _showNotif(this, _NotifKind.info, message);
 
+  /// An explicit "Actualizar datos": the data stays on screen while it's
+  /// re-read, so the re-read is announced at once and the notice cleared
+  /// when it ends.
+  Future<void> refreshWithNotice(Future<void> Function() refresh) async {
+    final messenger = ScaffoldMessenger.maybeOf(this);
+    _showNotif(this, _NotifKind.info, 'Actualizando datos…');
+    try {
+      await refresh();
+    } finally {
+      messenger?.hideCurrentSnackBar();
+    }
+  }
+
   /// Maps an [AppException] to a user-facing message and shows it. Prefer
   /// this over showing `exception.message` directly for anything the user
   /// can act on.

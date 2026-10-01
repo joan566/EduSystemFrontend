@@ -12,8 +12,10 @@ import 'activity_form.dart';
 class ActivityActions {
   ActivityActions._();
 
-  /// Creates the activity and, on success, opens its detail page.
-  static Future<void> create(
+  /// Creates the activity; returns its id, or null (after showing the
+  /// error) when it failed. The form closes with that id and the view then
+  /// calls [openCreated].
+  static Future<int?> create(
     BuildContext context, {
     required int teachingPeriodId,
     required ActivityFormResult data,
@@ -25,13 +27,17 @@ class ActivityActions {
       activityType: data.activityType.isEmpty ? null : data.activityType,
       maximumScore: data.maximumScore,
     );
-    if (!context.mounted) return;
+    if (!context.mounted) return activity?.id;
     if (activity == null) {
       final error = provider.lastError;
       if (error != null) context.showApiError(error);
-    } else {
-      context.showSuccess('Actividad creada.');
-      context.push(RoutePaths.activityDetail(activity.id));
+      return null;
     }
+    context.showSuccess('Actividad creada.');
+    return activity.id;
   }
+
+  /// Opens a just-created activity's detail page.
+  static void openCreated(BuildContext context, int activityId) =>
+      context.push(RoutePaths.activityDetail(activityId));
 }

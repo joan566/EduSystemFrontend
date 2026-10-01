@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../core/extensions/context_extensions.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/state/detail_state.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -243,7 +244,9 @@ class _Header extends StatelessWidget {
               student.studentCode,
             ),
             2 => StudentDetailActions.delete(context, student: student),
-            _ => context.read<StudentsProvider>().refreshDetail(student.id),
+            _ => context.refreshWithNotice(
+              () => context.read<StudentsProvider>().refreshDetail(student.id),
+            ),
           },
           itemBuilder: (context) => [
             const PopupMenuItem(value: 0, child: Text('Copiar código')),

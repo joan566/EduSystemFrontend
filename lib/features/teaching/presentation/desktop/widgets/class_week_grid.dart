@@ -31,16 +31,17 @@ class ClassWeekGrid extends StatelessWidget {
     BuildContext context, {
     ClassScheduleEntity? initial,
   }) async {
-    final data = await showDesktopDialog<ClassScheduleFormResult>(
+    await showDesktopDialog<void>(
       context,
-      child: ClassScheduleForm(initial: initial),
-    );
-    if (data == null || !context.mounted) return;
-    await ClassScheduleActions.save(
-      context,
-      teachingPeriodId: period.id,
-      initial: initial,
-      data: data,
+      child: ClassScheduleForm(
+        initial: initial,
+        onSubmit: (data) => ClassScheduleActions.save(
+          context,
+          teachingPeriodId: period.id,
+          initial: initial,
+          data: data,
+        ),
+      ),
     );
   }
 

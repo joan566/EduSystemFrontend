@@ -11,6 +11,7 @@ import '../../../../../core/widgets/shared/app_status_chip.dart';
 import '../../../../../core/widgets/shared/tinted_icon.dart';
 import '../../../../teaching/domain/entities/teaching_period_entity.dart';
 import '../../../domain/entities/exam_entity.dart';
+import '../../providers/exams_provider.dart';
 import '../../providers/submissions_provider.dart';
 import '../../shared/exam_results_summary.dart';
 import 'exams_table.dart';
@@ -233,6 +234,7 @@ class _PreviewState extends State<_Preview> {
               ? 'Listas para generar e imprimir.'
               : 'Se habilitan al completar las preguntas.',
           actionLabel: exam.ready ? 'Descargar PDF' : null,
+          busy: context.watch<ExamsProvider>().isGeneratingSheets(exam.id),
           onAction: () => actions.onDownloadSheets(exam),
         ),
         _Step(
@@ -326,6 +328,7 @@ class _Step extends StatelessWidget {
     required this.detail,
     required this.onAction,
     this.actionLabel,
+    this.busy = false,
     this.last = false,
   });
 
@@ -334,6 +337,9 @@ class _Step extends StatelessWidget {
   final String detail;
   final String? actionLabel;
   final VoidCallback onAction;
+
+  /// The action is running: its button shows a spinner and is disabled.
+  final bool busy;
   final bool last;
 
   @override
@@ -379,14 +385,19 @@ class _Step extends StatelessWidget {
                   Text(detail, style: textTheme.bodySmall),
                   if (actionLabel != null)
                     TextButton(
-                      onPressed: onAction,
+                      onPressed: busy ? null : onAction,
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.accentBlue,
                         padding: EdgeInsets.zero,
                         minimumSize: const Size(0, 30),
                         visualDensity: VisualDensity.compact,
                       ),
-                      child: Text(actionLabel!),
+                      child: busy
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(actionLabel!),
                     ),
                 ],
               ),

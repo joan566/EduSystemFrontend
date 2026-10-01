@@ -362,12 +362,12 @@ class _SideColumn extends StatelessWidget {
   final GradingConfigurationController controller;
 
   Future<void> _createScale(BuildContext context) async {
-    final data = await showDesktopDialog<GradingScaleFormResult>(
+    await showDesktopDialog<void>(
       context,
-      child: const GradingScaleForm(),
+      child: GradingScaleForm(
+        onSubmit: (data) => controller.createScale(context, data),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await controller.createScale(context, data);
   }
 
   @override

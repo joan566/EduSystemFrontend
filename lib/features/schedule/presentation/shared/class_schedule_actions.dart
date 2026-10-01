@@ -13,7 +13,7 @@ import 'class_schedule_form.dart';
 class ClassScheduleActions {
   ClassScheduleActions._();
 
-  static Future<void> save(
+  static Future<bool> save(
     BuildContext context, {
     required int teachingPeriodId,
     ClassScheduleEntity? initial,
@@ -27,14 +27,15 @@ class ClassScheduleActions {
       endTime: data.endTime,
       room: data.room.isEmpty ? null : data.room,
     );
-    if (!context.mounted) return;
+    if (!context.mounted) return error == null;
     if (error != null) {
       context.showApiError(error);
-    } else {
-      context.showSuccess(
-        initial == null ? 'Bloque agregado.' : 'Bloque actualizado.',
-      );
+      return false;
     }
+    context.showSuccess(
+      initial == null ? 'Bloque agregado.' : 'Bloque actualizado.',
+    );
+    return true;
   }
 
   static Future<void> delete(
@@ -42,22 +43,22 @@ class ClassScheduleActions {
     required int teachingPeriodId,
     required ClassScheduleEntity block,
   }) async {
-    final confirmed = await showAppConfirmDialog(
+    await showAppConfirmDialog(
       context,
       title: 'Eliminar bloque',
       message: '¿Quitar este bloque del horario de la clase?',
       confirmLabel: 'Eliminar',
+      onConfirm: () async {
+        final error = await context
+            .read<ScheduleProvider>()
+            .deleteClassSchedule(teachingPeriodId, block.id);
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess('Bloque eliminado.');
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<ScheduleProvider>().deleteClassSchedule(
-      teachingPeriodId,
-      block.id,
-    );
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Bloque eliminado.');
-    }
   }
 }

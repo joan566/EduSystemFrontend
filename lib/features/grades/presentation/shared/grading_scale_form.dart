@@ -15,13 +15,19 @@ typedef GradingScaleFormResult = ({
 /// Create form for a grading scale. Platform-agnostic: each view opens it
 /// with its own presenter, which supplies the [AppFormFrame] chrome.
 class GradingScaleForm extends StatefulWidget {
-  const GradingScaleForm({super.key});
+  const GradingScaleForm({super.key, required this.onSubmit});
+
+  /// Saves the values; the form stays open with its button loading until
+  /// it completes and closes only on success, so a failed save keeps
+  /// what was typed.
+  final Future<bool> Function(GradingScaleFormResult) onSubmit;
 
   @override
   State<GradingScaleForm> createState() => _GradingScaleFormState();
 }
 
 class _GradingScaleFormState extends State<GradingScaleForm> {
+  bool _saving = false;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _minController = TextEditingController(text: '0');
@@ -35,7 +41,7 @@ class _GradingScaleFormState extends State<GradingScaleForm> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final min = double.parse(_minController.text.trim());
     final max = double.parse(_maxController.text.trim());
@@ -43,18 +49,25 @@ class _GradingScaleFormState extends State<GradingScaleForm> {
       context.showWarning('El mínimo debe ser menor que el máximo.');
       return;
     }
-    Navigator.of(context).pop<GradingScaleFormResult>((
+    final GradingScaleFormResult data = (
       name: _nameController.text.trim(),
       minimumValue: min,
       maximumValue: max,
-    ));
+    );
+    setState(() => _saving = true);
+    final ok = await widget.onSubmit(data);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     return AppFormFrame(
       title: 'Nueva escala',
-      actions: [AppButton(label: 'Guardar', onPressed: _submit)],
+      actions: [
+        AppButton(label: 'Guardar', isLoading: _saving, onPressed: _submit),
+      ],
       child: Form(
         key: _formKey,
         child: Column(

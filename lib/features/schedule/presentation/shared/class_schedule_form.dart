@@ -20,7 +20,12 @@ typedef ClassScheduleFormResult = ({
 /// Create/edit one weekly block of a class (day, start, end, room).
 /// Platform-agnostic: each view presents it with its own [AppFormFrame].
 class ClassScheduleForm extends StatefulWidget {
-  const ClassScheduleForm({super.key, this.initial});
+  const ClassScheduleForm({super.key, required this.onSubmit, this.initial});
+
+  /// Saves the values; the form stays open with its button loading until
+  /// it completes and closes only on success, so a failed save keeps
+  /// what was typed.
+  final Future<bool> Function(ClassScheduleFormResult) onSubmit;
 
   final ClassScheduleEntity? initial;
 
@@ -29,6 +34,7 @@ class ClassScheduleForm extends StatefulWidget {
 }
 
 class _ClassScheduleFormState extends State<ClassScheduleForm> {
+  bool _saving = false;
   final _formKey = GlobalKey<FormState>();
   late int _dayOfWeek = widget.initial?.dayOfWeek ?? DateTime.monday;
   late ClockTime _start = widget.initial?.startTime ?? const ClockTime(7, 0);
@@ -58,25 +64,32 @@ class _ClassScheduleFormState extends State<ClassScheduleForm> {
     setState(() => isStart ? _start = value : _end = value);
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_end.compareTo(_start) <= 0) {
       context.showWarning('La hora de fin debe ser posterior a la de inicio.');
       return;
     }
-    Navigator.of(context).pop<ClassScheduleFormResult>((
+    final ClassScheduleFormResult data = (
       dayOfWeek: _dayOfWeek,
       startTime: _start,
       endTime: _end,
       room: _roomController.text.trim(),
-    ));
+    );
+    setState(() => _saving = true);
+    final ok = await widget.onSubmit(data);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     return AppFormFrame(
       title: widget.initial == null ? 'Agregar bloque' : 'Editar bloque',
-      actions: [AppButton(label: 'Guardar', onPressed: _submit)],
+      actions: [
+        AppButton(label: 'Guardar', isLoading: _saving, onPressed: _submit),
+      ],
       child: Form(
         key: _formKey,
         child: Column(

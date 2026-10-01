@@ -15,13 +15,19 @@ typedef ActivityFormResult = ({
 /// Create form for an activity. Platform-agnostic: each view opens it with
 /// its own presenter, which supplies the [AppFormFrame] chrome.
 class ActivityForm extends StatefulWidget {
-  const ActivityForm({super.key});
+  const ActivityForm({super.key, required this.onSubmit});
+
+  /// Saves the values; the form stays open with its button loading until
+  /// it completes and closes only on success, so a failed save keeps
+  /// what was typed.
+  final Future<int?> Function(ActivityFormResult) onSubmit;
 
   @override
   State<ActivityForm> createState() => _ActivityFormState();
 }
 
 class _ActivityFormState extends State<ActivityForm> {
+  bool _saving = false;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _typeController = TextEditingController();
@@ -35,20 +41,27 @@ class _ActivityFormState extends State<ActivityForm> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.of(context).pop<ActivityFormResult>((
+    final ActivityFormResult data = (
       name: _nameController.text.trim(),
       activityType: _typeController.text.trim(),
       maximumScore: double.parse(_maxScoreController.text.trim()),
-    ));
+    );
+    setState(() => _saving = true);
+    final result = await widget.onSubmit(data);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (result != null) Navigator.of(context).pop(result);
   }
 
   @override
   Widget build(BuildContext context) {
     return AppFormFrame(
       title: 'Nueva actividad',
-      actions: [AppButton(label: 'Crear', onPressed: _submit)],
+      actions: [
+        AppButton(label: 'Crear', isLoading: _saving, onPressed: _submit),
+      ],
       child: Form(
         key: _formKey,
         child: Column(

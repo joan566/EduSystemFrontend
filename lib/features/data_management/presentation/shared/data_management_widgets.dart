@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/state/list_state.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../core/widgets/shared/app_async_button.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_download.dart';
 import '../../../../core/widgets/shared/app_empty_state.dart';
@@ -118,7 +119,7 @@ class ImportResultSummary extends StatelessWidget {
   });
 
   final ImportResultEntity result;
-  final VoidCallback? onDownloadErrors;
+  final Future<void> Function()? onDownloadErrors;
   final VoidCallback onDismiss;
 
   @override
@@ -174,7 +175,7 @@ class ImportResultSummary extends StatelessWidget {
           ],
           if (onDownloadErrors != null) ...[
             const SizedBox(height: 12),
-            AppButton(
+            AppAsyncButton(
               label: 'Descargar reporte de errores',
               icon: Icons.download_outlined,
               variant: AppButtonVariant.outlined,

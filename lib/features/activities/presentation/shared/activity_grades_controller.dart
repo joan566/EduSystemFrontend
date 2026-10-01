@@ -73,23 +73,28 @@ class ActivityGradesController extends ChangeNotifier {
 
   /// Deletes the activity and pops back to the list.
   Future<void> delete(BuildContext context, ActivityEntity activity) async {
-    final confirmed = await showAppConfirmDialog(
+    var deleted = false;
+    await showAppConfirmDialog(
       context,
       title: 'Eliminar actividad',
       message: 'Esta acción no se puede deshacer.',
       confirmLabel: 'Eliminar',
+      onConfirm: () async {
+        final error = await context.read<ActivitiesProvider>().delete(
+          activity.id,
+          teachingPeriodId: activity.teachingPeriodId,
+        );
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          deleted = true;
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<ActivitiesProvider>().delete(
-      activity.id,
-      teachingPeriodId: activity.teachingPeriodId,
-    );
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      Navigator.of(context).pop();
-    }
+    if (!deleted || !context.mounted) return;
+    Navigator.of(context).pop();
+    context.showSuccess('Actividad eliminada.');
   }
 
   @override

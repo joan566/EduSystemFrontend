@@ -73,12 +73,12 @@ class GradingSettingsMobileView extends StatelessWidget {
   }
 
   Future<void> _createScale(BuildContext context) async {
-    final data = await showMobileForm<GradingScaleFormResult>(
+    await showMobileForm<void>(
       context,
-      child: const GradingScaleForm(),
+      child: GradingScaleForm(
+        onSubmit: (data) => config!.createScale(context, data),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await config!.createScale(context, data);
   }
 
   @override

@@ -28,24 +28,25 @@ class StudentDetailActions {
     required int studentId,
     required StudentEnrollmentEntity enrollment,
   }) async {
-    final confirmed = await showAppConfirmDialog(
+    await showAppConfirmDialog(
       context,
       title: 'Retirar estudiante',
       message:
           'El estudiante se retirará de ${enrollment.courseLabel}. Se conservará su historial.',
       confirmLabel: 'Retirar',
+      onConfirm: () async {
+        final error = await context.read<StudentsProvider>().withdraw(
+          studentId,
+          enrollment.groupId,
+        );
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess('Estudiante retirado del curso.');
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<StudentsProvider>().withdraw(
-      studentId,
-      enrollment.groupId,
-    );
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Estudiante retirado del curso.');
-    }
   }
 
   /// Permanent delete of the student and everything tied to them. The
@@ -55,7 +56,8 @@ class StudentDetailActions {
     BuildContext context, {
     required StudentEntity student,
   }) async {
-    final confirmed = await showAppConfirmDialog(
+    var deleted = false;
+    await showAppConfirmDialog(
       context,
       title: 'Eliminar estudiante',
       message:
@@ -65,14 +67,17 @@ class StudentDetailActions {
           'Si solo quieres sacarlo de un grupo, usa "Retirar": así se '
           'conserva su historial.',
       confirmLabel: 'Eliminar definitivamente',
+      onConfirm: () async {
+        final error = await context.read<StudentsProvider>().delete(student.id);
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          deleted = true;
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<StudentsProvider>().delete(student.id);
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-      return;
-    }
+    if (!deleted || !context.mounted) return;
     context.showSuccess('Estudiante eliminado.');
     if (context.canPop()) {
       context.pop();

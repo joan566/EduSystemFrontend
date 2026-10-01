@@ -245,23 +245,39 @@ class TeachingProvider extends SessionNotifier {
     if (fresh != null) _periods.upsert(fresh);
   }
 
+  /// Assignments whose class is being created right now, so every
+  /// "Crear clase" button for them shows it and can't send a second create.
+  final Set<int> _creatingClassFor = {};
+
+  bool isCreatingClassFor(int teachingAssignmentId) =>
+      _creatingClassFor.contains(teachingAssignmentId);
+
   Future<AppException?> createPeriod({
     required int teachingAssignmentId,
     required int academicPeriodId,
-  }) => _guard(() async {
-    _periods.upsert(
-      await _repository.createPeriod(
-        teachingAssignmentId: teachingAssignmentId,
-        academicPeriodId: academicPeriodId,
-      ),
-    );
-    publish(
-      const CatalogChanged(
-        CatalogResource.teachingPeriods,
-        CatalogChange.created,
-      ),
-    );
-  });
+  }) async {
+    _creatingClassFor.add(teachingAssignmentId);
+    notifyListeners();
+    try {
+      return await _guard(() async {
+        _periods.upsert(
+          await _repository.createPeriod(
+            teachingAssignmentId: teachingAssignmentId,
+            academicPeriodId: academicPeriodId,
+          ),
+        );
+        publish(
+          const CatalogChanged(
+            CatalogResource.teachingPeriods,
+            CatalogChange.created,
+          ),
+        );
+      });
+    } finally {
+      _creatingClassFor.remove(teachingAssignmentId);
+      notifyListeners();
+    }
+  }
 
   Future<AppException?> deletePeriod(int id) => _guard(() async {
     await _repository.deletePeriod(id);

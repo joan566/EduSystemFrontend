@@ -25,7 +25,7 @@ class CourseActions {
     return levels;
   }
 
-  static Future<void> save(
+  static Future<bool> save(
     BuildContext context, {
     CourseEntity? initial,
     required CourseFormResult data,
@@ -42,31 +42,33 @@ class CourseActions {
             name: data.name,
             academicYear: data.academicYear,
           );
-    if (!context.mounted) return;
+    if (!context.mounted) return error == null;
     if (error != null) {
       context.showApiError(error);
-    } else {
-      context.showSuccess(
-        initial == null ? 'Curso creado.' : 'Curso actualizado.',
-      );
+      return false;
     }
+    context.showSuccess(
+      initial == null ? 'Curso creado.' : 'Curso actualizado.',
+    );
+    return true;
   }
 
   static Future<void> delete(BuildContext context, CourseEntity course) async {
-    final confirmed = await showAppConfirmDialog(
+    await showAppConfirmDialog(
       context,
       title: 'Eliminar curso',
       message:
           'Esta acción no se puede deshacer. ¿Eliminar "${course.displayName}"?',
       confirmLabel: 'Eliminar',
+      onConfirm: () async {
+        final error = await context.read<CoursesProvider>().delete(course.id);
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess('Curso eliminado.');
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<CoursesProvider>().delete(course.id);
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Curso eliminado.');
-    }
   }
 }

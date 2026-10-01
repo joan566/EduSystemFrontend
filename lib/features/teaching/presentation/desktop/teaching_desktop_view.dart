@@ -20,8 +20,8 @@ import '../../../subjects/presentation/providers/subjects_provider.dart';
 import '../providers/teaching_provider.dart';
 import '../shared/class_grouping.dart';
 import '../shared/class_lookup.dart';
+import '../shared/add_classes_form_loader.dart';
 import '../shared/teaching_actions.dart';
-import '../shared/teaching_forms.dart';
 import 'widgets/class_preview_panel.dart';
 import 'widgets/classes_table.dart';
 
@@ -57,24 +57,16 @@ class TeachingDesktopView extends StatelessWidget {
   static const _previewMinWidth = 1100.0;
   static const _previewWidth = 360.0;
 
-  Future<void> _addClasses(BuildContext context, {int? groupId}) async {
-    final inputs = await TeachingActions.addClassesFormInputs(context);
-    if (inputs == null || !context.mounted) return;
-    final data = await showDesktopDialog<AddClassesResult>(
-      context,
-      width: 560,
-      child: AddClassesForm(
-        courses: inputs.courses,
-        subjects: inputs.subjects,
-        academicPeriods: inputs.academicPeriods,
-        assignments: inputs.assignments,
-        initialGroupId: groupId,
-        initialAcademicPeriodId: academicPeriodId,
-      ),
-    );
-    if (data == null || !context.mounted) return;
-    await TeachingActions.addClasses(context, data);
-  }
+  Future<void> _addClasses(BuildContext context, {int? groupId}) =>
+      showDesktopDialog<void>(
+        context,
+        width: 560,
+        child: AddClassesFormLoader(
+          initialGroupId: groupId,
+          initialAcademicPeriodId: academicPeriodId,
+          onSubmit: (data) => TeachingActions.addClasses(context, data),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {

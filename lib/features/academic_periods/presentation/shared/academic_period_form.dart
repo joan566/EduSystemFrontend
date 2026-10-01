@@ -18,7 +18,12 @@ typedef AcademicPeriodFormResult = ({
 /// Create/edit form for an academic period. Platform-agnostic: each view
 /// opens it with its own presenter, which supplies the [AppFormFrame] chrome.
 class AcademicPeriodForm extends StatefulWidget {
-  const AcademicPeriodForm({super.key, this.initial});
+  const AcademicPeriodForm({super.key, required this.onSubmit, this.initial});
+
+  /// Saves the values; the form stays open with its button loading until
+  /// it completes and closes only on success, so a failed save keeps
+  /// what was typed.
+  final Future<bool> Function(AcademicPeriodFormResult) onSubmit;
 
   final AcademicPeriodEntity? initial;
 
@@ -27,6 +32,7 @@ class AcademicPeriodForm extends StatefulWidget {
 }
 
 class _AcademicPeriodFormState extends State<AcademicPeriodForm> {
+  bool _saving = false;
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(
     text: widget.initial?.name,
@@ -65,7 +71,7 @@ class _AcademicPeriodFormState extends State<AcademicPeriodForm> {
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_startDate == null || _endDate == null) {
       context.showWarning('Selecciona la fecha de inicio y fin.');
@@ -75,11 +81,16 @@ class _AcademicPeriodFormState extends State<AcademicPeriodForm> {
       context.showWarning('La fecha de fin debe ser posterior a la de inicio.');
       return;
     }
-    Navigator.of(context).pop<AcademicPeriodFormResult>((
+    final AcademicPeriodFormResult data = (
       name: _nameController.text.trim(),
       startDate: _startDate!,
       endDate: _endDate!,
-    ));
+    );
+    setState(() => _saving = true);
+    final ok = await widget.onSubmit(data);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok) Navigator.of(context).pop();
   }
 
   @override
@@ -87,7 +98,9 @@ class _AcademicPeriodFormState extends State<AcademicPeriodForm> {
     final isEditing = widget.initial != null;
     return AppFormFrame(
       title: isEditing ? 'Editar periodo' : 'Nuevo periodo',
-      actions: [AppButton(label: 'Guardar', onPressed: _submit)],
+      actions: [
+        AppButton(label: 'Guardar', isLoading: _saving, onPressed: _submit),
+      ],
       child: Form(
         key: _formKey,
         child: Column(

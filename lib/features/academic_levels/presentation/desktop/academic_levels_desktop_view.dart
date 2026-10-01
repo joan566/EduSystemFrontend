@@ -43,12 +43,14 @@ class AcademicLevelsDesktopView extends StatelessWidget {
     BuildContext context, {
     AcademicLevelEntity? initial,
   }) async {
-    final data = await showDesktopDialog<AcademicLevelFormResult>(
+    await showDesktopDialog<void>(
       context,
-      child: AcademicLevelForm(initial: initial),
+      child: AcademicLevelForm(
+        initial: initial,
+        onSubmit: (data) =>
+            AcademicLevelActions.save(context, initial: initial, data: data),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await AcademicLevelActions.save(context, initial: initial, data: data);
   }
 
   @override
@@ -58,7 +60,8 @@ class AcademicLevelsDesktopView extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     final Widget main = switch (state.status) {
-      ViewStatus.initial || ViewStatus.loading => const DesktopListTableSkeleton(
+      ViewStatus.initial ||
+      ViewStatus.loading => const DesktopListTableSkeleton(
         columns: [
           SkeletonColumn('Grado', flex: 5, cell: SkeletonCell.badge),
           SkeletonColumn('Tus cursos', flex: 4),

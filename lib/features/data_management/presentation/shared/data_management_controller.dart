@@ -25,6 +25,8 @@ class DataManagementController extends ChangeNotifier {
   PickedFile? _schoolSetupPicked;
   PickedFile? get schoolSetupPicked => _schoolSetupPicked;
 
+  /// The download (export or template) currently running, so its button
+  /// shows the loading state.
   String? _exportLoadingAction;
   bool isExporting(String action) => _exportLoadingAction == action;
 
@@ -46,15 +48,12 @@ class DataManagementController extends ChangeNotifier {
   Future<void> _runExport(
     BuildContext context,
     String action,
-    Future<BinaryDownload> Function() fetch,
-  ) async {
+    Future<BinaryDownload> Function() fetch, {
+    String errorMessage = 'No se pudo generar la exportación.',
+  }) async {
     _update(() => _exportLoadingAction = action);
     try {
-      await fetchAndSaveFile(
-        context,
-        fetch: fetch,
-        errorMessage: 'No se pudo generar la exportación.',
-      );
+      await fetchAndSaveFile(context, fetch: fetch, errorMessage: errorMessage);
     } finally {
       _update(() => _exportLoadingAction = null);
     }
@@ -62,18 +61,20 @@ class DataManagementController extends ChangeNotifier {
 
   Future<void> downloadStudentsTemplate(BuildContext context) {
     final provider = context.read<ImportsProvider>();
-    return fetchAndSaveFile(
+    return _runExport(
       context,
-      fetch: provider.downloadTemplate,
+      'studentsTemplate',
+      provider.downloadTemplate,
       errorMessage: 'No se pudo descargar la plantilla.',
     );
   }
 
   Future<void> downloadSchoolSetupTemplate(BuildContext context) {
     final provider = context.read<ImportsProvider>();
-    return fetchAndSaveFile(
+    return _runExport(
       context,
-      fetch: provider.downloadSchoolSetupTemplate,
+      'schoolSetupTemplate',
+      provider.downloadSchoolSetupTemplate,
       errorMessage: 'No se pudo descargar la plantilla.',
     );
   }

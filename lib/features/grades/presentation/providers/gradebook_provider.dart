@@ -144,20 +144,37 @@ class GradebookProvider extends SessionNotifier {
     await _rereadDetail(detail);
   });
 
+  /// Grade details (evaluation, student) whose attachment is uploading, so
+  /// the drop zone / picker show it and can't start a second upload.
+  final Set<(int, int)> _uploading = {};
+
+  bool isUploadingAttachment(GradeDetailEntity detail) =>
+      _uploading.contains((detail.evaluation.evaluationId, detail.student.id));
+
   Future<AppException?> uploadAttachment(
     GradeDetailEntity detail, {
     required List<int> bytes,
     required String fileName,
-  }) => _guard(() async {
-    await _repository.uploadAttachment(
-      detail.evaluation.evaluationId,
-      detail.student.id,
-      bytes: bytes,
-      fileName: fileName,
-    );
-    _announce(detail.teachingPeriodId, ClassAspect.annotations);
-    await _rereadDetail(detail);
-  });
+  }) async {
+    final key = (detail.evaluation.evaluationId, detail.student.id);
+    _uploading.add(key);
+    notifyListeners();
+    try {
+      return await _guard(() async {
+        await _repository.uploadAttachment(
+          detail.evaluation.evaluationId,
+          detail.student.id,
+          bytes: bytes,
+          fileName: fileName,
+        );
+        _announce(detail.teachingPeriodId, ClassAspect.annotations);
+        await _rereadDetail(detail);
+      });
+    } finally {
+      _uploading.remove(key);
+      notifyListeners();
+    }
+  }
 
   Future<BinaryDownload> downloadAttachment(GradeDetailEntity detail) =>
       _repository.downloadAttachment(

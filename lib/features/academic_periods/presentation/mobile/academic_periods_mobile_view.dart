@@ -44,12 +44,14 @@ class AcademicPeriodsMobileView extends StatelessWidget {
     BuildContext context, {
     AcademicPeriodEntity? initial,
   }) async {
-    final data = await showMobileForm<AcademicPeriodFormResult>(
+    await showMobileForm<void>(
       context,
-      child: AcademicPeriodForm(initial: initial),
+      child: AcademicPeriodForm(
+        initial: initial,
+        onSubmit: (data) =>
+            AcademicPeriodActions.save(context, initial: initial, data: data),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await AcademicPeriodActions.save(context, initial: initial, data: data);
   }
 
   @override
@@ -83,7 +85,8 @@ class AcademicPeriodsMobileView extends StatelessWidget {
           ),
           Expanded(
             child: switch (state.status) {
-              ViewStatus.initial || ViewStatus.loading => const MobileListSkeleton(
+              ViewStatus.initial ||
+              ViewStatus.loading => const MobileListSkeleton(
                 leading: SkeletonLeading.square,
                 leadingSize: 48,
                 meta: true,

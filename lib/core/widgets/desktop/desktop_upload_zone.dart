@@ -1,6 +1,7 @@
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 
+import '../shared/app_loading.dart';
 import '../shared/picked_file.dart';
 
 /// Desktop file intake (§30, §31, §44): a drag & drop zone with a file
@@ -12,12 +13,17 @@ class DesktopUploadZone extends StatefulWidget {
     this.allowedExtensions,
     this.title = 'Arrastra tu archivo aquí',
     this.subtitle,
+    this.busy = false,
   });
 
   final void Function(PickedFile file) onFilePicked;
   final List<String>? allowedExtensions;
   final String title;
   final String? subtitle;
+
+  /// True while the picked file is being uploaded: drops and picks are
+  /// ignored and the zone shows an indeterminate progress bar.
+  final bool busy;
 
   @override
   State<DesktopUploadZone> createState() => _DesktopUploadZoneState();
@@ -45,6 +51,7 @@ class _DesktopUploadZoneState extends State<DesktopUploadZone> {
     final colors = Theme.of(context).colorScheme;
 
     return DropTarget(
+      enable: !widget.busy,
       onDragEntered: (_) => setState(() => _dragging = true),
       onDragExited: (_) => setState(() => _dragging = false),
       onDragDone: (details) async {
@@ -76,22 +83,38 @@ class _DesktopUploadZoneState extends State<DesktopUploadZone> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_upload_outlined, size: 32, color: colors.primary),
-            const SizedBox(height: 12),
-            Text(widget.title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text('o', style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: _pickFile,
-              child: const Text('Seleccionar archivo'),
-            ),
-            if (widget.subtitle != null) ...[
+            if (widget.busy) ...[
+              Text(
+                'Subiendo archivo…',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              const SizedBox(width: 240, child: AppProgressBar()),
+            ] else ...[
+              Icon(
+                Icons.cloud_upload_outlined,
+                size: 32,
+                color: colors.primary,
+              ),
               const SizedBox(height: 12),
               Text(
-                widget.subtitle!,
-                style: Theme.of(context).textTheme.bodySmall,
+                widget.title,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
+              const SizedBox(height: 4),
+              Text('o', style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: _pickFile,
+                child: const Text('Seleccionar archivo'),
+              ),
+              if (widget.subtitle != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  widget.subtitle!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ],
           ],
         ),

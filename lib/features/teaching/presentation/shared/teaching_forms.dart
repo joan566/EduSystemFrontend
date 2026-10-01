@@ -28,9 +28,14 @@ class AddClassesForm extends StatefulWidget {
     required this.subjects,
     required this.academicPeriods,
     required this.assignments,
+    required this.onSubmit,
     this.initialGroupId,
     this.initialAcademicPeriodId,
   });
+
+  /// Adds the classes; the form stays open with its button loading until
+  /// it completes and closes only on success.
+  final Future<bool> Function(AddClassesResult) onSubmit;
 
   final List<CourseEntity> courses;
   final List<SubjectEntity> subjects;
@@ -48,6 +53,7 @@ class AddClassesForm extends StatefulWidget {
 
 class _AddClassesFormState extends State<AddClassesForm> {
   final _formKey = GlobalKey<FormState>();
+  bool _saving = false;
   late int? _groupId =
       widget.courses
           .where((c) => c.id == widget.initialGroupId)
@@ -83,15 +89,19 @@ class _AddClassesFormState extends State<AddClassesForm> {
       if (a.groupId == _groupId) a.subjectId,
   };
 
-  void _submit() {
+  Future<void> _submit() async {
     final valid = _formKey.currentState!.validate();
     setState(() => _showSubjectError = _subjectIds.isEmpty);
     if (!valid || _subjectIds.isEmpty || _groupId == null) return;
-    Navigator.of(context).pop<AddClassesResult>((
+    setState(() => _saving = true);
+    final ok = await widget.onSubmit((
       groupId: _groupId!,
       subjectIds: _subjectIds.toList(),
       academicPeriodId: _academicPeriodId,
     ));
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok) Navigator.of(context).pop();
   }
 
   @override
@@ -101,7 +111,9 @@ class _AddClassesFormState extends State<AddClassesForm> {
 
     return AppFormFrame(
       title: 'Agregar materias a un curso',
-      actions: [AppButton(label: 'Guardar', onPressed: _submit)],
+      actions: [
+        AppButton(label: 'Guardar', isLoading: _saving, onPressed: _submit),
+      ],
       child: Form(
         key: _formKey,
         child: Column(

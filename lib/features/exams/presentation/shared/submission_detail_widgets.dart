@@ -18,7 +18,8 @@ import '../providers/submissions_provider.dart';
 
 /// Manual review mutations with user feedback, shared by both views: each
 /// view presents [CorrectAnswerForm] / [FinalGradeForm] its own way and
-/// hands the result here.
+/// passes these as the form's `onSubmit`. They return whether the change
+/// was saved (the form closes only then).
 class SubmissionReviewActions {
   SubmissionReviewActions._();
 
@@ -27,50 +28,52 @@ class SubmissionReviewActions {
   static int? _classOf(BuildContext context, int examId) =>
       context.read<ExamsProvider>().detail(examId).data?.teachingPeriodId;
 
-  static Future<void> correctAnswer(
+  /// [selectedOption] is the letter the student marked, null for
+  /// "Sin respuesta".
+  static Future<bool> correctAnswer(
     BuildContext context, {
     required int examId,
     required int submissionId,
     required SubmissionAnswer answer,
-    required String? result,
+    required String? selectedOption,
   }) async {
-    if (result == CorrectAnswerForm.unchanged) return;
     final error = await context.read<SubmissionsProvider>().correctAnswer(
       examId,
       submissionId,
       answer.questionNumber,
-      selectedOption: result,
+      selectedOption: selectedOption,
       reason: 'Corrección manual del profesor',
       teachingPeriodId: _classOf(context, examId),
     );
-    if (!context.mounted) return;
+    if (!context.mounted) return error == null;
     if (error != null) {
       context.showApiError(error);
-    } else {
-      context.showSuccess('Respuesta corregida.');
+      return false;
     }
+    context.showSuccess('Respuesta corregida.');
+    return true;
   }
 
-  static Future<void> setFinalGrade(
+  static Future<bool> setFinalGrade(
     BuildContext context, {
     required int examId,
     required int submissionId,
-    required double? result,
+    required double finalGrade,
   }) async {
-    if (result == null) return;
     final error = await context.read<SubmissionsProvider>().setFinalGrade(
       examId,
       submissionId,
-      finalGrade: result,
+      finalGrade: finalGrade,
       reason: 'Ajuste manual del profesor',
       teachingPeriodId: _classOf(context, examId),
     );
-    if (!context.mounted) return;
+    if (!context.mounted) return error == null;
     if (error != null) {
       context.showApiError(error);
-    } else {
-      context.showSuccess('Calificación final actualizada.');
+      return false;
     }
+    context.showSuccess('Calificación final actualizada.');
+    return true;
   }
 }
 
@@ -258,17 +261,56 @@ class SubmissionImagePreview extends StatelessWidget {
   }
 }
 
-/// Pick the option the student actually marked. Pops the letter, null for
-/// "Sin respuesta", or [unchanged].
-class CorrectAnswerForm extends StatelessWidget {
-  const CorrectAnswerForm({super.key, required this.answer});
-
-  static const unchanged = '__unchanged__';
+/// Pick the option the student actually marked. Tapping a choice saves it
+/// through [onSubmit] (the chip shows it's saving) and closes on success;
+/// closing without picking changes nothing.
+class CorrectAnswerForm extends StatefulWidget {
+  const CorrectAnswerForm({
+    super.key,
+    required this.answer,
+    required this.onSubmit,
+  });
 
   final SubmissionAnswer answer;
 
+  /// Saves the picked letter, or null for "Sin respuesta".
+  final Future<bool> Function(String? selectedOption) onSubmit;
+
+  @override
+  State<CorrectAnswerForm> createState() => _CorrectAnswerFormState();
+}
+
+class _CorrectAnswerFormState extends State<CorrectAnswerForm> {
+  bool _saving = false;
+
+  /// The choice being saved: a letter, or '' for "Sin respuesta".
+  String? _savingChoice;
+
+  Future<void> _pick(String? letter) async {
+    if (_saving) return;
+    setState(() {
+      _saving = true;
+      _savingChoice = letter ?? '';
+    });
+    final ok = await widget.onSubmit(letter);
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      _savingChoice = null;
+    });
+    if (ok) Navigator.of(context).pop();
+  }
+
+  Widget? _spinnerFor(String choice) => _savingChoice == choice
+      ? const SizedBox.square(
+          dimension: 14,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        )
+      : null;
+
   @override
   Widget build(BuildContext context) {
+    final answer = widget.answer;
     final letters = <String>{
       answer.correctOption,
       if (answer.selectedOption != null) answer.selectedOption!,
@@ -287,14 +329,16 @@ class CorrectAnswerForm extends StatelessWidget {
             children: [
               for (final letter in letters.take(6))
                 ChoiceChip(
+                  avatar: _spinnerFor(letter),
                   label: Text(letter),
                   selected: answer.selectedOption == letter,
-                  onSelected: (_) => Navigator.of(context).pop(letter),
+                  onSelected: _saving ? null : (_) => _pick(letter),
                 ),
               ChoiceChip(
+                avatar: _spinnerFor(''),
                 label: const Text('Sin respuesta'),
                 selected: answer.selectedOption == null,
-                onSelected: (_) => Navigator.of(context).pop(null),
+                onSelected: _saving ? null : (_) => _pick(null),
               ),
             ],
           ),
@@ -304,17 +348,24 @@ class CorrectAnswerForm extends StatelessWidget {
   }
 }
 
-/// Manual final grade within the submission's scale; pops the value.
+/// Manual final grade within the submission's scale, saved through
+/// [onSubmit]; closes on success.
 class FinalGradeForm extends StatefulWidget {
-  const FinalGradeForm({super.key, required this.submission});
+  const FinalGradeForm({
+    super.key,
+    required this.submission,
+    required this.onSubmit,
+  });
 
   final SubmissionEntity submission;
+  final Future<bool> Function(double finalGrade) onSubmit;
 
   @override
   State<FinalGradeForm> createState() => _FinalGradeFormState();
 }
 
 class _FinalGradeFormState extends State<FinalGradeForm> {
+  bool _saving = false;
   late final _controller = TextEditingController(
     text: widget.submission.finalGrade?.toString(),
   );
@@ -323,6 +374,21 @@ class _FinalGradeFormState extends State<FinalGradeForm> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit(num min, num max) async {
+    final value = double.tryParse(_controller.text.trim());
+    if (value == null || value < min || value > max) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ingresa un valor entre $min y $max.')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    final ok = await widget.onSubmit(value);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (ok) Navigator.of(context).pop();
   }
 
   @override
@@ -334,16 +400,8 @@ class _FinalGradeFormState extends State<FinalGradeForm> {
       actions: [
         AppButton(
           label: 'Guardar',
-          onPressed: () {
-            final value = double.tryParse(_controller.text.trim());
-            if (value == null || value < min || value > max) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Ingresa un valor entre $min y $max.')),
-              );
-              return;
-            }
-            Navigator.of(context).pop(value);
-          },
+          isLoading: _saving,
+          onPressed: () => _submit(min, max),
         ),
       ],
       child: AppTextField(

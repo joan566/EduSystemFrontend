@@ -11,6 +11,7 @@ import '../../../../core/widgets/desktop/desktop_dialog.dart';
 import '../../../../core/widgets/desktop/desktop_section_card.dart';
 import '../../../../core/widgets/desktop/desktop_skeletons.dart';
 import '../../../../core/widgets/desktop/desktop_upload_zone.dart';
+import '../../../../core/widgets/shared/app_async_button.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/picked_file.dart';
@@ -770,6 +771,9 @@ class _AttachmentCard extends StatelessWidget {
     final attachment = detail.attachment;
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
+    final uploading = context.watch<GradebookProvider>().isUploadingAttachment(
+      detail,
+    );
 
     return DesktopSectionCard(
       icon: Icons.attach_file,
@@ -783,6 +787,7 @@ class _AttachmentCard extends StatelessWidget {
                 subtitle:
                     'o haz clic para elegirlo · PDF, Word, Excel, PowerPoint o imagen, máx. 10 MB',
                 allowedExtensions: GradebookActions.attachmentExtensions,
+                busy: uploading,
                 onFilePicked: (file) =>
                     GradebookActions.upload(context, detail, file),
               )
@@ -822,11 +827,11 @@ class _AttachmentCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                        IconButton(
+                        AppAsyncIconButton(
                           tooltip: 'Descargar',
                           onPressed: () =>
                               GradebookActions.download(context, detail),
-                          icon: const Icon(Icons.download_outlined),
+                          icon: Icons.download_outlined,
                         ),
                       ],
                     ),
@@ -836,21 +841,30 @@ class _AttachmentCard extends StatelessWidget {
                     alignment: WrapAlignment.spaceBetween,
                     children: [
                       TextButton.icon(
-                        onPressed: () async {
-                          final file = await pickSingleFile(
-                            allowedExtensions:
-                                GradebookActions.attachmentExtensions,
-                          );
-                          if (file != null && context.mounted) {
-                            await GradebookActions.upload(
-                              context,
-                              detail,
-                              file,
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.swap_horiz, size: 18),
-                        label: const Text('Reemplazar'),
+                        onPressed: uploading
+                            ? null
+                            : () async {
+                                final file = await pickSingleFile(
+                                  allowedExtensions:
+                                      GradebookActions.attachmentExtensions,
+                                );
+                                if (file != null && context.mounted) {
+                                  await GradebookActions.upload(
+                                    context,
+                                    detail,
+                                    file,
+                                  );
+                                }
+                              },
+                        icon: uploading
+                            ? const SizedBox.square(
+                                dimension: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.swap_horiz, size: 18),
+                        label: Text(uploading ? 'Subiendo…' : 'Reemplazar'),
                       ),
 
                       TextButton.icon(

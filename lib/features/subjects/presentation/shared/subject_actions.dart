@@ -12,7 +12,7 @@ import 'subject_form.dart';
 class SubjectActions {
   SubjectActions._();
 
-  static Future<void> save(
+  static Future<bool> save(
     BuildContext context, {
     SubjectEntity? initial,
     required SubjectFormResult data,
@@ -26,33 +26,35 @@ class SubjectActions {
             name: data.name,
             description: description,
           );
-    if (!context.mounted) return;
+    if (!context.mounted) return error == null;
     if (error != null) {
       context.showApiError(error);
-    } else {
-      context.showSuccess(
-        initial == null ? 'Materia creada.' : 'Materia actualizada.',
-      );
+      return false;
     }
+    context.showSuccess(
+      initial == null ? 'Materia creada.' : 'Materia actualizada.',
+    );
+    return true;
   }
 
   static Future<void> delete(
     BuildContext context,
     SubjectEntity subject,
   ) async {
-    final confirmed = await showAppConfirmDialog(
+    await showAppConfirmDialog(
       context,
       title: 'Eliminar materia',
       message: 'Esta acción no se puede deshacer. ¿Eliminar "${subject.name}"?',
       confirmLabel: 'Eliminar',
+      onConfirm: () async {
+        final error = await context.read<SubjectsProvider>().delete(subject.id);
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess('Materia eliminada.');
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<SubjectsProvider>().delete(subject.id);
-    if (!context.mounted) return;
-    if (error != null) {
-      context.showApiError(error);
-    } else {
-      context.showSuccess('Materia eliminada.');
-    }
   }
 }

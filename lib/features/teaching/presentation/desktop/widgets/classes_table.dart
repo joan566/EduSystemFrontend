@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../../core/theme/app_colors.dart';
@@ -9,6 +10,7 @@ import '../../../../academic_periods/domain/entities/academic_period_entity.dart
 import '../../../domain/entities/teaching_assignment_entity.dart';
 import '../../../domain/entities/teaching_period_entity.dart';
 import '../../shared/class_lookup.dart';
+import '../../providers/teaching_provider.dart';
 
 /// One table row: a subject taught in a course and its class in the
 /// chosen period.
@@ -476,10 +478,18 @@ class _PeriodCell extends StatelessWidget {
       if (academicPeriod == null) {
         return Text('Sin clases', style: Theme.of(context).textTheme.bodySmall);
       }
+      final creating = context.watch<TeachingProvider>().isCreatingClassFor(
+        row.assignment.id,
+      );
       return TextButton.icon(
-        onPressed: onCreate,
-        icon: const Icon(Icons.add, size: 16),
-        label: const Text('Crear clase'),
+        onPressed: creating ? null : onCreate,
+        icon: creating
+            ? const SizedBox.square(
+                dimension: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.add, size: 16),
+        label: Text(creating ? 'Creando…' : 'Crear clase'),
         style: TextButton.styleFrom(
           foregroundColor: AppColors.accentBlue,
           visualDensity: VisualDensity.compact,

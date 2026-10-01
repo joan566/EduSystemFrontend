@@ -131,8 +131,7 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading =
-        context.watch<AuthProvider>().status == AuthStatus.authenticating;
+    final isLoading = context.watch<AuthProvider>().isBusy;
     return AppFormFrame(
       title: 'Cambiar contraseña',
       actions: [

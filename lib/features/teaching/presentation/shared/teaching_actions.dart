@@ -65,7 +65,8 @@ class TeachingActions {
     );
   }
 
-  static Future<void> addClasses(
+  /// Returns whether the classes were added (the form closes on true).
+  static Future<bool> addClasses(
     BuildContext context,
     AddClassesResult data,
   ) async {
@@ -76,16 +77,19 @@ class TeachingActions {
           subjectIds: data.subjectIds,
           academicPeriodId: data.academicPeriodId,
         );
-    if (!context.mounted) return;
+    if (!context.mounted) return error == null;
     if (error != null) {
       context.showApiError(error);
-    } else if (created == 0) {
+      return false;
+    }
+    if (created == 0) {
       context.showInfo('Ya dictas esas materias en ese curso y periodo.');
     } else {
       context.showSuccess(
         created == 1 ? 'Clase agregada.' : '$created clases agregadas.',
       );
     }
+    return true;
   }
 
   /// Creates [assignment]'s class in [academicPeriod] directly — both are
@@ -95,7 +99,9 @@ class TeachingActions {
     required TeachingAssignmentEntity assignment,
     required AcademicPeriodEntity academicPeriod,
   }) async {
-    final error = await context.read<TeachingProvider>().createPeriod(
+    final teaching = context.read<TeachingProvider>();
+    if (teaching.isCreatingClassFor(assignment.id)) return;
+    final error = await teaching.createPeriod(
       teachingAssignmentId: assignment.id,
       academicPeriodId: academicPeriod.id,
     );
@@ -127,19 +133,27 @@ class TeachingActions {
     BuildContext context,
     TeachingAssignmentEntity item,
   ) async {
-    final confirmed = await showAppConfirmDialog(
+    await showAppConfirmDialog(
       context,
       title: 'Quitar ${item.subjectName} de ${item.courseLabel}',
       message:
           'Dejarás de dictar esta materia en el curso. Esta acción no se '
           'puede deshacer.',
       confirmLabel: 'Quitar',
+      onConfirm: () async {
+        final error = await context.read<TeachingProvider>().deleteAssignment(
+          item.id,
+        );
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess(
+            '${item.subjectName} quitada de ${item.courseLabel}.',
+          );
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return;
-    final error = await context.read<TeachingProvider>().deleteAssignment(
-      item.id,
-    );
-    if (context.mounted && error != null) context.showApiError(error);
   }
 
   /// Returns whether the class was deleted.
@@ -147,23 +161,28 @@ class TeachingActions {
     BuildContext context,
     TeachingPeriodEntity item,
   ) async {
-    final confirmed = await showAppConfirmDialog(
+    var deleted = false;
+    await showAppConfirmDialog(
       context,
       title: 'Eliminar clase de ${item.academicPeriodName}',
       message:
           'Se elimina la clase de ${item.title} en '
           '${item.academicPeriodName}. Esta acción no se puede deshacer.',
       confirmLabel: 'Eliminar',
+      onConfirm: () async {
+        final error = await context.read<TeachingProvider>().deletePeriod(
+          item.id,
+        );
+        deleted = error == null;
+        if (!context.mounted) return;
+        if (error != null) {
+          context.showApiError(error);
+        } else {
+          context.showSuccess('Clase eliminada.');
+        }
+      },
     );
-    if (!confirmed || !context.mounted) return false;
-    final error = await context.read<TeachingProvider>().deletePeriod(item.id);
-    if (!context.mounted) return error == null;
-    if (error != null) {
-      context.showApiError(error);
-      return false;
-    }
-    context.showSuccess('Clase eliminada.');
-    return true;
+    return deleted;
   }
 }
 

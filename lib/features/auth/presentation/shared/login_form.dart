@@ -50,7 +50,7 @@ class _LoginFormState extends State<LoginForm> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final isLoading = auth.status == AuthStatus.authenticating;
+    final isLoading = auth.isBusy;
 
     return Form(
       key: _formKey,

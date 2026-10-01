@@ -10,6 +10,7 @@ import '../../../../core/widgets/mobile/mobile_file_picker_button.dart';
 import '../../../../core/widgets/mobile/mobile_form.dart';
 import '../../../../core/widgets/mobile/mobile_section_card.dart';
 import '../../../../core/widgets/mobile/mobile_skeletons.dart';
+import '../../../../core/widgets/shared/app_async_button.dart';
 import '../../../../core/widgets/shared/app_button.dart';
 import '../../../../core/widgets/shared/app_error_state.dart';
 import '../../../../core/widgets/shared/skeleton/skeleton_blocks.dart';
@@ -571,6 +572,9 @@ class _AttachmentCard extends StatelessWidget {
     final attachment = detail.attachment;
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
+    final uploading = context.watch<GradebookProvider>().isUploadingAttachment(
+      detail,
+    );
 
     return MobileSectionCard(
       icon: Icons.attach_file,
@@ -583,6 +587,7 @@ class _AttachmentCard extends StatelessWidget {
                 label: 'Adjuntar archivo',
                 allowedExtensions: GradebookActions.attachmentExtensions,
                 hint: 'PDF, Word, Excel, PowerPoint o imagen. Máx. 10 MB.',
+                busy: uploading,
                 onFilePicked: (file) =>
                     GradebookActions.upload(context, detail, file),
               )
@@ -613,11 +618,11 @@ class _AttachmentCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
+                    AppAsyncIconButton(
                       tooltip: 'Descargar',
                       onPressed: () =>
                           GradebookActions.download(context, detail),
-                      icon: const Icon(Icons.download_outlined),
+                      icon: Icons.download_outlined,
                     ),
                     IconButton(
                       tooltip: 'Quitar archivo',

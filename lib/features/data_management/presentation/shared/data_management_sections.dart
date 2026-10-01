@@ -57,6 +57,7 @@ class SchoolSetupCard extends StatelessWidget {
             label: 'Descargar plantilla',
             icon: Icons.download_outlined,
             variant: AppButtonVariant.outlined,
+            isLoading: controller.isExporting('schoolSetupTemplate'),
             onPressed: () => controller.downloadSchoolSetupTemplate(context),
           ),
           const SizedBox(height: 20),
@@ -92,6 +93,7 @@ List<Widget> classTemplateOptions(
           'varias clases a la vez. No incluye notas ni '
           'asistencia.',
       buttonLabel: 'Plantilla de estudiantes',
+      isLoading: controller.isExporting('studentsTemplate'),
       onPressed: () => controller.downloadStudentsTemplate(context),
     ),
     DataTemplateOption(

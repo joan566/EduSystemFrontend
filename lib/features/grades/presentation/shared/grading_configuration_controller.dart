@@ -128,7 +128,8 @@ class GradingConfigurationController extends ChangeNotifier {
     changed();
   }
 
-  Future<void> createScale(
+  /// Returns whether the scale was created (its form closes only then).
+  Future<bool> createScale(
     BuildContext context,
     GradingScaleFormResult data,
   ) async {
@@ -137,8 +138,13 @@ class GradingConfigurationController extends ChangeNotifier {
       minimumValue: data.minimumValue,
       maximumValue: data.maximumValue,
     );
-    if (!context.mounted) return;
-    if (error != null) context.showApiError(error);
+    if (!context.mounted) return error == null;
+    if (error != null) {
+      context.showApiError(error);
+      return false;
+    }
+    context.showSuccess('Escala "${data.name}" creada.');
+    return true;
   }
 
   Future<void> save(BuildContext context) async {

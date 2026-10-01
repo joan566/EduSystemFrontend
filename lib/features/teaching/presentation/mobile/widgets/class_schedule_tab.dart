@@ -25,16 +25,17 @@ class ClassScheduleTab extends StatelessWidget {
     BuildContext context, {
     ClassScheduleEntity? initial,
   }) async {
-    final data = await showMobileForm<ClassScheduleFormResult>(
+    await showMobileForm<void>(
       context,
-      child: ClassScheduleForm(initial: initial),
-    );
-    if (data == null || !context.mounted) return;
-    await ClassScheduleActions.save(
-      context,
-      teachingPeriodId: teachingPeriodId,
-      initial: initial,
-      data: data,
+      child: ClassScheduleForm(
+        initial: initial,
+        onSubmit: (data) => ClassScheduleActions.save(
+          context,
+          teachingPeriodId: teachingPeriodId,
+          initial: initial,
+          data: data,
+        ),
+      ),
     );
   }
 

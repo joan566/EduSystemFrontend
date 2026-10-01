@@ -37,12 +37,14 @@ class AcademicLevelsMobileView extends StatelessWidget {
     BuildContext context, {
     AcademicLevelEntity? initial,
   }) async {
-    final data = await showMobileForm<AcademicLevelFormResult>(
+    await showMobileForm<void>(
       context,
-      child: AcademicLevelForm(initial: initial),
+      child: AcademicLevelForm(
+        initial: initial,
+        onSubmit: (data) =>
+            AcademicLevelActions.save(context, initial: initial, data: data),
+      ),
     );
-    if (data == null || !context.mounted) return;
-    await AcademicLevelActions.save(context, initial: initial, data: data);
   }
 
   @override
@@ -72,7 +74,8 @@ class AcademicLevelsMobileView extends StatelessWidget {
           ),
           Expanded(
             child: switch (state.status) {
-              ViewStatus.initial || ViewStatus.loading => const MobileListSkeleton(
+              ViewStatus.initial ||
+              ViewStatus.loading => const MobileListSkeleton(
                 leading: SkeletonLeading.square,
                 leadingSize: 48,
                 meta: true,
