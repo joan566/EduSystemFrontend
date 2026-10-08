@@ -112,6 +112,8 @@ class ApiEndpoints {
       '/exams/$examId/submissions/batches';
   static String submissionBatchById(int examId, int batchId) =>
       '/exams/$examId/submissions/batches/$batchId';
+  static String getExamTemplate() => '/exams/import/template';
+  static const importExam = '/exams/import';
 
   // Activities
   static const activities = '/activities';

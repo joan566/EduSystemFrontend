@@ -29,6 +29,28 @@ class ExamRepository {
     numberOfQuestions: numberOfQuestions,
   );
 
+  Future<BinaryDownload> getExamTemplate() => _remote.getExamTemplate();
+
+  Future<ExamEntity> importDocument({
+    required int teachingPeriodId,
+    required List<int> fileBytes,
+    required String fileName,
+    String? name,
+    String? description,
+    DateTime? evaluationDate,
+    double? maximumScore,
+    ProgressCallback? onSendProgress,
+  }) => _remote.importDocument(
+    teachingPeriodId: teachingPeriodId,
+    fileBytes: fileBytes,
+    fileName: fileName,
+    name: name,
+    description: description,
+    evaluationDate: evaluationDate,
+    maximumScore: maximumScore,
+    onSendProgress: onSendProgress,
+  );
+
   /// Every exam of one class (all pages).
   Future<List<ExamSummaryEntity>> getAll(int teachingPeriodId) => fetchAllPages(
     (page, size) => _remote.getPage(

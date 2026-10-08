@@ -57,6 +57,63 @@ class ExamsProvider extends SessionNotifier {
   AppException? _lastError;
   AppException? get lastError => _lastError;
 
+  bool _importingDocument = false;
+  bool get importingDocument => _importingDocument;
+
+  double? _documentImportProgress;
+  double? get documentImportProgress => _documentImportProgress;
+
+  Future<({ExamEntity? exam, AppException? error})> importDocument({
+    required int teachingPeriodId,
+    required List<int> fileBytes,
+    required String fileName,
+    String? name,
+    String? description,
+    DateTime? evaluationDate,
+    double? maximumScore,
+  }) async {
+    if (_importingDocument) {
+      return (
+        exam: null,
+        error: const AppException(
+          code: AppErrorCode.invalidRequest,
+          message: 'Ya hay una importación de examen en curso.',
+        ),
+      );
+    }
+    _importingDocument = true;
+    _documentImportProgress = 0;
+    notifyListeners();
+    try {
+      final exam = await _repository.importDocument(
+        teachingPeriodId: teachingPeriodId,
+        fileBytes: fileBytes,
+        fileName: fileName,
+        name: name,
+        description: description,
+        evaluationDate: evaluationDate,
+        maximumScore: maximumScore,
+        onSendProgress: (sent, total) {
+          _documentImportProgress = total > 0 ? sent / total : null;
+          notifyListeners();
+        },
+      );
+      _announce(exam.teachingPeriodId);
+      _details.set(exam.id, exam);
+      _exams.update(exam.teachingPeriodId, (list) => _upsert(list, exam));
+      return (exam: exam, error: null);
+    } on AppException catch (error) {
+      return (exam: null, error: error);
+    } finally {
+      _importingDocument = false;
+      _documentImportProgress = null;
+      notifyListeners();
+    }
+  }
+
+  Future<BinaryDownload> downloadExamTemplate() =>
+      _repository.getExamTemplate();
+
   Future<ExamEntity?> create({
     required int teachingPeriodId,
     required String name,

@@ -17,6 +17,13 @@ class ExamActions {
     context.push('${RoutePaths.examCreate}?teachingPeriodId=$teachingPeriodId');
   }
 
+  static void importFromWord(
+    BuildContext context, {
+    required int teachingPeriodId,
+  }) {
+    context.push(RoutePaths.examImportForClass(teachingPeriodId));
+  }
+
   /// Deletes the exam; from the detail screen ([popOnSuccess]) it then pops
   /// back to the list.
   static Future<void> delete(

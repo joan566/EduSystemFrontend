@@ -4,6 +4,7 @@ import 'package:http_parser/http_parser.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/state/list_state.dart';
+import '../../../../core/utils/formatters.dart';
 import '../../domain/entities/exam_entity.dart';
 import '../../domain/entities/submission_batch_entity.dart';
 import '../../domain/entities/submission_entity.dart';
@@ -34,6 +35,46 @@ class ExamRemoteDataSource {
         maximumScore: maximumScore,
         numberOfQuestions: numberOfQuestions,
       ),
+    );
+    return ExamModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<BinaryDownload> getExamTemplate() =>
+      _client.getBinary(ApiEndpoints.getExamTemplate());
+
+  Future<ExamEntity> importDocument({
+    required int teachingPeriodId,
+    required List<int> fileBytes,
+    required String fileName,
+    String? name,
+    String? description,
+    DateTime? evaluationDate,
+    double? maximumScore,
+    ProgressCallback? onSendProgress,
+  }) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(
+        fileBytes,
+        filename: fileName,
+        contentType: MediaType(
+          'application',
+          'vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ),
+      ),
+    });
+    final response = await _client.postMultipart(
+      ApiEndpoints.importExam,
+      formData: formData,
+      queryParameters: {
+        'teachingPeriodId': teachingPeriodId,
+        'name': name,
+        'description': description,
+        'evaluationDate': evaluationDate == null
+            ? null
+            : Formatters.toApiDateTime(evaluationDate),
+        'maximumScore': maximumScore,
+      },
+      onSendProgress: onSendProgress,
     );
     return ExamModel.fromJson(response.data as Map<String, dynamic>);
   }

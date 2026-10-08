@@ -36,6 +36,10 @@ class RoutePaths {
   static const examCreate = '/app/exams/create';
   static String examCreateForClass(int teachingPeriodId) =>
       '$examCreate?teachingPeriodId=$teachingPeriodId';
+  static const examImport = '/app/exams/import';
+  static String examImportForClass(int teachingPeriodId) =>
+      '$examImport?teachingPeriodId=$teachingPeriodId';
+
   /// [tab]: 0 Preguntas, 1 Hojas de respuesta, 2 Resultados.
   static String examDetail(int id, {int? tab}) =>
       tab == null ? '/app/exams/$id' : '/app/exams/$id?tab=$tab';

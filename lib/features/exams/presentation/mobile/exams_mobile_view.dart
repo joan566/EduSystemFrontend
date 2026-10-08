@@ -23,6 +23,7 @@ import '../providers/exams_provider.dart';
 import '../shared/exam_actions.dart';
 import '../shared/exam_list_filters.dart';
 import 'widgets/exam_list_card.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 
 /// Mobile "Exámenes": brand bar, title, class picker, search + order,
 /// status pills, then one card per exam and a "Crear examen" button.
@@ -84,13 +85,49 @@ class ExamsMobileView extends StatelessWidget {
     return Scaffold(
       floatingActionButton: period == null
           ? null
-          : FloatingActionButton.extended(
-              onPressed: () =>
-                  ExamActions.create(context, teachingPeriodId: period.id),
+          : SpeedDial(
+              icon: Icons.add,
+              activeIcon: Icons.close,
               backgroundColor: AppColors.accentBlue,
               foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('Crear examen'),
+
+              // Espaciado y animaciones
+              spacing: 10,
+              spaceBetweenChildren: 6,
+              renderOverlay: true,
+              overlayColor: Colors.black,
+              overlayOpacity: 0.4,
+
+              children: [
+                // 1. Primera opción: Crear examen
+                SpeedDialChild(
+                  child: const Icon(Icons.add_task),
+                  backgroundColor: AppColors.accentBlue,
+                  foregroundColor: Colors.white,
+                  label: 'Crear examen',
+                  labelStyle: const TextStyle(
+                    fontSize: 14.0,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  onTap: () =>
+                      ExamActions.create(context, teachingPeriodId: period.id),
+                ),
+
+                SpeedDialChild(
+                  child: const Icon(Icons.description_outlined),
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.accentBlue,
+                  label: 'Importar o exportar plantilla',
+                  labelStyle: const TextStyle(
+                    fontSize: 14.0,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  onTap: () => ExamActions.importFromWord(
+                    context,
+                    teachingPeriodId: period.id,
+                  ),
+                ),
+              ],
             ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

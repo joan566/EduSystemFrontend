@@ -61,6 +61,8 @@ class ErrorMapper {
                 message: item['message'] as String? ?? '',
               ),
             );
+          } else if (item is String && item.trim().isNotEmpty) {
+            fieldErrors.add(FieldError(field: '', message: item));
           }
         }
       }

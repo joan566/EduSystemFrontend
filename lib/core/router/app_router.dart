@@ -19,6 +19,7 @@ import '../../features/exams/presentation/pages/batch_detail_page.dart';
 import '../../features/exams/presentation/pages/batch_upload_page.dart';
 import '../../features/exams/presentation/pages/exam_builder_page.dart';
 import '../../features/exams/presentation/pages/exam_detail_page.dart';
+import '../../features/exams/presentation/pages/exam_import_page.dart';
 import '../../features/exams/presentation/pages/exams_page.dart';
 import '../../features/exams/presentation/pages/submission_detail_page.dart';
 import '../../features/grades/presentation/pages/grade_detail_page.dart';
@@ -137,6 +138,18 @@ class AppRouter {
             path: RoutePaths.exams,
             builder: (context, state) => const ExamsPage(),
             routes: [
+              GoRoute(
+                path: 'import',
+                builder: (context, state) {
+                  final raw = state.uri.queryParameters['teachingPeriodId'];
+                  final teachingPeriodId = raw == null
+                      ? null
+                      : int.tryParse(raw);
+                  return teachingPeriodId == null
+                      ? const ExamsPage()
+                      : ExamImportPage(teachingPeriodId: teachingPeriodId);
+                },
+              ),
               GoRoute(
                 // Must come before ':id' so "create" isn't swallowed as an id.
                 path: 'create',
