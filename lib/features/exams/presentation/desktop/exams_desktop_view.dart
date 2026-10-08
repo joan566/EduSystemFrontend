@@ -96,6 +96,12 @@ class ExamsDesktopView extends StatelessWidget {
                       context,
                       teachingPeriodId: period.id,
                     ),
+              onImport: period == null
+                  ? null
+                  : () => ExamActions.importFromWord(
+                      context,
+                      teachingPeriodId: period.id,
+                    ),
             ),
             const SizedBox(height: 18),
             _Toolbar(
@@ -206,11 +212,13 @@ class _Header extends StatelessWidget {
     required this.period,
     required this.exams,
     required this.onCreate,
+    required this.onImport,
   });
 
   final TeachingPeriodEntity? period;
   final List<ExamSummaryEntity> exams;
   final VoidCallback? onCreate;
+  final VoidCallback? onImport;
 
   @override
   Widget build(BuildContext context) {
@@ -240,7 +248,24 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-        AppButton(label: 'Nuevo examen', icon: Icons.add, onPressed: onCreate),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.end,
+          children: [
+            AppButton(
+              label: 'Importar o exportar plantilla',
+              icon: Icons.description_outlined,
+              variant: AppButtonVariant.outlined,
+              onPressed: onImport,
+            ),
+            AppButton(
+              label: 'Nuevo examen',
+              icon: Icons.add,
+              onPressed: onCreate,
+            ),
+          ],
+        ),
       ],
     );
   }
